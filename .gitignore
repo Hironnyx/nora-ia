@@ -1,0 +1,37 @@
+# Python & Virtual Environments
+.venv/
+venv/
+env/
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyd
+
+# Secrets & Local Private Data (Jamais committer les clés API ni les données personnelles)
+.env
+memoire_nora.json
+smart_home_state.json
+nora_crash.log
+
+# Fichiers d'exécution temporaires
+temp_audio/
+screenshots/
+
+# PyInstaller & Build distributions
+build/
+dist/
+*.spec
+
+# Modèles neuronaux volumineux (téléchargeables via download_voice_models.py)
+models/rvc_zero_two/*.pt
+models/rvc_zero_two/*.pth
+models/rvc_zero_two/*.index
+models/rvc_zero_two/hubert_base_hf/*.safetensors
+models/rvc_zero_two/hubert_base_hf/*.bin
+
+# IDE, Éditeurs et Windows
+.vscode/
+.idea/
+Thumbs.db
+Desktop.ini
+*.lnk

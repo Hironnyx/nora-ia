@@ -1,0 +1,1 @@
+Exemple de contenu pour le test.

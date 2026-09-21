@@ -1,0 +1,155 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 600" width="100%" height="100%">
+  <defs>
+    <!-- Filtres d'ombre et lueur douce -->
+    <filter id="soft-shadow" x="-10%" y="-10%" width="130%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#5a2211" flood-opacity="0.18" />
+    </filter>
+    <filter id="text-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#ff7b54" flood-opacity="0.25" />
+    </filter>
+    <filter id="glass-blur" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="8" result="blur" />
+      <feColorMatrix type="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7" />
+    </filter>
+
+    <!-- Dégradés de couleurs chaudes -->
+    <linearGradient id="bg-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff8f0" />
+      <stop offset="40%" stop-color="#ffeedb" />
+      <stop offset="100%" stop-color="#ffe3cf" />
+    </linearGradient>
+
+    <linearGradient id="sunset-sun" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffbe53" />
+      <stop offset="60%" stop-color="#ff7b54" />
+      <stop offset="100%" stop-color="#e84a5f" />
+    </linearGradient>
+
+    <linearGradient id="coral-glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ff9a76" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#ff6f59" stop-opacity="0.9" />
+    </linearGradient>
+
+    <linearGradient id="amber-accent" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#f8a488" stop-opacity="0.6" />
+      <stop offset="100%" stop-color="#ffd57e" stop-opacity="0.8" />
+    </linearGradient>
+
+    <linearGradient id="text-grad" x1="0%" y1="0%" x2="100%" y2="50%">
+      <stop offset="0%" stop-color="#9a3412" />
+      <stop offset="50%" stop-color="#c2410c" />
+      <stop offset="100%" stop-color="#ea580c" />
+    </linearGradient>
+
+    <linearGradient id="card-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" stop-opacity="0.85" />
+      <stop offset="100%" stop-color="#ffffff" stop-opacity="0.45" />
+    </linearGradient>
+  </defs>
+
+  <!-- Fond principal -->
+  <rect width="900" height="600" rx="28" fill="url(#bg-grad)" />
+
+  <!-- Formes organiques d'ambiance (Blobs chaleureux) -->
+  <g opacity="0.85">
+    <!-- Soleil chaleureux en arrière-plan -->
+    <circle cx="720" cy="140" r="130" fill="url(#sunset-sun)" opacity="0.85" filter="url(#soft-shadow)" />
+    
+    <!-- Rayons de lumière / halos diffus -->
+    <circle cx="720" cy="140" r="180" fill="#ffd57e" opacity="0.25" />
+    <circle cx="720" cy="140" r="230" fill="#ffbe53" opacity="0.12" />
+
+    <!-- Blob supérieur gauche -->
+    <path d="M-60,120 C20,40 180,20 230,110 C280,200 160,310 70,300 C-20,290 -140,200 -60,120 Z" 
+          fill="url(#amber-accent)" />
+
+    <!-- Blob inférieur droit -->
+    <path d="M680,420 C760,360 880,390 920,470 C960,550 870,640 780,630 C690,620 600,480 680,420 Z" 
+          fill="url(#coral-glow)" />
+
+    <!-- Forme douce inférieure gauche -->
+    <path d="M120,480 C210,430 320,490 310,570 C300,650 180,660 100,620 C20,580 30,530 120,480 Z" 
+          fill="url(#amber-accent)" opacity="0.5" />
+  </g>
+
+  <!-- Carte centrale flottante en Glassmorphism -->
+  <g filter="url(#soft-shadow)">
+    <rect x="120" y="100" width="660" height="400" rx="36" fill="url(#card-grad)" stroke="#ffffff" stroke-width="2" />
+  </g>
+
+  <!-- Motif décoratif d'étoiles / scintillements (Sparkles) -->
+  <g fill="#f59e0b">
+    <!-- Sparkle 1 (Haut gauche carte) -->
+    <path d="M210,165 C210,175 200,185 190,185 C200,185 210,195 210,205 C210,195 220,185 230,185 C220,185 210,175 210,165 Z" fill="#ff9a76" />
+    <!-- Sparkle 2 (Près du texte) -->
+    <path d="M680,200 C680,212 668,224 656,224 C668,224 680,236 680,248 C680,236 692,224 704,224 C692,224 680,212 680,200 Z" fill="#fb923c" />
+    <!-- Sparkle 3 (Bas centre) -->
+    <circle cx="270" cy="410" r="4" fill="#ea580c" opacity="0.6" />
+    <circle cx="630" cy="400" r="5" fill="#f59e0b" opacity="0.7" />
+    <circle cx="650" cy="420" r="3" fill="#fb923c" opacity="0.5" />
+  </g>
+
+  <!-- Arc de cercle décoratif chaleureux -->
+  <path d="M380,160 Q450,140 520,160" stroke="#f97316" stroke-width="3" stroke-linecap="round" fill="none" opacity="0.4" />
+
+  <!-- Badge d'accueil convivial -->
+  <g transform="translate(365, 175)">
+    <rect x="0" y="0" width="170" height="34" rx="17" fill="#fed7aa" fill-opacity="0.7" />
+    <text x="85" y="22" font-family="'Segoe UI', Roboto, 'Helvetica Neue', sans-serif" font-size="13" font-weight="600" fill="#9a3412" text-anchor="middle" letter-spacing="1.5">DOUCE JOURNÉE</text>
+  </g>
+
+  <!-- Typographie Principale "Bonjour !" -->
+  <!-- Ombre douce du texte -->
+  <text x="450" y="322" 
+        font-family="'Playfair Display', 'Georgia', 'Merriweather', serif" 
+        font-size="88" 
+        font-weight="900" 
+        font-style="italic" 
+        text-anchor="middle" 
+        fill="#7c2d12" 
+        opacity="0.12" 
+        filter="url(#text-glow)">
+    Bonjour !
+  </text>
+
+  <!-- Texte principal 'Bonjour !' avec dégradé chaud et serif élégant -->
+  <text x="450" y="318" 
+        font-family="'Playfair Display', 'Georgia', 'Merriweather', serif" 
+        font-size="88" 
+        font-weight="900" 
+        font-style="italic" 
+        text-anchor="middle" 
+        fill="url(#text-grad)" 
+        letter-spacing="1">
+    Bonjour !
+  </text>
+
+  <!-- Ligne de soulignement calligraphique / sourire chaleureux -->
+  <path d="M340,345 C410,375 490,375 560,345" 
+        stroke="url(#sunset-sun)" 
+        stroke-width="5" 
+        stroke-linecap="round" 
+        fill="none" />
+  <circle cx="563" cy="343" r="3.5" fill="#e84a5f" />
+
+  <!-- Sous-titre chaleureux & bienveillant -->
+  <text x="450" y="415" 
+        font-family="'Segoe UI', Roboto, -apple-system, sans-serif" 
+        font-size="19" 
+        font-weight="500" 
+        fill="#7c2d12" 
+        text-anchor="middle" 
+        opacity="0.85" 
+        letter-spacing="0.5">
+    Rayonnez de joie et passez une belle journée ✨
+  </text>
+
+  <!-- Petites pastilles décoratives d'ambiance en bas de carte -->
+  <g transform="translate(415, 445)">
+    <circle cx="0" cy="0" r="4" fill="#fb923c" opacity="0.4" />
+    <circle cx="18" cy="0" r="5" fill="#f97316" opacity="0.7" />
+    <circle cx="36" cy="0" r="6" fill="#ea580c" opacity="0.9" />
+    <circle cx="54" cy="0" r="5" fill="#f97316" opacity="0.7" />
+    <circle cx="72" cy="0" r="4" fill="#fb923c" opacity="0.4" />
+  </g>
+</svg>

@@ -1,0 +1,135 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 500" width="100%" height="100%">
+  <defs>
+    <!-- Background Gradient -->
+    <linearGradient id="bgGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fdfbf7"/>
+      <stop offset="50%" stop-color="#f2eae1"/>
+      <stop offset="100%" stop-color="#e6d5c3"/>
+    </linearGradient>
+
+    <!-- Warm Golden/Terracotta Text Gradient -->
+    <linearGradient id="textGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#d97742"/>
+      <stop offset="50%" stop-color="#c85a32"/>
+      <stop offset="100%" stop-color="#a43820"/>
+    </linearGradient>
+
+    <!-- Sun/Warm Glow Gradient -->
+    <radialGradient id="sunGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#ffd166" stop-opacity="0.6"/>
+      <stop offset="60%" stop-color="#f4a261" stop-opacity="0.2"/>
+      <stop offset="100%" stop-color="#e76f51" stop-opacity="0"/>
+    </radialGradient>
+
+    <!-- Soft Drop Shadow Filter -->
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="2" dy="8" stdDeviation="6" flood-color="#7a4024" flood-opacity="0.18"/>
+    </filter>
+
+    <filter id="glow" x="-20%" y="-20%" width="140%" height="140%">
+      <feGaussianBlur stdDeviation="15" result="blur"/>
+      <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+    </filter>
+
+    <!-- Decorative Leaf Symbol -->
+    <g id="leaf">
+      <path d="M0,0 Q15,-20 20,-40 Q5,-25 0,0 Z" fill="#588157" opacity="0.85"/>
+      <path d="M0,0 Q-15,-20 -20,-40 Q-5,-25 0,0 Z" fill="#3a5a40" opacity="0.9"/>
+      <path d="M0,0 L0,-45" stroke="#283618" stroke-width="1.5" stroke-linecap="round"/>
+    </g>
+
+    <!-- Sparkle Symbol -->
+    <g id="sparkle">
+      <path d="M0,-12 C0,-4 4,0 12,0 C4,0 0,4 0,12 C0,4 -4,0 -12,0 C-4,0 0,-4 0,-12 Z" fill="#e9c46a"/>
+    </g>
+  </defs>
+
+  <!-- Background -->
+  <rect width="800" height="500" rx="24" fill="url(#bgGrad)" stroke="#d5c4b4" stroke-width="2"/>
+
+  <!-- Inner border frame -->
+  <rect x="25" y="25" width="750" height="450" rx="16" fill="none" stroke="#ffffff" stroke-width="1.5" opacity="0.7"/>
+
+  <!-- Warm ambient glow circle behind center -->
+  <circle cx="400" cy="230" r="180" fill="url(#sunGlow)" filter="url(#glow)"/>
+
+  <!-- Decorative Botanical Elements -->
+  <!-- Top Left Leaves -->
+  <g transform="translate(100, 100) rotate(-25)">
+    <use href="#leaf" transform="scale(1.2)" />
+    <use href="#leaf" transform="translate(25, 10) rotate(35) scale(0.9)" />
+    <use href="#leaf" transform="translate(-20, 20) rotate(-25) scale(0.8)" />
+  </g>
+
+  <!-- Bottom Right Leaves & Stem -->
+  <g transform="translate(700, 400) rotate(140)">
+    <use href="#leaf" transform="scale(1.3)" />
+    <use href="#leaf" transform="translate(30, 15) rotate(40) scale(1)" />
+    <use href="#leaf" transform="translate(-25, 10) rotate(-30) scale(0.9)" />
+  </g>
+
+  <!-- Floating Sparkles / Dots -->
+  <use href="#sparkle" transform="translate(180, 140) scale(0.7)" />
+  <use href="#sparkle" transform="translate(620, 120) scale(0.9)" />
+  <use href="#sparkle" transform="translate(220, 360) scale(0.6)" />
+  <use href="#sparkle" transform="translate(580, 340) scale(0.8)" />
+
+  <circle cx="140" cy="280" r="4" fill="#e76f51" opacity="0.6"/>
+  <circle cx="670" cy="220" r="5" fill="#2a9d8f" opacity="0.5"/>
+  <circle cx="280" cy="90" r="3.5" fill="#f4a261" opacity="0.7"/>
+  <circle cx="520" cy="410" r="4" fill="#e9c46a" opacity="0.8"/>
+
+  <!-- Main Content Group -->
+  <g filter="url(#softShadow)" transform="translate(0, 10)">
+    <!-- Subtitle tag -->
+    <text x="400" y="165" 
+          font-family="'Playfair Display', 'Georgia', serif" 
+          font-size="20" 
+          font-weight="400" 
+          font-style="italic"
+          fill="#8c6d53" 
+          text-anchor="middle" 
+          letter-spacing="4">
+      ~ une belle journée commence ici ~
+    </text>
+
+    <!-- Main Title "Bonjour !" with layered warmth -->
+    <text x="404" y="274" 
+          font-family="'Montserrat', 'Poppins', 'Segoe UI', sans-serif" 
+          font-size="96" 
+          font-weight="900" 
+          fill="#3e2723" 
+          opacity="0.12"
+          text-anchor="middle" 
+          letter-spacing="6">
+      Bonjour !
+    </text>
+    
+    <text x="400" y="270" 
+          font-family="'Montserrat', 'Poppins', 'Segoe UI', sans-serif" 
+          font-size="96" 
+          font-weight="900" 
+          fill="url(#textGrad)" 
+          text-anchor="middle" 
+          letter-spacing="6">
+      Bonjour !
+    </text>
+  </g>
+
+  <!-- Decorative Divider Underline -->
+  <g transform="translate(320, 315)">
+    <path d="M 0 10 Q 80 25 160 10" fill="none" stroke="#c85a32" stroke-width="2.5" stroke-linecap="round" opacity="0.7"/>
+    <circle cx="80" cy="19" r="4" fill="#d97742"/>
+  </g>
+
+  <!-- Friendly Footer / Accent text -->
+  <text x="400" y="380" 
+        font-family="'Open Sans', 'Helvetica', sans-serif" 
+        font-size="16" 
+        font-weight="500" 
+        fill="#6b5b52" 
+        text-anchor="middle" 
+        letter-spacing="2">
+    Passez une excellente journée ! ✨
+  </text>
+</svg>
