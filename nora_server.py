@@ -263,12 +263,19 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             system_monitor.clean_ram_cache()
             reply = "Cache RAM vidé ! Les performances de ton PC sont au top, Darling !"
 
-        # Générer l'audio de confirmation
+        # Générer l'audio de confirmation avec la voix de Zero Two
         audio_id = f"speech_action_{int(time.time()*1000)}.mp3"
         audio_path = AUDIO_DIR / audio_id
         audio_url = None
         try:
             asyncio.run(voice_engine._generate_audio_async(reply, audio_path))
+            try:
+                import voice_cloning
+                final_audio = voice_cloning.convert_to_zero_two(audio_path)
+                if final_audio != audio_path and final_audio.exists():
+                    audio_id = final_audio.name
+            except Exception:
+                pass
             audio_url = f"/api/audio/{audio_id}"
         except Exception:
             pass

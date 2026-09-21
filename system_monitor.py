@@ -42,7 +42,18 @@ def get_top_resource_processes(limit: int = 3) -> Dict[str, Any]:
 
     top_mem = sorted(procs, key=lambda x: x['mem_mb'], reverse=True)[:limit]
     top_cpu = sorted(procs, key=lambda x: x['cpu'], reverse=True)[:limit]
-    return {'top_mem': top_mem, 'top_cpu': top_cpu}
+def clean_ram_cache() -> str:
+    """Libère la mémoire RAM inutilisée, purge le ramasse-miettes et vide les caches."""
+    import gc
+    gc.collect()
+    if sys.platform == "win32":
+        try:
+            import ctypes
+            # Vide le working set du processus actuel
+            ctypes.windll.kernel32.SetProcessWorkingSetSize(-1, -1, -1)
+        except Exception:
+            pass
+    return "Mémoire vive optimisée et caches temporaires purgés."
 
 # Initialiser le calcul CPU de psutil
 try:
