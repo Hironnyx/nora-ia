@@ -268,6 +268,47 @@ def analyze_intent_and_respond(user_text: str) -> tuple[str, str]:
             ok, msg = nora_code_evolver.apply_improvement_with_git(latest_prop["id"])
             return "CHAT", f"{msg} Merci de ta confiance, Darling !"
 
+    # 6f. Agent de Santé & Bien-Être (Hydratation, Sommeil, Pauses, Bilan Santé)
+    if any(w in clean_input for w in ["verre d'eau", "verre deau", "bu de l'eau", "bu de leau", "bois de l'eau"]):
+        import agent_health
+        count = 1
+        m_count = re.search(r"([0-9]+) *(?:verres?)", clean_input)
+        if m_count:
+            count = int(m_count.group(1))
+        _, msg = agent_health.health_agent.log_water(count)
+        return "CHAT", msg
+
+    if re.search(r"(?:combien|niveau) *(?:d'eau|de verres) *(?:j'ai bu|bu)", clean_input):
+        import agent_health
+        today = agent_health.health_agent.get_today()
+        w = today.get("verres_eau", 0)
+        obj = today.get("objectif_verres", 8)
+        return "CHAT", f"Tu as bu {w} verres sur ton objectif de {obj} aujourd'hui, Darling ! 💧"
+
+    if re.search(r"(?:fais|donne|mon)? *(?:bilan|rapport|état) *(?:de )*(?:ma )*(?:santé|sante|forme|bien-être)", clean_input):
+        import agent_health
+        report = agent_health.health_agent.get_health_report_speech()
+        return "CHAT", report
+
+    m_sleep = re.search(r"(?:j'ai|je viens de)? *(?:dormi|dormir) *(?:environ )*([0-9]+(?:[\.,][0-9]+)?) *(?:heures?|h)", clean_input)
+    if m_sleep:
+        import agent_health
+        val = float(m_sleep.group(1).replace(",", "."))
+        msg = agent_health.health_agent.log_sleep(val)
+        return "CHAT", msg
+
+    # 6g. Contrôle Matériel du Smartphone (Lampe Torche, Volume Mobile, etc.)
+    if re.search(r"(?:allume|mets|active) *(?:la )*(?:torche|lampe|flash) *(?:du téléphone|du tel|mobile)?", clean_input) or clean_input in ["torche on", "lampe on"]:
+        return "PHONE_ACTION:flashlight:on", "J'allume la lampe torche de ton téléphone, Darling ! 💡"
+
+    if re.search(r"(?:éteins|eteins|coupe|désactive|desactive) *(?:la )*(?:torche|lampe|flash) *(?:du téléphone|du tel|mobile)?", clean_input) or clean_input in ["torche off", "lampe off"]:
+        return "PHONE_ACTION:flashlight:off", "Voilà, torche éteinte pour toi, Darling ! 💡"
+
+    m_ph_vol = re.search(r"(?:volume|son) *(?:du téléphone|du tel|mobile) *(?:à|a)? *([0-9]{1,3})", clean_input)
+    if m_ph_vol:
+        val = int(m_ph_vol.group(1))
+        return f"PHONE_ACTION:volume:{val}", f"Je règle le volume de ton téléphone à {val}%, Darling ! 🔊"
+
 
     # 4. Diagnostic matériel instantané du PC (Sondes system_monitor)
     pc_status_patterns = [

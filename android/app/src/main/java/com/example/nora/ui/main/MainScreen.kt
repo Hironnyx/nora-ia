@@ -14,6 +14,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -39,8 +40,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -66,12 +65,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import coil.request.ImageRequest
 import com.example.nora.data.NoraAction
+import com.example.nora.theme.ZeroTwoAmber
 import com.example.nora.theme.ZeroTwoBorder
 import com.example.nora.theme.ZeroTwoCardBg
 import com.example.nora.theme.ZeroTwoCrimson
+import com.example.nora.theme.ZeroTwoCyan
 import com.example.nora.theme.ZeroTwoDarkBg
 import com.example.nora.theme.ZeroTwoEmerald
 import com.example.nora.theme.ZeroTwoPink
+import com.example.nora.theme.ZeroTwoPurple
 import com.example.nora.theme.ZeroTwoRoseLight
 import com.example.nora.theme.ZeroTwoTextMuted
 import com.example.nora.theme.ZeroTwoTextWhite
@@ -117,10 +119,10 @@ fun MainScreen(
         modifier = modifier
             .fillMaxSize()
             .background(ZeroTwoDarkBg)
-            .padding(horizontal = 16.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // 1. Barre Supérieure (Header & Statut Réseau)
+        // 1. Barre Supérieure (Statut Réseau & Contrôles Rapides)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -136,50 +138,134 @@ fun MainScreen(
                         fontWeight = FontWeight.Bold,
                         color = ZeroTwoPink
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Zero Two Mobile",
+                        text = "Zero Two",
                         fontSize = 12.sp,
-                        color = ZeroTwoTextMuted
+                        color = ZeroTwoRoseLight
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    val statusColor = when {
+                        state.isConnected -> ZeroTwoEmerald
+                        state.isStandaloneMode -> ZeroTwoCyan
+                        else -> ZeroTwoCrimson
+                    }
+                    val statusText = when {
+                        state.isConnected -> "Connecté PC (RTX 4080)"
+                        state.isStandaloneMode -> "Mode Autonome Mobile 📱"
+                        else -> "Initialisation..."
+                    }
                     Box(
                         modifier = Modifier
                             .size(8.dp)
                             .clip(CircleShape)
-                            .background(if (state.isConnected) ZeroTwoEmerald else ZeroTwoCrimson)
+                            .background(statusColor)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = if (state.isConnected) "Connecté au PC (RTX 4080)" else "Déconnecté",
+                        text = statusText,
                         fontSize = 11.sp,
-                        color = if (state.isConnected) ZeroTwoEmerald else ZeroTwoCrimson
+                        fontWeight = FontWeight.Medium,
+                        color = statusColor
                     )
                 }
             }
 
-            Row {
-                IconButton(onClick = { viewModel.refreshCapabilities() }) {
-                    Text("🔄", fontSize = 18.sp)
+            // Boutons d'actions rapides (Torche, WoL, Actualiser, Réglages)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Lampe torche rapide
+                IconButton(
+                    onClick = { viewModel.toggleTorch() },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Text(
+                        text = if (state.isFlashlightOn) "💡" else "🔦",
+                        fontSize = 18.sp
+                    )
                 }
-                IconButton(onClick = {
-                    settingsUrlText = state.serverUrl
-                    showSettingsDialog = true
-                }) {
-                    Text("⚙️", fontSize = 18.sp)
+
+                // Réveil PC rapide (WoL)
+                IconButton(
+                    onClick = { viewModel.wakePc() },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Text("⚡", fontSize = 18.sp)
+                }
+
+                IconButton(
+                    onClick = { viewModel.refreshCapabilities() },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Text("🔄", fontSize = 16.sp)
+                }
+
+                IconButton(
+                    onClick = {
+                        settingsUrlText = state.serverUrl
+                        showSettingsDialog = true
+                    },
+                    modifier = Modifier.size(36.dp)
+                ) {
+                    Text("⚙️", fontSize = 16.sp)
                 }
             }
         }
 
-        // 2. Zone Mascotte & Bulle de Dialogue
+        // 2. Bandeau Santé & Télémétrie Téléphone (Ange Gardien)
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp)
+                .horizontalScroll(rememberScrollState()),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            // Verres d'eau avec bouton d'ajout direct
+            HealthChip(
+                icon = "💧",
+                title = "${state.todayWater}/8",
+                subtitle = "Eau",
+                highlight = state.todayWater >= 8,
+                onClick = { viewModel.addWater() }
+            )
+
+            // Podomètre Pas réels
+            HealthChip(
+                icon = "🏃",
+                title = "${state.todaySteps}",
+                subtitle = "Pas",
+                highlight = state.todaySteps >= 6000,
+                onClick = null
+            )
+
+            // Batterie smartphone
+            HealthChip(
+                icon = "🔋",
+                title = "${state.batteryPercent}%",
+                subtitle = "Batterie",
+                highlight = state.batteryPercent > 20,
+                onClick = null
+            )
+
+            // Sommeil
+            HealthChip(
+                icon = "💤",
+                title = "${state.sleepHours}h",
+                subtitle = "Sommeil",
+                highlight = true,
+                onClick = null
+            )
+        }
+
+        // 3. Zone Centrale (Mascotte & Dialogue)
         Column(
             modifier = Modifier
                 .weight(1f)
                 .verticalScroll(rememberScrollState()),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            Spacer(modifier = Modifier.height(6.dp))
+            Spacer(modifier = Modifier.height(4.dp))
 
             // Bulle de dialogue Zero Two
             Card(
@@ -189,19 +275,19 @@ fun MainScreen(
                 shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = ZeroTwoCardBg)
             ) {
-                Column(modifier = Modifier.padding(14.dp)) {
+                Column(modifier = Modifier.padding(12.dp)) {
                     Text(
                         text = state.bubbleMessage,
                         color = ZeroTwoTextWhite,
-                        fontSize = 14.sp,
+                        fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
-                        lineHeight = 20.sp,
+                        lineHeight = 19.sp,
                         textAlign = TextAlign.Start
                     )
                     if (state.isSpeaking) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "🎙️ Zero Two vous parle...",
+                            text = "🎙️ Zero Two te parle...",
                             fontSize = 11.sp,
                             color = ZeroTwoRoseLight,
                             fontWeight = FontWeight.SemiBold
@@ -210,19 +296,23 @@ fun MainScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // Sprite animé de Zero Two
-            val spriteUrl = "${state.serverUrl.trimEnd('/')}/api/sprites/${state.currentOutfit}/${state.spriteState}.png"
+            // Sprite animé Zero Two avec basculement automatique Asset local / Serveur PC
+            val localAssetPath = "file:///android_asset/sprites/nora_${state.currentOutfit}_${state.spriteState}.png"
+            val fallbackLocalPath = "file:///android_asset/sprites/nora_${state.spriteState}.png"
+            val serverSpriteUrl = "${state.serverUrl.trimEnd('/')}/api/sprites/${state.currentOutfit}/${state.spriteState}.png"
+            val targetSpriteUrl = if (state.isConnected) serverSpriteUrl else localAssetPath
+
             Box(
                 modifier = Modifier
-                    .size(200.dp)
+                    .size(190.dp)
                     .offset(y = floatOffset.dp),
                 contentAlignment = Alignment.Center
             ) {
                 AsyncImage(
                     model = ImageRequest.Builder(context)
-                        .data(spriteUrl)
+                        .data(targetSpriteUrl)
                         .crossfade(true)
                         .build(),
                     contentDescription = "Zero Two Mascot",
@@ -244,7 +334,7 @@ fun MainScreen(
                             .background(if (isSelected) ZeroTwoCrimson else ZeroTwoCardBg)
                             .border(1.dp, if (isSelected) ZeroTwoPink else ZeroTwoBorder, RoundedCornerShape(20.dp))
                             .clickable { viewModel.selectOutfit(id) }
-                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                            .padding(horizontal = 12.dp, vertical = 5.dp)
                     ) {
                         Text(
                             text = label,
@@ -256,25 +346,25 @@ fun MainScreen(
                 }
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(8.dp))
 
-            // 3. Panneau Dynamique des Capacités & Domotique
+            // 4. Panneau Dynamique des Capacités & Domotique
             Text(
-                text = "⚡ CONTRÔLES DYNAMIQUES DU PC & MAISON",
+                text = if (state.isConnected) "⚡ CONTRÔLES PC & MAISON CONNECTÉE" else "📱 ACTIONS RAPIDES DU SMARTPHONE",
                 fontSize = 11.sp,
                 fontWeight = FontWeight.Bold,
-                color = ZeroTwoPink,
+                color = if (state.isConnected) ZeroTwoPink else ZeroTwoCyan,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 4.dp, vertical = 4.dp)
+                    .padding(horizontal = 4.dp, vertical = 2.dp)
             )
 
             LazyVerticalGrid(
                 columns = GridCells.Fixed(2),
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(180.dp),
-                contentPadding = PaddingValues(4.dp),
+                    .height(175.dp),
+                contentPadding = PaddingValues(2.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
@@ -284,21 +374,21 @@ fun MainScreen(
             }
         }
 
-        // 4. Barre Inférieure (Microphone & Saisie Texte)
+        // 5. Barre Inférieure (Microphone & Saisie Texte)
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp),
+                .padding(top = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             OutlinedTextField(
                 value = inputText,
                 onValueChange = { inputText = it },
-                placeholder = { Text("Parler ou donner un ordre...", color = ZeroTwoTextMuted, fontSize = 12.sp) },
+                placeholder = { Text("Parler à Nora ou donner un ordre...", color = ZeroTwoTextMuted, fontSize = 12.sp) },
                 modifier = Modifier
                     .weight(1f)
-                    .height(52.dp),
-                shape = RoundedCornerShape(26.dp),
+                    .height(50.dp),
+                shape = RoundedCornerShape(25.dp),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = ZeroTwoPink,
                     unfocusedBorderColor = ZeroTwoBorder,
@@ -312,7 +402,6 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.width(8.dp))
 
-            // Bouton Envoyer texte
             if (inputText.isNotBlank()) {
                 IconButton(
                     onClick = {
@@ -320,14 +409,13 @@ fun MainScreen(
                         inputText = ""
                     },
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(46.dp)
                         .clip(CircleShape)
                         .background(ZeroTwoPink)
                 ) {
                     Text("➤", fontSize = 18.sp, color = Color.White)
                 }
             } else {
-                // Bouton Microphone Vocal Android
                 IconButton(
                     onClick = {
                         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
@@ -342,7 +430,7 @@ fun MainScreen(
                         }
                     },
                     modifier = Modifier
-                        .size(48.dp)
+                        .size(46.dp)
                         .clip(CircleShape)
                         .background(
                             Brush.linearGradient(
@@ -356,7 +444,7 @@ fun MainScreen(
         }
     }
 
-    // Dialogue de configuration de l'IP du serveur PC
+    // Dialogue de configuration de l'IP du serveur PC ou Tunnel 4G/5G
     if (showSettingsDialog) {
         AlertDialog(
             onDismissRequest = { showSettingsDialog = false },
@@ -364,15 +452,15 @@ fun MainScreen(
             text = {
                 Column {
                     Text(
-                        "Entrez l'adresse IP locale de votre PC (Wi-Fi) :",
+                        "Entrez l'adresse IP Wi-Fi locale ou l'URL de tunnel distant Cloudflare :",
                         color = ZeroTwoTextWhite,
-                        fontSize = 13.sp
+                        fontSize = 12.sp
                     )
                     Spacer(modifier = Modifier.height(8.dp))
                     OutlinedTextField(
                         value = settingsUrlText,
                         onValueChange = { settingsUrlText = it },
-                        label = { Text("URL du serveur") },
+                        label = { Text("URL Serveur / Tunnel") },
                         singleLine = true,
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = ZeroTwoPink,
@@ -381,8 +469,8 @@ fun MainScreen(
                     )
                     Spacer(modifier = Modifier.height(6.dp))
                     Text(
-                        "Exemple : http://192.168.1.183:8000",
-                        fontSize = 11.sp,
+                        "Wi-Fi Maison : http://192.168.1.183:8000\nAccès 4G/5G : URL Cloudflare générée par 'activer_acces_distant.bat'",
+                        fontSize = 10.sp,
                         color = ZeroTwoTextMuted
                     )
                 }
@@ -395,7 +483,7 @@ fun MainScreen(
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = ZeroTwoPink)
                 ) {
-                    Text("Sauvegarder", color = Color.White)
+                    Text("Enregistrer", color = Color.White)
                 }
             },
             dismissButton = {
@@ -409,11 +497,48 @@ fun MainScreen(
 }
 
 @Composable
+fun HealthChip(
+    icon: String,
+    title: String,
+    subtitle: String,
+    highlight: Boolean,
+    onClick: (() -> Unit)?
+) {
+    val chipModifier = Modifier
+        .clip(RoundedCornerShape(12.dp))
+        .background(ZeroTwoCardBg)
+        .border(1.dp, if (highlight) ZeroTwoCyan else ZeroTwoBorder, RoundedCornerShape(12.dp))
+        .then(if (onClick != null) Modifier.clickable { onClick() } else Modifier)
+        .padding(horizontal = 10.dp, vertical = 6.dp)
+
+    Row(
+        modifier = chipModifier,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(text = icon, fontSize = 16.sp)
+        Spacer(modifier = Modifier.width(6.dp))
+        Column {
+            Text(
+                text = title,
+                fontSize = 12.sp,
+                fontWeight = FontWeight.Bold,
+                color = if (highlight) ZeroTwoCyan else ZeroTwoTextWhite
+            )
+            Text(
+                text = subtitle,
+                fontSize = 9.sp,
+                color = ZeroTwoTextMuted
+            )
+        }
+    }
+}
+
+@Composable
 fun ActionCard(action: NoraAction, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
-            .height(76.dp)
+            .height(72.dp)
             .border(
                 1.dp,
                 if (action.active) ZeroTwoPink else ZeroTwoBorder,
@@ -428,16 +553,16 @@ fun ActionCard(action: NoraAction, onClick: () -> Unit) {
         Row(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = 12.dp, vertical = 8.dp),
+                .padding(horizontal = 10.dp, vertical = 6.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Text(text = action.icon, fontSize = 24.sp)
-            Spacer(modifier = Modifier.width(10.dp))
+            Text(text = action.icon, fontSize = 22.sp)
+            Spacer(modifier = Modifier.width(8.dp))
             Column {
                 Text(
                     text = action.title,
                     color = ZeroTwoTextWhite,
-                    fontSize = 13.sp,
+                    fontSize = 12.sp,
                     fontWeight = FontWeight.SemiBold
                 )
                 Text(

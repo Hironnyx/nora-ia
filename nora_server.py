@@ -74,6 +74,9 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         # 6. Carnet d'apprentissage autonome
         elif path == "/api/learning":
             self._handle_learning()
+        # 7. Données Santé & Bien-Être
+        elif path == "/api/health":
+            self._handle_health_get()
         else:
             self._set_cors_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint introuvable"}).encode("utf-8"))
@@ -97,6 +100,9 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         # 3. Changement de tenue de Zero Two
         elif path == "/api/outfit":
             self._handle_set_outfit(data)
+        # 4. Synchronisation Santé Mobile (Health Connect / Pas)
+        elif path == "/api/health":
+            self._handle_health_post(data)
         else:
             self._set_cors_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint POST introuvable"}).encode("utf-8"))
@@ -219,6 +225,30 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
                 "category": "pc",
                 "action": "optimize_code",
                 "active": False
+            },
+            {
+                "id": "log_water",
+                "title": "Boire un Verre d'Eau",
+                "icon": "💧",
+                "category": "sante",
+                "action": "log_water",
+                "active": False
+            },
+            {
+                "id": "screen_pause",
+                "title": "Pause Écran / Yeux",
+                "icon": "🧘",
+                "category": "sante",
+                "action": "screen_pause",
+                "active": False
+            },
+            {
+                "id": "health_report",
+                "title": "Bilan Santé Darling",
+                "icon": "🩺",
+                "category": "sante",
+                "action": "health_report",
+                "active": False
             }
         ]
 
@@ -243,8 +273,24 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"error": "Message vide"}).encode("utf-8"))
             return
 
+        # Synchroniser les métriques de santé mobiles éventuelles transmises
+        if "mobile_health" in data or "battery" in data:
+            import agent_health
+            agent_health.health_agent.sync_mobile_health_data(data.get("mobile_health", data))
+
         # 1. Analyse de l'intention et réponse par le cerveau Nora
         intent, chat_reply = nora_brain.analyze_intent_and_respond(user_message)
+
+        # Extraction d'ordre matériel pour le téléphone
+        device_cmd = None
+        if intent.startswith("PHONE_ACTION:"):
+            parts = intent.split(":")
+            if len(parts) >= 3 and parts[1] == "flashlight":
+                device_cmd = {"type": "flashlight", "action": parts[2]}
+            elif len(parts) >= 3 and parts[1] == "volume":
+                device_cmd = {"type": "volume", "value": int(parts[2])}
+            elif len(parts) >= 3 and parts[1] == "launch_app":
+                device_cmd = {"type": "launch_app", "package": parts[2]}
 
         # 2. Génération audio de la voix Zero Two via edge-tts + RVC (RTX 4080)
         audio_id = f"speech_mobile_{int(time.time()*1000)}.mp3"
@@ -270,7 +316,8 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             "intent": intent,
             "audio_url": audio_url,
             "sprite_state": "idle",
-            "outfit": memory_manager.get_current_outfit()
+            "outfit": memory_manager.get_current_outfit(),
+            "device_command": device_cmd
         }
         self._set_cors_headers(200)
         self.wfile.write(json.dumps(resp, ensure_ascii=False).encode("utf-8"))
@@ -318,6 +365,15 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
                 reply = f"Darling ! {res['explication']} Dis-moi 'Oui applique' si tu veux que je valide ce code !"
             else:
                 reply = "Mon code est déjà parfaitement optimisé pour le moment, Darling !"
+        elif action_name == "log_water":
+            import agent_health
+            _, reply = agent_health.health_agent.log_water(1)
+        elif action_name == "screen_pause":
+            import agent_health
+            reply = agent_health.health_agent.log_screen_break()
+        elif action_name == "health_report":
+            import agent_health
+            reply = agent_health.health_agent.get_health_report_speech()
 
         # Générer l'audio de confirmation avec la voix de Zero Two
         audio_id = f"speech_action_{int(time.time()*1000)}.mp3"
@@ -408,6 +464,33 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             "knowledge": kb,
             "journal_markdown": journal_text,
             "summary": nora_learner.get_recent_learnings_summary()
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_health_get(self):
+        import agent_health
+        today = agent_health.health_agent.get_today()
+        journal_md = ""
+        if agent_health.JOURNAL_FILE.exists():
+            try:
+                with open(agent_health.JOURNAL_FILE, "r", encoding="utf-8") as f:
+                    journal_md = f.read()
+            except Exception:
+                pass
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "today": today,
+            "speech_report": agent_health.health_agent.get_health_report_speech(),
+            "journal_markdown": journal_md
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_health_post(self, data: dict):
+        import agent_health
+        agent_health.health_agent.sync_mobile_health_data(data)
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "success": True,
+            "today": agent_health.health_agent.get_today(),
+            "reply": "Données santé synchronisées avec succès, Darling !"
         }, ensure_ascii=False).encode("utf-8"))
 
     def log_message(self, format, *args):

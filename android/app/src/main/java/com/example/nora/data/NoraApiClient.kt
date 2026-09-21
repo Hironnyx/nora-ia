@@ -31,24 +31,32 @@ data class NoraCapabilities(
     val currentOutfit: String
 )
 
+data class NoraDeviceCommand(
+    val type: String,
+    val action: String?,
+    val value: Int?
+)
+
 data class NoraChatResponse(
     val reply: String,
     val audioUrl: String?,
     val intent: String?,
-    val outfit: String?
+    val outfit: String?,
+    val deviceCommand: NoraDeviceCommand? = null
 )
 
 data class NoraActionResponse(
     val success: Boolean,
     val reply: String,
-    val audioUrl: String?
+    val audioUrl: String?,
+    val deviceCommand: NoraDeviceCommand? = null
 )
 
 class NoraApiClient {
     private val client = OkHttpClient.Builder()
-        .connectTimeout(5, TimeUnit.SECONDS)
+        .connectTimeout(4, TimeUnit.SECONDS)
         .readTimeout(15, TimeUnit.SECONDS)
-        .writeTimeout(10, TimeUnit.SECONDS)
+        .writeTimeout(8, TimeUnit.SECONDS)
         .build()
 
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
@@ -100,10 +108,15 @@ class NoraApiClient {
         }
     }
 
-    suspend fun sendChat(baseUrl: String, message: String): Result<NoraChatResponse> = withContext(Dispatchers.IO) {
+    suspend fun sendChat(baseUrl: String, message: String, mobileHealth: JSONObject? = null): Result<NoraChatResponse> = withContext(Dispatchers.IO) {
         try {
             val cleanUrl = baseUrl.trimEnd('/')
-            val payload = JSONObject().apply { put("message", message) }
+            val payload = JSONObject().apply {
+                put("message", message)
+                if (mobileHealth != null) {
+                    put("mobile_health", mobileHealth)
+                }
+            }
             val request = Request.Builder()
                 .url("$cleanUrl/api/chat")
                 .post(payload.toString().toRequestBody(jsonMedia))
@@ -118,7 +131,18 @@ class NoraApiClient {
             val audioUrl = if (json.has("audio_url") && !json.isNull("audio_url")) json.optString("audio_url") else null
             val intent = json.optString("intent")
             val outfit = json.optString("outfit")
-            Result.success(NoraChatResponse(reply, audioUrl, intent, outfit))
+
+            var devCmd: NoraDeviceCommand? = null
+            val cmdObj = json.optJSONObject("device_command")
+            if (cmdObj != null) {
+                devCmd = NoraDeviceCommand(
+                    type = cmdObj.optString("type"),
+                    action = if (cmdObj.has("action")) cmdObj.optString("action") else null,
+                    value = if (cmdObj.has("value")) cmdObj.optInt("value") else null
+                )
+            }
+
+            Result.success(NoraChatResponse(reply, audioUrl, intent, outfit, devCmd))
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -142,6 +166,20 @@ class NoraApiClient {
             val reply = json.optString("reply", "Action exécutée.")
             val audioUrl = if (json.has("audio_url") && !json.isNull("audio_url")) json.optString("audio_url") else null
             Result.success(NoraActionResponse(success, reply, audioUrl))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun syncHealth(baseUrl: String, healthData: JSONObject): Result<Boolean> = withContext(Dispatchers.IO) {
+        try {
+            val cleanUrl = baseUrl.trimEnd('/')
+            val request = Request.Builder()
+                .url("$cleanUrl/api/health")
+                .post(healthData.toString().toRequestBody(jsonMedia))
+                .build()
+            val response = client.newCall(request).execute()
+            Result.success(response.isSuccessful)
         } catch (e: Exception) {
             Result.failure(e)
         }
