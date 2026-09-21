@@ -1095,6 +1095,13 @@ class NoraMascot(QWidget):
             QApplication.quit()
 
 def run_app():
+    # Démarrer le serveur API mobile en arrière-plan pour le smartphone
+    try:
+        import nora_server
+        nora_server.start_server_background(8000)
+    except Exception as e:
+        print(f"Avertissement serveur mobile: {e}")
+
     app = QApplication(sys.argv)
     mascot = NoraMascot()
     mascot.show()
