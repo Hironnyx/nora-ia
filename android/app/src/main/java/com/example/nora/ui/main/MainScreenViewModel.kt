@@ -64,6 +64,10 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         NoraAction("torch", "Lampe Torche", "💡", "device", "device:flashlight", false),
         NoraAction("wol", "Réveil PC (WoL)", "⚡", "network", "device:wake_pc", false),
         NoraAction("water", "Boire un verre", "💧", "health", "health:water", false),
+        NoraAction("patrimoine", "Bilan Patrimoine 💎", "💎", "finance", "finance:patrimoine", false),
+        NoraAction("crypto", "Marché Crypto (BTC)", "🪙", "finance", "finance:crypto", false),
+        NoraAction("bourse", "Bourse & ETF", "📈", "finance", "finance:bourse", false),
+        NoraAction("budget", "Comptes Bancaires", "🏦", "finance", "finance:budget", false),
         NoraAction("youtube", "Lancer YouTube", "📺", "apps", "device:launch_youtube", false),
         NoraAction("spotify", "Lancer Spotify", "🎵", "apps", "device:launch_spotify", false),
         NoraAction("vibrate", "Vibrer Téléphone", "📳", "device", "device:vibrate", false)
@@ -445,6 +449,30 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                     deviceController.vibrate(250)
                     _uiState.update { it.copy(bubbleMessage = "📳 Bzz ! Je te tiens la main Darling !") }
                     return@launch
+                }
+                "finance:patrimoine" -> {
+                    if (!_uiState.value.isConnected) {
+                        sendMessage("Donne-moi mon bilan financier et patrimoine")
+                        return@launch
+                    }
+                }
+                "finance:crypto" -> {
+                    if (!_uiState.value.isConnected) {
+                        sendMessage("Comment se porte le marché crypto et le Bitcoin ?")
+                        return@launch
+                    }
+                }
+                "finance:bourse" -> {
+                    if (!_uiState.value.isConnected) {
+                        sendMessage("Comment va la bourse, le S&P 500 et mes investissements ?")
+                        return@launch
+                    }
+                }
+                "finance:budget" -> {
+                    if (!_uiState.value.isConnected) {
+                        sendMessage("Quel est le solde de mes comptes et mon budget ?")
+                        return@launch
+                    }
                 }
             }
 

@@ -309,6 +309,51 @@ def analyze_intent_and_respond(user_text: str) -> tuple[str, str]:
         val = int(m_ph_vol.group(1))
         return f"PHONE_ACTION:volume:{val}", f"Je règle le volume de ton téléphone à {val}%, Darling ! 🔊"
 
+    # 6h. Suite Financière (Budget & Banques, Bourse & ETF, Crypto & Web3, Patrimoine Net Global)
+    if any(w in clean_input for w in ["patrimoine", "richesse", "fortune", "valeur totale", "mes actifs", "bilan financier"]):
+        import finance_manager
+        return "CHAT", finance_manager.get_global_speech_report()
+
+    # Détection Dépenses / Revenus / Budget
+    if any(w in clean_input for w in ["j'ai payé", "jai paye", "j'ai dépensé", "jai depense", "acheté", "achete", "salaire reçu"]):
+        import agent_budget
+        tx = agent_budget.budget_agent.parse_natural_language(user_text)
+        if tx["amount"] != 0.0:
+            agent_budget.budget_agent.add_transaction(tx["amount"], tx["category"], tx["description"], tx["account"])
+            verb = "dépense" if tx["amount"] < 0 else "revenu"
+            return "CHAT", f"C'est noté Darling ! J'ai enregistré ta {verb} de {abs(tx['amount']):.2f} euros dans '{tx['category']}'. Nouveau solde de ton compte {tx['account']} : {agent_budget.budget_agent.get_accounts().get(tx['account'], {}).get('balance', 0):.2f} euros."
+
+    if any(w in clean_input for w in ["mes comptes", "compte courant", "mon budget", "combien il me reste", "solde de mes comptes", "mon livret"]):
+        import agent_budget
+        return "CHAT", agent_budget.budget_agent.get_summary_speech()
+
+    # Détection Bourse / Actions / ETF
+    if any(w in clean_input for w in ["bourse", "actions", "action", "etf", "s&p", "cac 40", "cac40", "msci world", "pea", "compte titre"]):
+        import agent_bourse
+        # Vérification si action spécifique demandée
+        for tick in ["nvidia", "apple", "tesla", "microsoft", "lvmh", "total"]:
+            if tick in clean_input:
+                q = agent_bourse.bourse_agent.fetch_ticker_quote(tick)
+                if q.get("price"):
+                    return "CHAT", f"L'action {q['name']} cote actuellement à {q['price']} {q['currency']} ({q['change_pct']:+.2f}% aujourd'hui), Darling !"
+        return "CHAT", agent_bourse.bourse_agent.get_summary_speech()
+
+    # Détection Crypto / Bitcoin / Web3
+    if any(w in clean_input for w in ["crypto", "bitcoin", "btc", "ethereum", "eth", "solana", "sol", "fear and greed", "peur et cupidité"]):
+        import agent_crypto
+        if "fear" in clean_input or "greed" in clean_input or "sentiment" in clean_input or "peur" in clean_input:
+            fng = agent_crypto.crypto_agent.fetch_fear_and_greed_index()
+            return "CHAT", f"L'indice Crypto Fear & Greed est à {fng['value']}/100, en zone '{fng['classification_fr']}', Darling !"
+        elif "solana" in clean_input or "sol" in clean_input:
+            q = agent_crypto.crypto_agent.fetch_crypto_price_usd("SOL")
+            return "CHAT", f"Le Solana (SOL) s'échange à {q['price_eur']:.2f} euros ({q['change_24h_pct']:+.1f}% sur 24h), Darling !"
+        elif "ethereum" in clean_input or "eth" in clean_input:
+            q = agent_crypto.crypto_agent.fetch_crypto_price_usd("ETH")
+            return "CHAT", f"L'Ethereum (ETH) s'échange à {q['price_eur']:.2f} euros ({q['change_24h_pct']:+.1f}% sur 24h), Darling !"
+        elif "bitcoin" in clean_input or "btc" in clean_input:
+            q = agent_crypto.crypto_agent.fetch_crypto_price_usd("BTC")
+            return "CHAT", f"Le Bitcoin (BTC) cote à {q['price_eur']:.2f} euros ({q['change_24h_pct']:+.1f}% sur 24h), Darling !"
+        return "CHAT", agent_crypto.crypto_agent.get_summary_speech()
 
     # 4. Diagnostic matériel instantané du PC (Sondes system_monitor)
     pc_status_patterns = [

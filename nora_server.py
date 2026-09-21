@@ -77,6 +77,15 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         # 7. Données Santé & Bien-Être
         elif path == "/api/health":
             self._handle_health_get()
+        # 8. Suite Financière (Budget, Bourse, Crypto, Patrimoine)
+        elif path == "/api/finances":
+            self._handle_finances_get()
+        elif path == "/api/bourse":
+            self._handle_bourse_get()
+        elif path == "/api/crypto":
+            self._handle_crypto_get()
+        elif path == "/api/patrimoine":
+            self._handle_patrimoine_get()
         else:
             self._set_cors_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint introuvable"}).encode("utf-8"))
@@ -103,6 +112,9 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         # 4. Synchronisation Santé Mobile (Health Connect / Pas)
         elif path == "/api/health":
             self._handle_health_post(data)
+        # 5. Ajout de transaction financière
+        elif path == "/api/finances":
+            self._handle_finances_post(data)
         else:
             self._set_cors_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint POST introuvable"}).encode("utf-8"))
@@ -249,6 +261,38 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
                 "category": "sante",
                 "action": "health_report",
                 "active": False
+            },
+            {
+                "id": "patrimoine_report",
+                "title": "Bilan Patrimoine 💎",
+                "icon": "💎",
+                "category": "finance",
+                "action": "patrimoine_report",
+                "active": False
+            },
+            {
+                "id": "crypto_market",
+                "title": "Marché Crypto (BTC)",
+                "icon": "🪙",
+                "category": "finance",
+                "action": "crypto_market",
+                "active": False
+            },
+            {
+                "id": "bourse_report",
+                "title": "Bourse & ETF",
+                "icon": "📈",
+                "category": "finance",
+                "action": "bourse_report",
+                "active": False
+            },
+            {
+                "id": "budget_report",
+                "title": "Comptes Bancaires",
+                "icon": "🏦",
+                "category": "finance",
+                "action": "budget_report",
+                "active": False
             }
         ]
 
@@ -374,6 +418,18 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         elif action_name == "health_report":
             import agent_health
             reply = agent_health.health_agent.get_health_report_speech()
+        elif action_name == "patrimoine_report":
+            import finance_manager
+            reply = finance_manager.get_global_speech_report()
+        elif action_name == "crypto_market":
+            import agent_crypto
+            reply = agent_crypto.crypto_agent.get_summary_speech()
+        elif action_name == "bourse_report":
+            import agent_bourse
+            reply = agent_bourse.bourse_agent.get_summary_speech()
+        elif action_name == "budget_report":
+            import agent_budget
+            reply = agent_budget.budget_agent.get_summary_speech()
 
         # Générer l'audio de confirmation avec la voix de Zero Two
         audio_id = f"speech_action_{int(time.time()*1000)}.mp3"
@@ -491,6 +547,59 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             "success": True,
             "today": agent_health.health_agent.get_today(),
             "reply": "Données santé synchronisées avec succès, Darling !"
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_finances_get(self):
+        import agent_budget
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "accounts": agent_budget.budget_agent.get_accounts(),
+            "total_liquidities": agent_budget.budget_agent.get_total_liquidities(),
+            "transactions": agent_budget.budget_agent.data.get("transactions", []),
+            "speech": agent_budget.budget_agent.get_summary_speech()
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_finances_post(self, data: dict):
+        import agent_budget
+        amount = float(data.get("amount", 0.0))
+        category = data.get("category", "Autre")
+        desc = data.get("description", "Dépense enregistrée")
+        acc = data.get("account", "Courant")
+        tx = agent_budget.budget_agent.add_transaction(amount, category, desc, acc)
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "success": True,
+            "transaction": tx,
+            "accounts": agent_budget.budget_agent.get_accounts()
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_bourse_get(self):
+        import agent_bourse
+        val = agent_bourse.bourse_agent.get_portfolio_valuation()
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "portfolio": val,
+            "speech": agent_bourse.bourse_agent.get_summary_speech()
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_crypto_get(self):
+        import agent_crypto
+        val = agent_crypto.crypto_agent.get_portfolio_valuation()
+        fng = agent_crypto.crypto_agent.fetch_fear_and_greed_index()
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "portfolio": val,
+            "fear_and_greed": fng,
+            "speech": agent_crypto.crypto_agent.get_summary_speech()
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_patrimoine_get(self):
+        import finance_manager
+        pat = finance_manager.get_patrimoine_global()
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "patrimoine": pat,
+            "speech": finance_manager.get_global_speech_report()
         }, ensure_ascii=False).encode("utf-8"))
 
     def log_message(self, format, *args):
