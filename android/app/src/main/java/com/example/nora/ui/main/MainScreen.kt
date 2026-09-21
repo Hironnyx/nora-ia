@@ -146,15 +146,17 @@ fun MainScreen(
                     )
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    val statusColor = when {
-                        state.isConnected -> ZeroTwoEmerald
-                        state.isStandaloneMode -> ZeroTwoCyan
-                        else -> ZeroTwoCrimson
+                    val statusColor = when (state.connectionType) {
+                        "local" -> ZeroTwoEmerald
+                        "remote" -> ZeroTwoCyan
+                        "autonomous" -> ZeroTwoPurple
+                        else -> if (state.isConnected) ZeroTwoEmerald else ZeroTwoRoseLight
                     }
-                    val statusText = when {
-                        state.isConnected -> "Connecté PC (RTX 4080)"
-                        state.isStandaloneMode -> "Mode Autonome Mobile 📱"
-                        else -> "Initialisation..."
+                    val statusText = when (state.connectionType) {
+                        "local" -> "Wi-Fi Maison (RTX 4080) 🟢"
+                        "remote" -> "4G/5G Distant (Cloudflare) 🌐"
+                        "autonomous" -> "Mode Autonome Mobile 📱"
+                        else -> if (state.isConnected) "Connecté au PC" else "Recherche de Nora..."
                     }
                     Box(
                         modifier = Modifier

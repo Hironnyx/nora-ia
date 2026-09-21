@@ -2,7 +2,7 @@
   "version": "1.0",
   "historique": {
     "2026-09-22": {
-      "verres_eau": 2,
+      "verres_eau": 3,
       "objectif_verres": 8,
       "pauses_ecran": 1,
       "sommeil_heures": 7.5,
@@ -12,7 +12,8 @@
       "frequence_cardiaque_moyenne": 72,
       "niveau_energie": 8,
       "derniere_hydratation": "01:03",
-      "notes": []
+      "notes": [],
+      "batterie_telephone": 25
     }
   }
 }

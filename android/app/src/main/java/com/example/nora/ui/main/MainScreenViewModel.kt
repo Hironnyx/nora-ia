@@ -2,6 +2,8 @@ package com.example.nora.ui.main
 
 import android.app.Application
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import androidx.lifecycle.AndroidViewModel
@@ -27,8 +29,11 @@ import java.util.Locale
 
 data class NoraUiState(
     val serverUrl: String = "http://192.168.1.183:8000",
+    val localServerUrl: String = "http://192.168.1.183:8000",
+    val remoteServerUrl: String? = null,
     val isConnected: Boolean = false,
     val isStandaloneMode: Boolean = false,
+    val connectionType: String = "none", // "local" (Wi-Fi maison), "remote" (4G/5G Cloudflare), "autonomous" (PC éteint)
     val currentOutfit: String = "franxx",
     val spriteState: String = "idle",
     val bubbleMessage: String = "Bonjour Darling ! Je suis prête. Tu peux me parler ou piloter la maison.",
@@ -67,6 +72,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     private val _uiState = MutableStateFlow(
         NoraUiState(
             serverUrl = prefs.getString("server_url", "http://192.168.1.183:8000") ?: "http://192.168.1.183:8000",
+            localServerUrl = prefs.getString("local_server_url", "http://192.168.1.183:8000") ?: "http://192.168.1.183:8000",
             actions = defaultStandaloneActions,
             todaySteps = healthManager.getTodaySteps(),
             todayWater = healthManager.getTodayWater(),
@@ -83,6 +89,22 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     private var tts: TextToSpeech? = null
     private var ttsReady = false
 
+    private val connectivityManager = application.getSystemService(Context.CONNECTIVITY_SERVICE) as? ConnectivityManager
+    private val networkCallback = object : ConnectivityManager.NetworkCallback() {
+        override fun onAvailable(network: Network) {
+            viewModelScope.launch {
+                delay(1200)
+                refreshCapabilities()
+            }
+        }
+        override fun onLost(network: Network) {
+            viewModelScope.launch {
+                delay(1200)
+                refreshCapabilities()
+            }
+        }
+    }
+
     private val audioPlayer = NoraAudioPlayer(
         onPlaybackStarted = {
             _uiState.update { it.copy(isSpeaking = true) }
@@ -98,7 +120,16 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         initTts(application)
         startBlinkLoop()
         startTelemetryLoop()
+        registerNetworkWatcher()
         refreshCapabilities()
+    }
+
+    private fun registerNetworkWatcher() {
+        try {
+            connectivityManager?.registerDefaultNetworkCallback(networkCallback)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 
     private fun initTts(context: Context) {
@@ -107,7 +138,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                 tts?.let { engine ->
                     val result = engine.setLanguage(Locale.FRENCH)
                     if (result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED) {
-                        engine.setPitch(1.15f) // Voix légèrement plus aiguë pour Zero Two
+                        engine.setPitch(1.15f)
                         engine.setSpeechRate(1.02f)
                         engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
                             override fun onStart(utteranceId: String?) {
@@ -157,39 +188,79 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     fun setServerUrl(url: String) {
         val clean = url.trim().trimEnd('/')
         prefs.edit().putString("server_url", clean).apply()
-        _uiState.update { it.copy(serverUrl = clean) }
+        prefs.edit().putString("local_server_url", clean).apply()
+        _uiState.update { it.copy(serverUrl = clean, localServerUrl = clean) }
         refreshCapabilities()
     }
 
+    /**
+     * Algorithme de Routage Intelligent & Automatique :
+     * 1. Test rapide du Wi-Fi Maison (Local) : 192.168.1.183 (latence < 2s)
+     * 2. Si échec (passage en 4G/5G dehors) : Découverte automatique du tunnel Cloudflare sur GitHub
+     * 3. Si échec (PC éteint) : Passage en Mode Autonome Smartphone (Gemini Direct)
+     */
     fun refreshCapabilities() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
-            val res = apiClient.fetchCapabilities(_uiState.value.serverUrl)
-            res.onSuccess { cap ->
+            val localUrl = _uiState.value.localServerUrl
+
+            // Étape 1 : Vérification Wi-Fi local rapide
+            val localRes = apiClient.fetchCapabilities(localUrl, fastCheck = true)
+            if (localRes.isSuccess) {
+                val cap = localRes.getOrNull()!!
                 _uiState.update {
                     it.copy(
                         isConnected = true,
                         isStandaloneMode = false,
+                        connectionType = "local",
+                        serverUrl = localUrl,
                         isLoading = false,
                         actions = cap.actions.ifEmpty { defaultStandaloneActions },
                         outfits = cap.outfits,
                         currentOutfit = cap.currentOutfit
                     )
                 }
-                // Synchronisation santé avec le PC
                 syncHealthToPc()
-            }.onFailure { err ->
-                // PC inaccessible -> Passage transparent en Mode Autonome Téléphone
-                _uiState.update {
-                    it.copy(
-                        isConnected = false,
-                        isStandaloneMode = true,
-                        isLoading = false,
-                        actions = defaultStandaloneActions,
-                        errorMessage = null,
-                        bubbleMessage = "🌸 Je suis en Mode Autonome sur ton téléphone, Darling ! Ton PC dort ou est éteint, mais je veille toujours sur toi."
-                    )
+                return@launch
+            }
+
+            // Étape 2 : Passage automatique au tunnel sécurisé 4G/5G Cloudflare
+            val remoteRes = apiClient.fetchRemoteTunnelEndpoint()
+            if (remoteRes.isSuccess) {
+                val tunnelUrl = remoteRes.getOrNull()!!
+                val tunnelCapRes = apiClient.fetchCapabilities(tunnelUrl, fastCheck = false)
+                if (tunnelCapRes.isSuccess) {
+                    val cap = tunnelCapRes.getOrNull()!!
+                    _uiState.update {
+                        it.copy(
+                            isConnected = true,
+                            isStandaloneMode = false,
+                            connectionType = "remote",
+                            serverUrl = tunnelUrl,
+                            remoteServerUrl = tunnelUrl,
+                            isLoading = false,
+                            actions = cap.actions.ifEmpty { defaultStandaloneActions },
+                            outfits = cap.outfits,
+                            currentOutfit = cap.currentOutfit,
+                            bubbleMessage = "🌐 Connectée à ton PC en 4G/5G via le tunnel sécurisé Cloudflare, Darling !"
+                        )
+                    }
+                    syncHealthToPc()
+                    return@launch
                 }
+            }
+
+            // Étape 3 : PC inaccessible ou éteint -> Mode Autonome Smartphone
+            _uiState.update {
+                it.copy(
+                    isConnected = false,
+                    isStandaloneMode = true,
+                    connectionType = "autonomous",
+                    isLoading = false,
+                    actions = defaultStandaloneActions,
+                    errorMessage = null,
+                    bubbleMessage = "🌸 Je suis en Mode Autonome sur ton téléphone, Darling ! Ton PC dort ou est éteint, mais je veille toujours sur toi."
+                )
             }
         }
     }
@@ -308,7 +379,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                     speakTts("Je suis là avec toi Darling !")
                 }
             } else {
-                // Mode Connecté : Envoi au serveur PC avec télémétrie santé
+                // Mode Connecté : Envoi au serveur PC (Local ou 4G/5G Tunnel)
                 val healthPayload = healthManager.buildSyncPayload(deviceController.getBatteryLevel())
                 val res = apiClient.sendChat(_uiState.value.serverUrl, text, healthPayload)
                 res.onSuccess { reply ->
@@ -337,16 +408,8 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                         speakTts(reply.reply)
                     }
                 }.onFailure { err ->
-                    // Échec PC -> Basculement transparent en mode autonome
-                    _uiState.update {
-                        it.copy(
-                            isLoading = false,
-                            isConnected = false,
-                            isStandaloneMode = true,
-                            bubbleMessage = "Le PC ne répond plus, Darling ! Je bascule en Mode Autonome sur ton téléphone."
-                        )
-                    }
-                    speakTts("Le PC ne répond plus, Darling ! Je prends le relais sur ton téléphone.")
+                    // Re-tentative immédiate de réconciliation réseau
+                    refreshCapabilities()
                 }
             }
         }
@@ -473,6 +536,11 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
 
     override fun onCleared() {
         super.onCleared()
+        try {
+            connectivityManager?.unregisterNetworkCallback(networkCallback)
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
         audioPlayer.stop()
         tts?.stop()
         tts?.shutdown()

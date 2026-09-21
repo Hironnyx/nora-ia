@@ -61,14 +61,47 @@ class NoraApiClient {
 
     private val jsonMedia = "application/json; charset=utf-8".toMediaType()
 
-    suspend fun fetchCapabilities(baseUrl: String): Result<NoraCapabilities> = withContext(Dispatchers.IO) {
+    private val fastClient = OkHttpClient.Builder()
+        .connectTimeout(2, TimeUnit.SECONDS)
+        .readTimeout(3, TimeUnit.SECONDS)
+        .writeTimeout(3, TimeUnit.SECONDS)
+        .build()
+
+    suspend fun fetchRemoteTunnelEndpoint(): Result<String> = withContext(Dispatchers.IO) {
+        try {
+            val rawUrl = "https://raw.githubusercontent.com/Hironnyx/nora-ia/main/remote_endpoint.json?nocache=${System.currentTimeMillis()}"
+            val request = Request.Builder()
+                .url(rawUrl)
+                .get()
+                .build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) {
+                return@withContext Result.failure(Exception("HTTP ${response.code}"))
+            }
+            val body = response.body?.string() ?: ""
+            val json = JSONObject(body)
+            val tunnelUrl = json.optString("tunnel_url")
+            if (tunnelUrl.isNotBlank() && tunnelUrl.startsWith("http") && !tunnelUrl.contains("trycloudflare.com/")) {
+                Result.success(tunnelUrl.trimEnd('/'))
+            } else if (tunnelUrl.isNotBlank() && tunnelUrl.startsWith("http")) {
+                Result.success(tunnelUrl.trimEnd('/'))
+            } else {
+                Result.failure(Exception("URL de tunnel vide"))
+            }
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun fetchCapabilities(baseUrl: String, fastCheck: Boolean = false): Result<NoraCapabilities> = withContext(Dispatchers.IO) {
         try {
             val cleanUrl = baseUrl.trimEnd('/')
             val request = Request.Builder()
                 .url("$cleanUrl/api/capabilities")
                 .get()
                 .build()
-            val response = client.newCall(request).execute()
+            val activeClient = if (fastCheck) fastClient else client
+            val response = activeClient.newCall(request).execute()
             if (!response.isSuccessful) {
                 return@withContext Result.failure(Exception("HTTP ${response.code}"))
             }

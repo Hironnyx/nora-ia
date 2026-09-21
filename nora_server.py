@@ -501,6 +501,14 @@ def start_server_background(port: int = SERVER_PORT) -> ThreadingSimpleServer:
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
     print(f"🚀 Serveur Nora Mobile actif sur http://0.0.0.0:{port} (Wi-Fi : http://192.168.1.183:{port})")
+
+    # Démarrage automatique du tunnel 4G/5G sécurisé en arrière-plan
+    try:
+        import tunnel_manager
+        threading.Thread(target=tunnel_manager.start_remote_tunnel, args=(True,), daemon=True).start()
+    except Exception as e:
+        print(f"⚠️ Démarrage tunnel 4G/5G : {e}")
+
     return server
 
 if __name__ == "__main__":
