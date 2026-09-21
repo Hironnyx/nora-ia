@@ -220,6 +220,54 @@ def analyze_intent_and_respond(user_text: str) -> tuple[str, str]:
             res = tools_web.autonomous_web_browse_and_summarize(query, visual=True)
             return "CHAT", res["speech"]
 
+    # 6b. Studio Vidéo YouTube & Shorts Autonome
+    m_vid = re.search(r"(?:crée|cree|fais|génère|genere|monte) *(?:moi)? *(?:une )*(?:nouvelle )*(?:vidéo|video|short|clip|tiktok) *(?:youtube)? *(?:sur|à propos de|de)? *([a-zA-Z0-9_\- 'àéèêëîïôöùûüç]+)?", clean_input)
+    if m_vid and any(w in clean_input for w in ["vidéo", "video", "short", "tiktok"]):
+        import nora_video_studio
+        topic = m_vid.group(1).strip() if m_vid.group(1) else ""
+        format_type = "shorts" if any(w in clean_input for w in ["short", "shorts", "tiktok", "vertical", "réel", "reel"]) else "standard"
+        if not topic or topic in ["youtube", "moi", "nora", "une vidéo", "un short"]:
+            res = nora_video_studio.create_video_from_latest_learning(format_type=format_type)
+        else:
+            res = nora_video_studio.create_video(topic, format_type=format_type)
+        if res.get("success"):
+            return "CHAT", f"Tadaaa ! J'ai terminé le montage de notre vidéo sur '{res['title']}' ! Elle est prête dans le dossier creations_videos, viens voir, Darling !"
+        else:
+            return "CHAT", f"Oups Darling, j'ai rencontré un petit imprévu pendant le montage : {res.get('error', 'erreur')}"
+
+    # 6c. Auto-Apprentissage Autonome & Carnet de Connaissances
+    m_learn = re.search(r"(?:apprends|renseigne[- ]toi|découvre|decouvre|explore) *(?:sur|à propos de|des choses sur)? *([a-zA-Z0-9_\- 'àéèêëîïôöùûüç]+)?", clean_input)
+    if m_learn and any(w in clean_input for w in ["apprends", "renseigne", "découvre", "decouvre"]):
+        import nora_learner
+        topic = m_learn.group(1).strip() if m_learn.group(1) else ""
+        if topic and topic not in ["quelque chose", "un truc", "ce que tu veux", "toi"]:
+            res = nora_learner.learn_about(topic, autonomous=False)
+        else:
+            res = nora_learner.learn_something_new()
+        return "CHAT", res.get("message_vocal", f"C'est fait Darling ! J'ai appris plein de choses et j'ai tout noté dans mon carnet d'apprentissage !")
+
+    # 6d. Consultation du Carnet d'Apprentissage
+    if re.search(r"(?:qu'est[- ]ce que|que|qu'as|tu as) *(?:tu as |as[- ]tu )*(?:appris|découvert|explore)", clean_input) or "carnet d'apprentissage" in clean_input:
+        import nora_learner
+        summary = nora_learner.get_recent_learnings_summary()
+        return "CHAT", summary
+
+    # 6e. Auto-Amélioration et Évolution du Code Source
+    if any(w in clean_input for w in ["analyse ton code", "ameliore ton code", "améliore ton code", "optimise ton code", "examine ton code"]):
+        import nora_code_evolver
+        res = nora_code_evolver.analyze_and_propose_improvement("system_monitor.py")
+        if res.get("success"):
+            return "CHAT", f"Darling ! {res['explication']} Tu veux que j'applique cette amélioration dans mon code ?"
+        else:
+            return "CHAT", f"J'ai examiné mon code, Darling ! Tout est propre et optimisé pour le moment."
+
+    if re.search(r"^(?:oui|valide|applique|accepte|mets à jour|go) *(?:l'|cette)? *(?:amélioration|amelioration|optimisation|le code)", clean_input):
+        import nora_code_evolver
+        latest_prop = nora_code_evolver.get_latest_pending_proposal()
+        if latest_prop:
+            ok, msg = nora_code_evolver.apply_improvement_with_git(latest_prop["id"])
+            return "CHAT", f"{msg} Merci de ta confiance, Darling !"
+
 
     # 4. Diagnostic matériel instantané du PC (Sondes system_monitor)
     pc_status_patterns = [

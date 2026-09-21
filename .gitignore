@@ -15,7 +15,12 @@ nora_crash.log
 
 # Fichiers d'exécution temporaires
 temp_audio/
+temp_video/
+temp_sandbox/
 screenshots/
+creations_videos/*.mp4
+creations_videos/*.avi
+
 
 # PyInstaller & Build distributions
 build/

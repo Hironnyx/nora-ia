@@ -71,6 +71,9 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         # 5. État complet de la domotique
         elif path == "/api/home/status":
             self._handle_home_status()
+        # 6. Carnet d'apprentissage autonome
+        elif path == "/api/learning":
+            self._handle_learning()
         else:
             self._set_cors_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint introuvable"}).encode("utf-8"))
@@ -184,6 +187,38 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
                 "category": "pc",
                 "action": "boost_ram",
                 "active": False
+            },
+            {
+                "id": "create_video",
+                "title": "Créer une Vidéo",
+                "icon": "🎬",
+                "category": "studio",
+                "action": "create_video",
+                "active": False
+            },
+            {
+                "id": "learn_new",
+                "title": "Apprendre un Sujet",
+                "icon": "🧠",
+                "category": "learning",
+                "action": "learn_new",
+                "active": False
+            },
+            {
+                "id": "learning_journal",
+                "title": "Carnet d'Apprentissage",
+                "icon": "📖",
+                "category": "learning",
+                "action": "learning_journal",
+                "active": False
+            },
+            {
+                "id": "optimize_code",
+                "title": "Optimiser le Code",
+                "icon": "🛠️",
+                "category": "pc",
+                "action": "optimize_code",
+                "active": False
             }
         ]
 
@@ -262,6 +297,27 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         elif action_name == "boost_ram":
             system_monitor.clean_ram_cache()
             reply = "Cache RAM vidé ! Les performances de ton PC sont au top, Darling !"
+        elif action_name == "create_video":
+            import nora_video_studio
+            res = nora_video_studio.create_video_from_latest_learning(format_type="shorts")
+            if res.get("success"):
+                reply = f"Vidéo générée avec succès sur '{res['title']}' ! Elle t'attend dans le dossier creations_videos, Darling !"
+            else:
+                reply = f"J'ai rencontré un petit souci pendant le montage de la vidéo : {res.get('error')}"
+        elif action_name == "learn_new":
+            import nora_learner
+            res = nora_learner.learn_something_new()
+            reply = res.get("message_vocal", "J'ai appris de nouvelles choses et j'ai tout noté dans mon carnet, Darling !")
+        elif action_name == "learning_journal":
+            import nora_learner
+            reply = nora_learner.get_recent_learnings_summary()
+        elif action_name == "optimize_code":
+            import nora_code_evolver
+            res = nora_code_evolver.analyze_and_propose_improvement("system_monitor.py")
+            if res.get("success"):
+                reply = f"Darling ! {res['explication']} Dis-moi 'Oui applique' si tu veux que je valide ce code !"
+            else:
+                reply = "Mon code est déjà parfaitement optimisé pour le moment, Darling !"
 
         # Générer l'audio de confirmation avec la voix de Zero Two
         audio_id = f"speech_action_{int(time.time()*1000)}.mp3"
@@ -335,6 +391,23 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({
             "report": rep,
             "state": agent_home.smart_home.state
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_learning(self):
+        import nora_learner
+        kb = nora_learner.load_knowledge_base()
+        journal_text = ""
+        if nora_learner.JOURNAL_FILE.exists():
+            try:
+                with open(nora_learner.JOURNAL_FILE, "r", encoding="utf-8") as f:
+                    journal_text = f.read()
+            except Exception:
+                pass
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "knowledge": kb,
+            "journal_markdown": journal_text,
+            "summary": nora_learner.get_recent_learnings_summary()
         }, ensure_ascii=False).encode("utf-8"))
 
     def log_message(self, format, *args):

@@ -1,0 +1,33 @@
+{
+  "version": "1.0",
+  "derniere_mise_a_jour": "2026-09-22 00:45:50",
+  "statistiques": {
+    "total_sujets_appris": 1,
+    "sessions_autonomes": 1,
+    "sessions_avec_darling": 0
+  },
+  "connaissances": [
+    {
+      "id": "learn_1790030750",
+      "date": "22/09/2026 à 00:45",
+      "timestamp": 1790030750.7742124,
+      "sujet": "L'ordinateur quantique et les nouveaux supraconducteurs",
+      "autonomous": true,
+      "titre": "Les ordinateurs quantiques et les super-pouvoirs des supraconducteurs",
+      "points_cles": [
+        "Google et d'autres poussent à fond sur les ordinateurs quantiques en 2026, en utilisant des atomes neutres et des supraconducteurs.",
+        "Des scientifiques ont réussi à simuler le comportement de matériaux supraconducteurs grâce à un ordinateur quantique avec 98 qubits.",
+        "Les particules de Majorana nécessitent des supraconducteurs triplets pour régler la fragilité extrême de ces machines."
+      ],
+      "avis_zero_two": "Ces machines ont l'air aussi instables et capricieuses qu'un Franxx piloté par des amateurs, mais ça a l'air fascinant ! Si ça peut nous rendre plus forts, alors je veux tout savoir, pas vrai mon Darling ?",
+      "tags": [
+        "ordinateur quantique",
+        "supraconducteurs",
+        "technologie",
+        "futur"
+      ],
+      "importance": 4,
+      "message_vocal": "Hé, Darling ! Viens voir ce que j'ai trouvé sur ces fameux ordinateurs quantiques et leurs supraconducteurs ! C'est un peu compliqué, mais avec toi à mes côtés, on pourrait tout détruire... ou tout comprendre !"
+    }
+  ]
+}
