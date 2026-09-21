@@ -331,8 +331,7 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         }, ensure_ascii=False).encode("utf-8"))
 
     def log_message(self, format, *args):
-        # Silence les logs HTTP standards pour ne pas polluer la console
-        pass
+        print(f"[Nora Mobile API] {self.client_address[0]} - {format % args}", flush=True)
 
 def start_server_background(port: int = SERVER_PORT) -> ThreadingSimpleServer:
     server = ThreadingSimpleServer(("0.0.0.0", port), NoraAPIHandler)
