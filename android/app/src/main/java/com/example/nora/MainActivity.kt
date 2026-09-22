@@ -44,8 +44,19 @@ class MainActivity : ComponentActivity() {
     private fun requestNeededPermissions() {
         val permissions = mutableListOf(
             Manifest.permission.CAMERA,
-            Manifest.permission.RECORD_AUDIO
+            Manifest.permission.RECORD_AUDIO,
+            Manifest.permission.SEND_SMS,
+            Manifest.permission.READ_SMS,
+            Manifest.permission.RECEIVE_SMS,
+            Manifest.permission.READ_CONTACTS,
+            Manifest.permission.READ_PHONE_STATE,
+            Manifest.permission.READ_CALL_LOG,
+            Manifest.permission.CALL_PHONE
         )
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            permissions.add(Manifest.permission.ANSWER_PHONE_CALLS)
+        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             permissions.add(Manifest.permission.ACTIVITY_RECOGNITION)

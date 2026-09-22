@@ -261,7 +261,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
             val remoteRes = apiClient.fetchRemoteTunnelEndpoint()
             if (remoteRes.isSuccess) {
                 val tunnelUrl = remoteRes.getOrNull()!!
-                val tunnelCapRes = apiClient.fetchCapabilities(tunnelUrl, fastCheck = false)
+                val tunnelCapRes = apiClient.fetchCapabilities(tunnelUrl, fastCheck = true)
                 if (tunnelCapRes.isSuccess) {
                     val cap = tunnelCapRes.getOrNull()!!
                     _uiState.update {
@@ -371,23 +371,84 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                 )
             }
 
-            // Gestion des commandes directes au téléphone dans le texte
-            val lower = text.lowercase().trim()
+            val clean = text.trim()
+            val lower = clean.lowercase()
+
+            // 1. Commandes matérielles directes téléphone
             if (lower.contains("allume la lampe") || lower.contains("allumer la torche") || lower.contains("active la torche")) {
                 deviceController.setFlashlight(true)
-                _uiState.update { it.copy(isFlashlightOn = true) }
+                _uiState.update { it.copy(isLoading = false, isFlashlightOn = true, bubbleMessage = "Lampe torche allumée, Maverick.") }
+                speakTts("Lampe torche allumée, Maverick.")
+                return@launch
             } else if (lower.contains("éteins la lampe") || lower.contains("eteindre la lampe") || lower.contains("éteindre la torche")) {
                 deviceController.setFlashlight(false)
-                _uiState.update { it.copy(isFlashlightOn = false) }
-            } else if (lower.contains("réveille le pc") || lower.contains("allume le pc") || lower.contains("démarrer le pc")) {
+                _uiState.update { it.copy(isLoading = false, isFlashlightOn = false, bubbleMessage = "Lampe torche éteinte, Maverick.") }
+                speakTts("Lampe torche éteinte, Maverick.")
+                return@launch
+            } else if (lower.contains("réveille le pc") || lower.contains("allume le pc") || lower.contains("démarrer le pc") || lower.contains("reveille le pc")) {
                 wakePc()
                 return@launch
             } else if (lower.contains("j'ai bu") || lower.contains("verre d'eau") || lower.contains("boire de l'eau")) {
                 addWater()
+                _uiState.update { it.copy(isLoading = false) }
+                return@launch
             }
 
+            // 2. Gestion prioritaire et directe des SMS sur le smartphone (même si le PC est éteint)
+            val smsRegex = Regex("""(?:envoie|envoyer|écris|ecris)\s+(?:un\s+)?(?:sms|message|texte)\s+(?:à|a)\s+([a-zA-ZÀ-ÿ0-9_\-\s]+?)(?:\s*(?:pour lui dire|disant|qui dit|:|de|que)\s*(.*))?$""", RegexOption.IGNORE_CASE)
+            val smsMatch = smsRegex.find(clean)
+            if (smsMatch != null) {
+                val target = smsMatch.groupValues[1].trim()
+                val body = smsMatch.groupValues[2].trim().ifEmpty { "Message envoyé par Nora pour Maverick." }
+                if (target.isNotBlank()) {
+                    val result = smsManager.sendSms(target, body)
+                    result.onSuccess { msg ->
+                        _uiState.update { it.copy(isLoading = false, bubbleMessage = msg, spriteState = "idle") }
+                        speakTts(msg)
+                    }.onFailure { err ->
+                        val errMsg = "Échec d'envoi du SMS : ${err.message}. Veuillez vérifier que les autorisations SMS et Contacts sont accordées."
+                        _uiState.update { it.copy(isLoading = false, bubbleMessage = errMsg, spriteState = "idle") }
+                        speakTts("Impossible d'envoyer le SMS, Maverick. Veuillez vérifier les permissions.")
+                    }
+                    return@launch
+                }
+            }
+
+            // 3. Consultation directe des SMS
+            if (lower.contains("lis mes sms") || lower.contains("derniers sms") || lower.contains("lire mes sms") || lower.contains("mes sms") || lower.contains("derniers messages")) {
+                val recent = smsManager.getRecentSms(3)
+                if (recent.isEmpty()) {
+                    val emptyMsg = "Aucun SMS récent trouvé sur votre téléphone, Maverick."
+                    _uiState.update { it.copy(isLoading = false, bubbleMessage = emptyMsg, spriteState = "idle") }
+                    speakTts(emptyMsg)
+                } else {
+                    val sb = StringBuilder("Derniers SMS reçus :\n")
+                    recent.forEach { item ->
+                        sb.append("• ${item.senderName} : \"${item.body}\"\n")
+                    }
+                    val resText = sb.toString().trim()
+                    _uiState.update { it.copy(isLoading = false, bubbleMessage = resText, spriteState = "idle") }
+                    speakTts("Vous avez un SMS de ${recent.first().senderName}, Maverick.")
+                }
+                return@launch
+            }
+
+            // 4. Mode Standardiste
+            if (lower.contains("mode standardiste") || lower.contains("parle à ma place") || lower.contains("parle a ma place") || lower.contains("fais la standardiste")) {
+                phoneManager.isStandardisteModeActive = !phoneManager.isStandardisteModeActive
+                val statusText = if (phoneManager.isStandardisteModeActive) {
+                    "Mode Standardiste activé, Maverick. Je gère vos appels entrants."
+                } else {
+                    "Mode Standardiste désactivé, Maverick."
+                }
+                _uiState.update { it.copy(isLoading = false, bubbleMessage = statusText, spriteState = "idle") }
+                speakTts(statusText)
+                return@launch
+            }
+
+            // 5. Routage IA (Mode Connecté PC avec repli autonome instantané si PC éteint)
             if (_uiState.value.isStandaloneMode) {
-                // Mode Autonome : Appel direct à Google Gemini Flash
+                // Mode Autonome Téléphone : Appel direct à Gemini 3.5 Flash-Lite
                 val res = geminiDirectClient.generateZeroTwoReply(
                     userMessage = text,
                     todaySteps = healthManager.getTodaySteps(),
@@ -397,7 +458,8 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                     _uiState.update {
                         it.copy(
                             isLoading = false,
-                            bubbleMessage = reply
+                            bubbleMessage = reply,
+                            spriteState = "idle"
                         )
                     }
                     speakTts(reply)
@@ -406,13 +468,13 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                         it.copy(
                             isLoading = false,
                             spriteState = "idle",
-                            bubbleMessage = "Je suis à vos côtés, Maverick. Même sans réseau, je reste opérationnelle. 🌸"
+                            bubbleMessage = "Je suis à vos côtés, Maverick. Même sans le PC, je reste à votre entière écoute. 🌸"
                         )
                     }
                     speakTts("Je suis à votre disposition, Maverick.")
                 }
             } else {
-                // Mode Connecté : Envoi au serveur PC (Local ou 4G/5G Tunnel)
+                // Mode Connecté : Envoi au serveur PC
                 val healthPayload = healthManager.buildSyncPayload(deviceController.getBatteryLevel())
                 val res = apiClient.sendChat(_uiState.value.serverUrl, text, healthPayload)
                 res.onSuccess { reply ->
@@ -425,7 +487,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                         )
                     }
 
-                    // Exécution des commandes matérielles & téléphoniques renvoyées par le cerveau PC
+                    // Exécution des commandes matérielles renvoyées par le PC
                     reply.deviceCommand?.let { cmd ->
                         when (cmd.type) {
                             "sms", "send_sms" -> {
@@ -451,8 +513,8 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                                     recent.forEach { item ->
                                         sb.append("• ${item.senderName} : \"${item.body}\"\n")
                                     }
-                                    val text = sb.toString().trim()
-                                    _uiState.update { it.copy(bubbleMessage = text) }
+                                    val textOut = sb.toString().trim()
+                                    _uiState.update { it.copy(bubbleMessage = textOut) }
                                     speakTts("Vous avez un SMS de ${recent.first().senderName}.")
                                 }
                             }
@@ -479,7 +541,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                         }
                     }
 
-                    // Lecture audio RVC Nora si disponible, sinon synthèse vocale
+                    // Audio RVC si disponible, sinon synthèse vocale
                     reply.audioUrl?.let { audioEndpoint ->
                         val fullUrl = if (audioEndpoint.startsWith("http")) audioEndpoint else "${_uiState.value.serverUrl}$audioEndpoint"
                         audioPlayer.playStream(fullUrl)
@@ -487,8 +549,38 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                         speakTts(reply.reply)
                     }
                 }.onFailure { err ->
-                    // Re-tentative immédiate de réconciliation réseau
-                    refreshCapabilities()
+                    // PC inaccessible ou éteint -> Bascule instantanée en mode autonome smartphone !
+                    _uiState.update {
+                        it.copy(
+                            isConnected = false,
+                            isStandaloneMode = true,
+                            connectionType = "autonomous"
+                        )
+                    }
+                    val fallbackRes = geminiDirectClient.generateZeroTwoReply(
+                        userMessage = text,
+                        todaySteps = healthManager.getTodaySteps(),
+                        todayWater = healthManager.getTodayWater()
+                    )
+                    fallbackRes.onSuccess { reply ->
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                bubbleMessage = reply,
+                                spriteState = "idle"
+                            )
+                        }
+                        speakTts(reply)
+                    }.onFailure {
+                        _uiState.update {
+                            it.copy(
+                                isLoading = false,
+                                spriteState = "idle",
+                                bubbleMessage = "Votre PC est hors ligne, Maverick. Je reste à vos côtés en mode autonome sur votre smartphone."
+                            )
+                        }
+                        speakTts("Votre PC est hors ligne, Maverick. Je reste à votre service sur votre téléphone.")
+                    }
                 }
             }
         }

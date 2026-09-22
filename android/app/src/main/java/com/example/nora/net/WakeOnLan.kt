@@ -10,9 +10,14 @@ object WakeOnLan {
 
     const val DEFAULT_PC_MAC = "A8:A1:59:53:0D:70"
     const val DEFAULT_BROADCAST_IP = "192.168.1.255"
+    const val DEFAULT_WAN_IP = "82.67.216.56"
     const val WOL_PORT = 9
 
-    suspend fun wakePc(macAddress: String = DEFAULT_PC_MAC, broadcastIp: String = DEFAULT_BROADCAST_IP): Result<String> = withContext(Dispatchers.IO) {
+    suspend fun wakePc(
+        macAddress: String = DEFAULT_PC_MAC,
+        broadcastIp: String = DEFAULT_BROADCAST_IP,
+        wanIp: String = DEFAULT_WAN_IP
+    ): Result<String> = withContext(Dispatchers.IO) {
         try {
             val cleanMac = macAddress.replace(":", "").replace("-", "")
             if (cleanMac.length != 12) {
@@ -33,14 +38,30 @@ object WakeOnLan {
                 System.arraycopy(macBytes, 0, bytes, i, macBytes.size)
             }
 
-            val address = InetAddress.getByName(broadcastIp)
-            val packet = DatagramPacket(bytes, bytes.size, address, WOL_PORT)
-            val socket = DatagramSocket()
-            socket.broadcast = true
-            socket.send(packet)
-            socket.close()
+            // 1. Envoi sur le Wi-Fi local (192.168.1.255)
+            try {
+                val addressLocal = InetAddress.getByName(broadcastIp)
+                val packetLocal = DatagramPacket(bytes, bytes.size, addressLocal, WOL_PORT)
+                val socketLocal = DatagramSocket()
+                socketLocal.broadcast = true
+                socketLocal.send(packetLocal)
+                socketLocal.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
 
-            Result.success("Paquet Magique Wake-on-LAN envoyé à $macAddress !")
+            // 2. Envoi sur l'IP Publique Freebox pour réveil à distance en 4G/5G
+            try {
+                val addressWan = InetAddress.getByName(wanIp)
+                val packetWan = DatagramPacket(bytes, bytes.size, addressWan, WOL_PORT)
+                val socketWan = DatagramSocket()
+                socketWan.send(packetWan)
+                socketWan.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            Result.success("Signal de réveil envoyé (Local Wi-Fi et 4G/5G WAN) !")
         } catch (e: Exception) {
             Result.failure(e)
         }

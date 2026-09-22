@@ -78,6 +78,9 @@ class SmsAndContactsManager(private val context: Context) {
     }
 
     fun sendSms(contactOrNumber: String, messageText: String): Result<String> {
+        if (!hasSmsPermissions()) {
+            return Result.failure(SecurityException("Autorisation SMS non accordée. Veuillez l'activer dans les Paramètres Android."))
+        }
         return try {
             val number = resolveContactNumber(contactOrNumber)
             val smsMgr: SmsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
