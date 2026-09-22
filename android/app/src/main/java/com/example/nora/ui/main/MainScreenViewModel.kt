@@ -10,6 +10,8 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.nora.ai.GeminiDirectClient
 import com.example.nora.audio.NoraAudioPlayer
+import com.example.nora.controller.NoraPhoneManager
+import com.example.nora.controller.SmsAndContactsManager
 import com.example.nora.data.NoraAction
 import com.example.nora.data.NoraApiClient
 import com.example.nora.data.NoraOutfit
@@ -17,6 +19,8 @@ import com.example.nora.device.DeviceController
 import com.example.nora.health.HealthManager
 import com.example.nora.net.WakeOnLan
 import com.example.nora.notifications.NoraNotificationManager
+import com.example.nora.receiver.NoraCallReceiver
+import com.example.nora.service.NoraNotificationListenerService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,7 +40,7 @@ data class NoraUiState(
     val connectionType: String = "none", // "local" (Wi-Fi maison), "remote" (4G/5G Cloudflare), "autonomous" (PC éteint)
     val currentOutfit: String = "franxx",
     val spriteState: String = "idle",
-    val bubbleMessage: String = "Bonjour Darling ! Je suis prête. Tu peux me parler ou piloter la maison.",
+    val bubbleMessage: String = "Bonjour Maverick ! Je suis à votre service. Vous pouvez me parler, consulter vos messages ou piloter vos équipements.",
     val actions: List<NoraAction> = emptyList(),
     val outfits: List<NoraOutfit> = emptyList(),
     val isSpeaking: Boolean = false,
@@ -54,13 +58,18 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     private val prefs = application.getSharedPreferences("nora_prefs", Context.MODE_PRIVATE)
     private val apiClient = NoraApiClient()
 
-    // Hardware & Device Controllers
+    // Hardware, Communications & Device Controllers
     val deviceController = DeviceController(application)
     val healthManager = HealthManager(application)
     val notificationManager = NoraNotificationManager(application)
+    val smsManager = SmsAndContactsManager(application)
+    val phoneManager = NoraPhoneManager(application, smsManager)
     private val geminiDirectClient = GeminiDirectClient("AQ.Ab8RN6LPugLNpFSWqrzBV6PkJP22OGmqPB_J_lqOwwAuh-ywPw")
 
     private val defaultStandaloneActions = listOf(
+        NoraAction("emails", "Mes Mails 📧", "📧", "comms", "comms:emails", false),
+        NoraAction("read_sms", "Lire SMS 📨", "📨", "comms", "comms:read_sms", false),
+        NoraAction("standardiste", "Standardiste 👩‍💼", "👩‍💼", "comms", "comms:standardiste", false),
         NoraAction("torch", "Lampe Torche", "💡", "device", "device:flashlight", false),
         NoraAction("wol", "Réveil PC (WoL)", "⚡", "network", "device:wake_pc", false),
         NoraAction("water", "Boire un verre", "💧", "health", "health:water", false),
@@ -125,7 +134,27 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         startBlinkLoop()
         startTelemetryLoop()
         registerNetworkWatcher()
+        registerCommsReceivers()
         refreshCapabilities()
+    }
+
+    private fun registerCommsReceivers() {
+        NoraCallReceiver.onIncomingCallListener = { number, contact ->
+            viewModelScope.launch {
+                val displayName = if (contact.isNotBlank() && contact != "Numéro masqué") contact else number
+                val announcement = phoneManager.getCallAnnouncement(displayName)
+                _uiState.update { it.copy(bubbleMessage = "📞 Appel entrant : $displayName ($number)") }
+                speakTts(announcement)
+            }
+        }
+
+        NoraNotificationListenerService.onMessageReceivedListener = { msg ->
+            viewModelScope.launch {
+                _uiState.update {
+                    it.copy(bubbleMessage = "💬 Message de ${msg.sender} (${msg.appName}) : \"${msg.message}\"")
+                }
+            }
+        }
     }
 
     private fun registerNetworkWatcher() {
@@ -246,7 +275,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                             actions = cap.actions.ifEmpty { defaultStandaloneActions },
                             outfits = cap.outfits,
                             currentOutfit = cap.currentOutfit,
-                            bubbleMessage = "🌐 Connectée à ton PC en 4G/5G via le tunnel sécurisé Cloudflare, Darling !"
+                            bubbleMessage = "🌐 Connectée à votre PC en 4G/5G via le tunnel sécurisé Cloudflare, Maverick !"
                         )
                     }
                     syncHealthToPc()
@@ -263,7 +292,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                     isLoading = false,
                     actions = defaultStandaloneActions,
                     errorMessage = null,
-                    bubbleMessage = "🌸 Je suis en Mode Autonome sur ton téléphone, Darling ! Ton PC dort ou est éteint, mais je veille toujours sur toi."
+                    bubbleMessage = "🌸 Je suis en Mode Autonome sur votre téléphone, Maverick. Votre PC est éteint ou inaccessible, mais je reste à votre disposition."
                 )
             }
         }
@@ -282,10 +311,10 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
 
         if (current == 8) {
             notificationManager.sendWaterReminder(current)
-            _uiState.update { it.copy(bubbleMessage = "🎉 Félicitations Darling ! Tu as bu tes 8 verres d'eau recommandés aujourd'hui ! Tu es au top !") }
-            if (_uiState.value.isStandaloneMode) speakTts("Félicitations Darling ! Tu as atteint tes 8 verres d'eau aujourd'hui !")
+            _uiState.update { it.copy(bubbleMessage = "🎉 Félicitations Maverick ! Vous avez bu vos 8 verres d'eau recommandés aujourd'hui ! C'est parfait !") }
+            if (_uiState.value.isStandaloneMode) speakTts("Félicitations Maverick ! Vous avez atteint vos 8 verres d'eau aujourd'hui !")
         } else {
-            _uiState.update { it.copy(bubbleMessage = "💧 Bravo Darling ! Verre d'eau n°$current enregistré. Reste bien hydraté !") }
+            _uiState.update { it.copy(bubbleMessage = "💧 Bravo Maverick ! Verre d'eau n°$current enregistré. Pensez à bien vous hydrater.") }
         }
 
         if (_uiState.value.isConnected) {
@@ -307,11 +336,11 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                 _uiState.update {
                     it.copy(
                         isLoading = false,
-                        bubbleMessage = "⚡ Signal de réveil envoyé au PC (RTX 4080) ! Attends 15 secondes qu'il démarre, puis touche 🔄."
+                        bubbleMessage = "⚡ Signal de réveil envoyé au PC (RTX 4080) ! Attendez quelques secondes qu'il démarre, puis touchez 🔄."
                     )
                 }
                 if (_uiState.value.isStandaloneMode) {
-                    speakTts("Signal de réveil envoyé à ton ordinateur, Darling !")
+                    speakTts("Signal de réveil envoyé à votre ordinateur, Maverick !")
                 }
             }.onFailure { err ->
                 _uiState.update {
@@ -377,10 +406,10 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                         it.copy(
                             isLoading = false,
                             spriteState = "idle",
-                            bubbleMessage = "Je suis là avec toi Darling ! Même sans réseau je reste à tes côtés. 🌸"
+                            bubbleMessage = "Je suis à vos côtés, Maverick. Même sans réseau, je reste opérationnelle. 🌸"
                         )
                     }
-                    speakTts("Je suis là avec toi Darling !")
+                    speakTts("Je suis à votre disposition, Maverick.")
                 }
             } else {
                 // Mode Connecté : Envoi au serveur PC (Local ou 4G/5G Tunnel)
@@ -396,15 +425,61 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                         )
                     }
 
-                    // Exécution des commandes matérielles renvoyées par le cerveau PC
+                    // Exécution des commandes matérielles & téléphoniques renvoyées par le cerveau PC
                     reply.deviceCommand?.let { cmd ->
-                        deviceController.executeDeviceCommand(cmd.type, cmd.action, cmd.value)
-                        if (cmd.type == "flashlight") {
-                            _uiState.update { it.copy(isFlashlightOn = deviceController.isFlashlightOn()) }
+                        when (cmd.type) {
+                            "sms", "send_sms" -> {
+                                val target = cmd.contact ?: (cmd.value?.toString() ?: "")
+                                val body = cmd.body ?: ""
+                                if (target.isNotBlank() && body.isNotBlank()) {
+                                    val result = smsManager.sendSms(target, body)
+                                    result.onSuccess { msg ->
+                                        _uiState.update { it.copy(bubbleMessage = msg) }
+                                    }.onFailure { err ->
+                                        _uiState.update { it.copy(bubbleMessage = "Échec d'envoi du SMS : ${err.message}") }
+                                    }
+                                }
+                            }
+                            "read_sms" -> {
+                                val recent = smsManager.getRecentSms(3)
+                                if (recent.isEmpty()) {
+                                    val emptyMsg = "Aucun SMS récent trouvé sur votre téléphone, Maverick."
+                                    _uiState.update { it.copy(bubbleMessage = emptyMsg) }
+                                    speakTts(emptyMsg)
+                                } else {
+                                    val sb = StringBuilder("Derniers SMS reçus :\n")
+                                    recent.forEach { item ->
+                                        sb.append("• ${item.senderName} : \"${item.body}\"\n")
+                                    }
+                                    val text = sb.toString().trim()
+                                    _uiState.update { it.copy(bubbleMessage = text) }
+                                    speakTts("Vous avez un SMS de ${recent.first().senderName}.")
+                                }
+                            }
+                            "standardiste", "call_standardiste" -> {
+                                val active = if (cmd.action != null) {
+                                    cmd.action == "enable" || cmd.action == "start" || cmd.action == "on"
+                                } else {
+                                    true
+                                }
+                                phoneManager.isStandardisteModeActive = active
+                                val statusText = if (active) {
+                                    "Mode Standardiste activé, Maverick. Je gère vos appels entrants."
+                                } else {
+                                    "Mode Standardiste désactivé, Maverick."
+                                }
+                                _uiState.update { it.copy(bubbleMessage = statusText) }
+                            }
+                            else -> {
+                                deviceController.executeDeviceCommand(cmd.type, cmd.action, cmd.value)
+                                if (cmd.type == "flashlight") {
+                                    _uiState.update { it.copy(isFlashlightOn = deviceController.isFlashlightOn()) }
+                                }
+                            }
                         }
                     }
 
-                    // Lecture audio RVC Zero Two si disponible, sinon synthèse vocale
+                    // Lecture audio RVC Nora si disponible, sinon synthèse vocale
                     reply.audioUrl?.let { audioEndpoint ->
                         val fullUrl = if (audioEndpoint.startsWith("http")) audioEndpoint else "${_uiState.value.serverUrl}$audioEndpoint"
                         audioPlayer.playStream(fullUrl)
@@ -421,8 +496,37 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
 
     fun triggerAction(action: NoraAction) {
         viewModelScope.launch {
-            // Traitement des actions locales smartphone
+            // Traitement des actions locales smartphone & communications
             when (action.action) {
+                "comms:emails" -> {
+                    sendMessage("Résume-moi mes derniers emails")
+                    return@launch
+                }
+                "comms:read_sms" -> {
+                    val recent = smsManager.getRecentSms(3)
+                    if (recent.isEmpty()) {
+                        val emptyMsg = "Aucun SMS récent trouvé, Maverick."
+                        _uiState.update { it.copy(bubbleMessage = emptyMsg) }
+                        speakTts(emptyMsg)
+                    } else {
+                        val sb = StringBuilder("Voici vos derniers SMS, Maverick :\n")
+                        recent.forEach { item ->
+                            sb.append("• ${item.senderName} : \"${item.body}\"\n")
+                        }
+                        val text = sb.toString().trim()
+                        _uiState.update { it.copy(bubbleMessage = text) }
+                        speakTts("Vous avez reçu un SMS de ${recent.first().senderName}.")
+                    }
+                    return@launch
+                }
+                "comms:standardiste" -> {
+                    phoneManager.isStandardisteModeActive = !phoneManager.isStandardisteModeActive
+                    val state = if (phoneManager.isStandardisteModeActive) "activé" else "désactivé"
+                    val msg = "Mode Standardiste $state, Monsieur Maverick. Je filtre et gère vos appels."
+                    _uiState.update { it.copy(bubbleMessage = msg) }
+                    speakTts(msg)
+                    return@launch
+                }
                 "device:flashlight" -> {
                     toggleTorch()
                     return@launch
@@ -437,17 +541,17 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                 }
                 "device:launch_youtube" -> {
                     deviceController.launchApp("youtube")
-                    _uiState.update { it.copy(bubbleMessage = "📺 YouTube lancé pour toi Darling !") }
+                    _uiState.update { it.copy(bubbleMessage = "📺 YouTube a été ouvert pour vous, Maverick.") }
                     return@launch
                 }
                 "device:launch_spotify" -> {
                     deviceController.launchApp("spotify")
-                    _uiState.update { it.copy(bubbleMessage = "🎵 Spotify lancé pour toi Darling !") }
+                    _uiState.update { it.copy(bubbleMessage = "🎵 Spotify a été ouvert pour vous, Maverick.") }
                     return@launch
                 }
                 "device:vibrate" -> {
                     deviceController.vibrate(250)
-                    _uiState.update { it.copy(bubbleMessage = "📳 Bzz ! Je te tiens la main Darling !") }
+                    _uiState.update { it.copy(bubbleMessage = "📳 Téléphone notifié avec succès, Maverick.") }
                     return@launch
                 }
                 "finance:patrimoine" -> {
@@ -512,7 +616,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                 }
             } else {
                 _uiState.update {
-                    it.copy(bubbleMessage = "Cette commande nécessite la connexion à ton PC (RTX 4080), Darling. Utilise ⚡ pour le réveiller !")
+                    it.copy(bubbleMessage = "Cette commande nécessite la connexion à votre PC (RTX 4080), Maverick. Utilisez ⚡ pour le réveiller !")
                 }
             }
         }

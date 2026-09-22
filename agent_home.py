@@ -180,11 +180,11 @@ class SmartHomeCommander:
                     self.config["hue_bridge_ip"] = ip
                     self.config["mode"] = "hue"
                     self.save_config()
-                    return True, f"Connexion réussie avec le pont Philips Hue ({ip}) ! Nora contrôle désormais vos lumières, Darling !"
+                    return True, f"Connexion réussie avec le pont Philips Hue ({ip}) ! Nora contrôle désormais vos lumières, Maverick !"
                 elif "error" in item:
                     err_type = item["error"].get("type")
                     if err_type == 101:
-                        return False, "Le bouton du pont Hue n'a pas été pressé ! Appuyez sur le gros bouton rond au centre du pont Hue et réessayez, Darling !"
+                        return False, "Le bouton du pont Hue n'a pas été pressé ! Appuyez sur le gros bouton rond au centre du pont Hue et réessayez, Maverick."
                     return False, f"Erreur du pont Hue : {item['error'].get('description', 'Inconnue')}"
         except Exception as e:
             return False, f"Impossible de contacter le pont Hue ({ip}) : {e}"
@@ -295,7 +295,7 @@ class SmartHomeCommander:
                     stat = "allumées" if on is not False else "éteintes"
                     if color_name:
                         return True, f"Toutes les lumières sont passées en {color_name} !"
-                    return True, f"Toutes les lumières de la maison sont maintenant {stat}, Darling !"
+                    return True, f"Toutes les lumières de la maison sont maintenant {stat}, Maverick."
             except Exception as e:
                 return False, f"Erreur de communication avec le pont Hue : {e}"
 
@@ -337,7 +337,7 @@ class SmartHomeCommander:
         url = f"http://{ip}/api/{user}/groups/0/action"
         try:
             requests.put(url, json=payload, timeout=4.0)
-            return True, f"Ordre appliqué à vos lumières Philips Hue, Darling !"
+            return True, "Ordre appliqué à vos lumières Philips Hue, Maverick."
         except Exception as e:
             return False, f"Impossible d'appliquer l'ordre : {e}"
 
@@ -362,7 +362,7 @@ class SmartHomeCommander:
             self.save_state()
             stat = "allumées" if on is not False else "éteintes"
             col_str = f" en {color_name}" if color_name else ""
-            return True, f"[Maison Nora] Toutes les lumières sont {stat}{col_str}, Darling !"
+            return True, f"[Maison Nora] Toutes les lumières sont {stat}{col_str}, Maverick."
 
         # Pièce spécifique
         room = None
@@ -385,15 +385,15 @@ class SmartHomeCommander:
         stat = "allumée" if lights[room]["on"] else "éteinte"
         col_str = f" en {lights[room].get('color')}" if color_name else ""
         room_prep = "de la chambre" if room == "chambre" else ("de la cuisine" if room == "cuisine" else f"du {room}")
-        return True, f"[Maison Nora] La lumière {room_prep} est maintenant {stat}{col_str}, Darling !"
+        return True, f"[Maison Nora] La lumière {room_prep} est maintenant {stat}{col_str}, Maverick."
 
     # -------------------------------------------------------------
-    # AMBIANCE SPÉCIALE ZERO TWO & MODE NUIT
+    # AMBIANCE & MODE NUIT
     # -------------------------------------------------------------
     def activate_zero_two_ambiance(self) -> Tuple[bool, str]:
-        """Met toutes les lumières dans le rose et rouge signature de Zero Two !"""
+        """Ajuste les lumières dans une douce ambiance tamisée rose."""
         ok, _ = self.set_light("all", on=True, brightness=90, color_name="rose")
-        return True, "Ambiance Zero Two activée, Darling ! Tout est baigné dans un doux rose pastel !"
+        return True, "Ambiance tamisée rose activée, Maverick."
 
     def activate_night_mode(self) -> Tuple[bool, str]:
         """Éteint toutes les lumières et ferme les volets pour la nuit."""
@@ -402,7 +402,7 @@ class SmartHomeCommander:
         self.state["covers"]["salon"] = "fermé"
         self.state["covers"]["chambre"] = "fermé"
         self.save_state()
-        return True, "Mode Nuit activé ! Toutes les lumières sont éteintes et les volets sont fermés. Fais de beaux rêves Darling !"
+        return True, "Mode Nuit activé, Maverick. Toutes les lumières sont éteintes et les volets sont fermés. Passez une excellente nuit."
 
     # -------------------------------------------------------------
     # VOLETS ET CHAUFFAGE (SIMULATEUR & HOME ASSISTANT READY)
@@ -425,7 +425,7 @@ class SmartHomeCommander:
 
             self.save_state()
             action = "ouverts" if open_state else "fermés"
-            return True, f"Les volets {room} sont maintenant {action}, Darling !"
+            return True, f"Les volets {room} sont maintenant {action}, Maverick."
 
     def set_temperature(self, temp_celsius: float) -> Tuple[bool, str]:
         """Règle la température de consigne du chauffage / thermostat."""
@@ -433,7 +433,7 @@ class SmartHomeCommander:
             clamped = max(15.0, min(28.0, float(temp_celsius)))
             self.state["climate"]["temperature"] = clamped
             self.save_state()
-            return True, f"Thermostat réglé sur {clamped:.1f}°C, Darling !"
+            return True, f"Thermostat réglé sur {clamped:.1f}°C, Maverick."
 
     # -------------------------------------------------------------
     # RAPPORT GLOBAL D'ÉTAT
@@ -494,7 +494,7 @@ class SmartHomeCommander:
         # 4. État de la Maison
         if re.search(r"(?:état|etat|status|qu'est-ce qui est allumé|qu est ce qui est allume).*(?:maison|lumière|lumiere|chambre|salon|hue)", clean):
             report = self.get_status_report()
-            return True, f"Voici l'état de notre maison, Darling :\n{report}"
+            return True, f"Voici l'état des équipements de votre domicile, Maverick :\n{report}"
 
         # 5. Réglage de couleur spécifique (ex: "mets la lumière du salon en bleu")
         for color in HUE_COLORS.keys():

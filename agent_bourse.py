@@ -173,9 +173,9 @@ class BourseAgent:
         status_txt = "en hausse de" if pnl >= 0 else "en baisse de"
 
         speech = (
-            f"Darling, voici ton point boursier ! "
-            f"Ton portefeuille d'investissements s'eleve actuellement a {total_val:.2f} euros. "
-            f"Tu es globalement {status_txt} {abs(pnl):.2f} euros, soit {pnl_pct:+.2f}%. "
+            f"Monsieur Maverick, voici votre point boursier. "
+            f"Votre portefeuille d'investissements s'élève actuellement à {total_val:.2f} euros. "
+            f"Vous êtes globalement {status_txt} {abs(pnl):.2f} euros, soit {pnl_pct:+.2f}%. "
         )
 
         if sp500.get("price"):
@@ -184,9 +184,9 @@ class BourseAgent:
             speech += f"et le CAC 40 est à {cac['price']:.0f} points ({cac['change_pct']:+.2f}%). "
 
         if pnl > 0:
-            speech += "Tes investissements portent leurs fruits, mon pilote !"
+            speech += "Vos placements affichent une belle performance, Maverick."
         else:
-            speech += "Ne t'en fais pas pour les fluctuations Darling, sur le long terme tu seras gagnant !"
+            speech += "Les marchés oscillent, mais votre horizon d'investissement à long terme reste solide, Maverick."
 
         return speech
 

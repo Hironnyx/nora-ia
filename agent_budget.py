@@ -150,16 +150,16 @@ class BudgetAgent:
         total = self.get_total_liquidities()
 
         speech = (
-            f"Darling, voici l'état de tes comptes bancaires : "
-            f"Tu as {courant:.2f} euros sur ton compte courant, "
-            f"{livret:.2f} euros sur ton Livret A, et {epargne:.2f} euros d'épargne. "
-            f"Cela te fait un total de liquidités de {total:.2f} euros. "
+            f"Monsieur Maverick, voici l'état de vos comptes bancaires : "
+            f"Vous avez {courant:.2f} euros sur votre compte courant, "
+            f"{livret:.2f} euros sur votre Livret A, et {epargne:.2f} euros d'épargne. "
+            f"Ce qui représente un total de liquidités disponibles de {total:.2f} euros. "
         )
 
         if courant < 250:
-            speech += "Attention Darling, ton compte courant est un peu bas pour finir le mois ! Garde un oeil sur tes dépenses."
+            speech += "Attention Maverick, le solde de votre compte courant est un peu juste pour terminer le mois. Restez vigilant sur vos dépenses."
         else:
-            speech += "Tes finances sont très bien gérées Darling, je suis fière de toi !"
+            speech += "Vos finances sont saines et parfaitement gérées, Maverick."
 
         return speech
 

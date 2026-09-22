@@ -12,12 +12,20 @@ __pycache__/
 memoire_nora.json
 smart_home_state.json
 nora_crash.log
+config_mail.json
+finances_*.json
+bourse_*.json
+crypto_*.json
+sante_*.json
+
 
 # Fichiers d'exécution temporaires
 temp_audio/
 temp_video/
 temp_sandbox/
 screenshots/
+audio_responses/
+android/.kotlin/
 creations_videos/*.mp4
 creations_videos/*.avi
 cloudflared.exe

@@ -22,14 +22,14 @@ class NoraNotificationManager(private val context: Context) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val importance = NotificationManager.IMPORTANCE_DEFAULT
             val channel = NotificationChannel(CHANNEL_ID, CHANNEL_NAME, importance).apply {
-                description = "Rappels d'hydratation, suivi des pas et alertes santé de Zero Two"
+                description = "Rappels d'hydratation, suivi des pas et alertes santé de Nora"
             }
             val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
             nm?.createNotificationChannel(channel)
         }
     }
 
-    fun sendZeroTwoNotification(title: String, message: String, notificationId: Int = 101) {
+    fun sendNoraNotification(title: String, message: String, notificationId: Int = 101) {
         try {
             val builder = NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(android.R.drawable.ic_dialog_info)
@@ -48,17 +48,17 @@ class NoraNotificationManager(private val context: Context) {
     }
 
     fun sendWaterReminder(currentGlasses: Int) {
-        sendZeroTwoNotification(
-            "💧 Rappel Hydratation Zero Two",
-            "Darling, bois une gorgée d'eau fraîche ! Tu en es à $currentGlasses/8 verres aujourd'hui. Prends soin de toi ! 🌸",
+        sendNoraNotification(
+            "💧 Rappel Hydratation Nora",
+            "Monsieur Maverick, pensez à vous hydrater. Vous en êtes à $currentGlasses/8 verres aujourd'hui. Prenez soin de vous. 🌸",
             102
         )
     }
 
     fun sendStepGoalCongratulations(steps: Int) {
-        sendZeroTwoNotification(
+        sendNoraNotification(
             "🎉 Objectif de Pas Validé !",
-            "Incroyable Darling ! Tu as déjà atteint $steps pas ! Je suis fière de mon pilote ! 🚀",
+            "Félicitations Maverick ! Vous avez atteint $steps pas aujourd'hui ! C'est une excellente performance. 🚀",
             103
         )
     }

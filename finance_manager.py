@@ -50,12 +50,12 @@ def get_global_speech_report() -> str:
     alloc = pat["allocation"]
 
     speech = (
-        f"Darling, voici ton grand bilan patrimonial global ! "
-        f"Ton patrimoine net s'eleve a {net:.2f} euros. "
-        f"Tu possedes {bank:.2f} euros en banque ({alloc['bank_pct']}%), "
-        f"{bourse:.2f} euros en bourse et ETF ({alloc['bourse_pct']}%), "
-        f"et {crypto:.2f} euros en cryptomonnaies ({alloc['crypto_pct']}%). "
-        f"Tes investissements sont bien diversifies et continuent de grandir, mon Darling !"
+        f"Monsieur Maverick, voici votre bilan patrimonial global. "
+        f"Votre patrimoine net s'élève à {net:.2f} euros. "
+        f"Vous disposez de {bank:.2f} euros de liquidités bancaires ({alloc['bank_pct']}%), "
+        f"{bourse:.2f} euros investis en bourse et ETF ({alloc['bourse_pct']}%), "
+        f"et {crypto:.2f} euros en actifs cryptomonnaies ({alloc['crypto_pct']}%). "
+        f"Votre portefeuille est bien diversifié et vos avoirs sont sous contrôle."
     )
     return speech
 

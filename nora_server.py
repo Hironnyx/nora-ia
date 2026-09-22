@@ -36,6 +36,27 @@ import voice_engine
 import mascot_assets
 
 SERVER_PORT = 8000
+ACTIVE_AUDIO_JOBS: dict[str, threading.Event] = {}
+
+def _synthesize_audio_background(text: str, target_path: Path, job_id: str, evt: threading.Event):
+    """Synthétise l'audio en arrière-plan sans bloquer la réponse texte."""
+    try:
+        asyncio.run(voice_engine._generate_audio_async(text, target_path))
+        try:
+            import voice_cloning
+            final_audio = voice_cloning.convert_to_zero_two(target_path)
+            if final_audio != target_path and final_audio.exists():
+                try:
+                    import shutil
+                    shutil.copy2(final_audio, target_path)
+                except Exception:
+                    pass
+        except Exception as ex:
+            print(f"[RVC Background Convert] {ex}")
+    except Exception as e:
+        print(f"[Audio Background Error] {e}")
+    finally:
+        evt.set()
 
 class ThreadingSimpleServer(ThreadingMixIn, HTTPServer):
     daemon_threads = True
@@ -86,6 +107,9 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             self._handle_crypto_get()
         elif path == "/api/patrimoine":
             self._handle_patrimoine_get()
+        # 9. Courriels (Emails)
+        elif path == "/api/emails":
+            self._handle_emails_get()
         else:
             self._set_cors_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint introuvable"}).encode("utf-8"))
@@ -115,6 +139,9 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         # 5. Ajout de transaction financière
         elif path == "/api/finances":
             self._handle_finances_post(data)
+        # 6. Gestion et envoi de courriels
+        elif path == "/api/emails":
+            self._handle_emails_post(data)
         else:
             self._set_cors_headers(404)
             self.wfile.write(json.dumps({"error": "Endpoint POST introuvable"}).encode("utf-8"))
@@ -293,6 +320,30 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
                 "category": "finance",
                 "action": "budget_report",
                 "active": False
+            },
+            {
+                "id": "check_emails",
+                "title": "Mes Courriels",
+                "icon": "📧",
+                "category": "comms",
+                "action": "check_emails",
+                "active": False
+            },
+            {
+                "id": "call_standardiste",
+                "title": "Mode Standardiste",
+                "icon": "🎙️",
+                "category": "comms",
+                "action": "call_standardiste",
+                "active": False
+            },
+            {
+                "id": "read_sms",
+                "title": "Derniers SMS",
+                "icon": "✉️",
+                "category": "comms",
+                "action": "read_sms",
+                "active": False
             }
         ]
 
@@ -335,24 +386,27 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
                 device_cmd = {"type": "volume", "value": int(parts[2])}
             elif len(parts) >= 3 and parts[1] == "launch_app":
                 device_cmd = {"type": "launch_app", "package": parts[2]}
+            elif len(parts) >= 3 and parts[1] == "send_sms":
+                device_cmd = {"type": "send_sms", "contact": parts[2], "body": parts[3] if len(parts) >= 4 else ""}
+            elif len(parts) >= 2 and parts[1] == "call_standardiste":
+                device_cmd = {"type": "call_standardiste"}
+            elif len(parts) >= 2 and parts[1] == "read_sms":
+                device_cmd = {"type": "read_sms"}
+            elif len(parts) >= 2 and parts[1] == "call_log":
+                device_cmd = {"type": "call_log"}
 
-        # 2. Génération audio de la voix Zero Two via edge-tts + RVC (RTX 4080)
+        # 2. Découplage Audio Asynchrone : Réponse texte immédiate en ~0,17s !
         audio_id = f"speech_mobile_{int(time.time()*1000)}.mp3"
         audio_path = AUDIO_DIR / audio_id
+        evt = threading.Event()
+        ACTIVE_AUDIO_JOBS[audio_id] = evt
 
-        try:
-            asyncio.run(voice_engine._generate_audio_async(chat_reply, audio_path))
-            try:
-                import voice_cloning
-                final_audio = voice_cloning.convert_to_zero_two(audio_path)
-                if final_audio != audio_path and final_audio.exists():
-                    audio_id = final_audio.name
-            except Exception:
-                pass
-            audio_url = f"/api/audio/{audio_id}"
-        except Exception as e:
-            print(f"[Audio Error] {e}")
-            audio_url = None
+        threading.Thread(
+            target=_synthesize_audio_background,
+            args=(chat_reply, audio_path, audio_id, evt),
+            daemon=True
+        ).start()
+        audio_url = f"/api/audio/{audio_id}"
 
         resp = {
             "user_message": user_message,
@@ -398,7 +452,7 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         elif action_name == "learn_new":
             import nora_learner
             res = nora_learner.learn_something_new()
-            reply = res.get("message_vocal", "J'ai appris de nouvelles choses et j'ai tout noté dans mon carnet, Darling !")
+            reply = res.get("message_vocal", "J'ai enrichi mes connaissances dans mon carnet, Maverick.")
         elif action_name == "learning_journal":
             import nora_learner
             reply = nora_learner.get_recent_learnings_summary()
@@ -406,9 +460,9 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             import nora_code_evolver
             res = nora_code_evolver.analyze_and_propose_improvement("system_monitor.py")
             if res.get("success"):
-                reply = f"Darling ! {res['explication']} Dis-moi 'Oui applique' si tu veux que je valide ce code !"
+                reply = f"Maverick : {res['explication']} Dites-moi 'Oui applique' si vous souhaitez valider."
             else:
-                reply = "Mon code est déjà parfaitement optimisé pour le moment, Darling !"
+                reply = "Le code est déjà parfaitement optimisé, Maverick."
         elif action_name == "log_water":
             import agent_health
             _, reply = agent_health.health_agent.log_water(1)
@@ -430,23 +484,25 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         elif action_name == "budget_report":
             import agent_budget
             reply = agent_budget.budget_agent.get_summary_speech()
+        elif action_name == "check_emails":
+            import agent_mail
+            reply = agent_mail.mail_agent.get_summary_speech()
+        elif action_name == "call_standardiste":
+            reply = "Mode Standardiste actif, Maverick. Je prendrai vos prochains appels avec professionnalisme."
+        elif action_name == "read_sms":
+            reply = "Synchronisation de vos derniers messages mobiles demandée, Maverick."
 
-        # Générer l'audio de confirmation avec la voix de Zero Two
+        # Générer l'audio de confirmation en tâche de fond non-bloquante
         audio_id = f"speech_action_{int(time.time()*1000)}.mp3"
         audio_path = AUDIO_DIR / audio_id
-        audio_url = None
-        try:
-            asyncio.run(voice_engine._generate_audio_async(reply, audio_path))
-            try:
-                import voice_cloning
-                final_audio = voice_cloning.convert_to_zero_two(audio_path)
-                if final_audio != audio_path and final_audio.exists():
-                    audio_id = final_audio.name
-            except Exception:
-                pass
-            audio_url = f"/api/audio/{audio_id}"
-        except Exception:
-            pass
+        evt = threading.Event()
+        ACTIVE_AUDIO_JOBS[audio_id] = evt
+        threading.Thread(
+            target=_synthesize_audio_background,
+            args=(reply, audio_path, audio_id, evt),
+            daemon=True
+        ).start()
+        audio_url = f"/api/audio/{audio_id}"
 
         self._set_cors_headers(200)
         self.wfile.write(json.dumps({
@@ -468,6 +524,10 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             self.wfile.write(json.dumps({"error": "Tenue invalide"}).encode("utf-8"))
 
     def _handle_audio(self, filename: str):
+        # Si la génération audio est en cours en tâche de fond, attendre qu'elle se termine
+        if filename in ACTIVE_AUDIO_JOBS:
+            ACTIVE_AUDIO_JOBS[filename].wait(timeout=12.0)
+
         file_path = AUDIO_DIR / filename
         if file_path.exists() and file_path.is_file():
             self._set_cors_headers(200, "audio/mpeg")
@@ -602,6 +662,35 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             "speech": finance_manager.get_global_speech_report()
         }, ensure_ascii=False).encode("utf-8"))
 
+    def _handle_emails_get(self):
+        import agent_mail
+        emails = agent_mail.mail_agent.fetch_recent_emails(unread_only=False, limit=5)
+        self._set_cors_headers(200)
+        self.wfile.write(json.dumps({
+            "emails": emails,
+            "speech": agent_mail.mail_agent.get_summary_speech()
+        }, ensure_ascii=False).encode("utf-8"))
+
+    def _handle_emails_post(self, data: dict):
+        import agent_mail
+        action = data.get("action", "summary")
+        if action == "draft":
+            to = data.get("to", "")
+            subject = data.get("subject", "")
+            instr = data.get("instructions", "")
+            draft = agent_mail.mail_agent.draft_reply(to, subject, instr)
+            self._set_cors_headers(200)
+            self.wfile.write(json.dumps({"draft": draft}, ensure_ascii=False).encode("utf-8"))
+        elif action == "send":
+            to = data.get("to", "")
+            subject = data.get("subject", "")
+            body = data.get("body", "")
+            ok, msg = agent_mail.mail_agent.send_email(to, subject, body)
+            self._set_cors_headers(200)
+            self.wfile.write(json.dumps({"success": ok, "message": msg}, ensure_ascii=False).encode("utf-8"))
+        else:
+            self._handle_emails_get()
+
     def log_message(self, format, *args):
         print(f"[Nora Mobile API] {self.client_address[0]} - {format % args}", flush=True)
 
@@ -610,6 +699,14 @@ def start_server_background(port: int = SERVER_PORT) -> ThreadingSimpleServer:
     t = threading.Thread(target=server.serve_forever, daemon=True)
     t.start()
     print(f"🚀 Serveur Nora Mobile actif sur http://0.0.0.0:{port} (Wi-Fi : http://192.168.1.183:{port})")
+
+    # Pré-chauffage VRAM automatique pour la RTX 4080
+    try:
+        import voice_cloning
+        voice_cloning.warmup_in_background()
+        print("🌸 [VoiceCloning] Pré-chauffage VRAM du modèle vocal lancé en arrière-plan.")
+    except Exception as e:
+        print(f"⚠️ Pré-chauffage VRAM : {e}")
 
     # Démarrage automatique du tunnel 4G/5G sécurisé en arrière-plan
     try:

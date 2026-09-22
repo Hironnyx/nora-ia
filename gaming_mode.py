@@ -107,11 +107,11 @@ def set_gaming_mode(enabled: bool) -> str:
         game = detect_running_game()
         game_str = f" Jeu détecté : {game}." if game else ""
         return (
-            f"🎮 Mode Gaming ACTIVÉ, Darling ! {count} applications en arrière-plan vidées de leur cache "
-            f"({freed} Mo de RAM libérés).{game_str} Silence radio et priorité absolue à tes performances !"
+            f"🎮 Mode Performance Jeu ACTIVÉ, Maverick. {count} processus en arrière-plan vidés de leur cache "
+            f"({freed} Mo de RAM libérés).{game_str} Priorité absolue accordée à vos performances."
         )
     else:
-        return "✨ Mode Gaming DÉSACTIVÉ. Je reprends mes alertes audio normales, Darling !"
+        return "✨ Mode Performance DÉSACTIVÉ. Les alertes audio reprennent leur cours normal, Maverick."
 
 def toggle_gaming_mode() -> Tuple[bool, str]:
     """Bascule l'état du mode gaming."""

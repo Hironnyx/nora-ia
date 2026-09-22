@@ -120,9 +120,9 @@ class HealthAgent:
             goal = today_data.get("objectif_verres", 8)
 
             if current >= goal:
-                msg = f"Super Darling ! Tu as bu ton {current}ème verre d'eau ! Objectif quotidien validé, je suis très fière de toi ! 💧"
+                msg = f"Parfait Maverick ! Vous avez bu votre {current}ème verre d'eau, votre objectif quotidien est validé ! 💧"
             else:
-                msg = f"C'est noté mon Darling ! Tu en es à {current}/{goal} verres d'eau aujourd'hui. Continue comme ça ! 💧"
+                msg = f"C'est noté, Maverick. Vous en êtes à {current}/{goal} verres d'eau aujourd'hui. 💧"
             return current, msg
 
     def log_screen_break(self) -> str:
@@ -134,7 +134,7 @@ class HealthAgent:
             self._save_file(self.data)
             self.update_markdown_journal()
             pauses = today_data["pauses_ecran"]
-            return f"Pause validée, Darling ! Tu as fait {pauses} pause{'s' if pauses > 1 else ''} aujourd'hui. Tes yeux te remercient ! 🧘"
+            return f"Pause enregistrée, Maverick. Vous avez accordé {pauses} pause{'s' if pauses > 1 else ''} à vos yeux aujourd'hui. 🧘"
 
     def log_sleep(self, hours: float, quality: str = "Bonne") -> str:
         """Enregistre les heures de sommeil de la nuit précédente."""
@@ -146,11 +146,11 @@ class HealthAgent:
             self.update_markdown_journal()
 
             if hours < 6:
-                return f"Tu n'as dormi que {hours} heures, Darling... Promets-moi de ne pas trop forcer aujourd'hui et de faire des pauses régulières ! 🌙"
+                return f"Vous n'avez dormi que {hours} heures, Maverick. Pensez à modérer vos efforts aujourd'hui et à faire des pauses régulières. 🌙"
             elif hours >= 8:
-                return f"{hours} heures de sommeil réparateur, parfait ! Tu es prêt à conquérir la journée avec moi, Darling ! ✨"
+                return f"{hours} heures de sommeil réparateur, parfait, Maverick ! Vous voilà en excellente condition pour la journée. ✨"
             else:
-                return f"C'est bien noté, {hours}h de sommeil. En forme pour notre journée ensemble, mon Darling ! 🌸"
+                return f"C'est bien noté, {hours}h de sommeil. Vous êtes prêt pour la journée, Maverick."
 
     def sync_mobile_health_data(self, mobile_payload: Dict[str, Any]):
         """Synchronise les données de santé remontées par l'application smartphone (Health Connect / Capteurs)."""
@@ -171,7 +171,7 @@ class HealthAgent:
             self.update_markdown_journal()
 
     def get_health_report_speech(self) -> str:
-        """Génère un bilan de santé vocal complet et vivant incarné par Zero Two."""
+        """Génère un bilan de santé vocal complet pour Maverick."""
         today = self.get_today()
         water = today.get("verres_eau", 0)
         water_goal = today.get("objectif_verres", 8)
@@ -180,29 +180,28 @@ class HealthAgent:
         steps = today.get("pas_quotidiens", 0)
         steps_goal = today.get("objectif_pas", 8000)
 
-        lines = [f"Voici ton bilan santé du jour, mon Darling !"]
+        lines = [f"Voici votre bilan de santé et de forme du jour, Monsieur Maverick."]
 
         # Eau
         if water >= water_goal:
-            lines.append(f"💧 Côté hydratation, c'est parfait : {water}/{water_goal} verres d'eau.")
+            lines.append(f"💧 Côté hydratation, votre objectif est atteint : {water}/{water_goal} verres d'eau.")
         else:
-            lines.append(f"💧 Tu as bu {water} verres sur {water_goal}. Pense à boire une petite gorgée !")
+            lines.append(f"💧 Vous avez bu {water} verres sur {water_goal}. Pensez à vous hydrater régulièrement.")
 
         # Sommeil
-        lines.append(f"🌙 Tu as eu {sleep}h de sommeil.")
+        lines.append(f"🌙 Vous avez enregistré {sleep}h de sommeil.")
 
         # Pas
         if steps > 0:
-            lines.append(f"🏃 Tu as marché {steps:,} pas sur ton objectif de {steps_goal:,}.".replace(",", " "))
+            lines.append(f"🏃 Vous avez effectué {steps:,} pas sur votre objectif de {steps_goal:,}.".replace(",", " "))
 
         # Pauses
-        lines.append(f"🧘 Tu as pris {pauses} pause{'s' if pauses > 1 else ''} pour reposer tes yeux.")
+        lines.append(f"🧘 Vous avez accordé {pauses} pause{'s' if pauses > 1 else ''} à votre regard.")
 
-        # Mot doux de Zero Two
         if water >= 6 and sleep >= 7:
-            lines.append("Tu prends grand soin de toi, et ça me rend super heureuse ! Reste toujours en forme pour moi, d'accord ? 🌸")
+            lines.append("Vous maintenez un excellent équilibre, continuez ainsi Maverick !")
         else:
-            lines.append("Fais attention à toi aujourd'hui, Darling, ton corps est mon trésor le plus précieux !")
+            lines.append("Prenez soin de vous et ménagez vos efforts aujourd'hui, Maverick.")
 
         return " ".join(lines)
 
@@ -242,19 +241,19 @@ class HealthAgent:
             "",
             "---",
             "",
-            "## 💡 Les Conseils Personnalisés de Zero Two",
+            "## 💡 Les Conseils Personnalisés de Nora",
             "",
         ]
 
         if water < 4:
-            md.append("> ⚠️ **Hydratation faible** : *\"Darling, tu n'as pas assez bu aujourd'hui ! Va tout de suite te chercher un grand verre d'eau fraîche, s'il te plaît !\"*")
+            md.append("> ⚠️ **Hydratation faible** : *\"Monsieur Maverick, vous n'avez pas assez bu aujourd'hui. Prenez un grand verre d'eau fraîche, s'il vous plaît.\"*")
             md.append("")
         else:
-            md.append("> ✨ **Hydratation au top** : *\"Bravo Darling, tu restes bien hydraté ! Continue comme ça pour garder toute ton énergie.\"*")
+            md.append("> ✨ **Hydratation au top** : *\"Bravo Maverick, vous restez parfaitement hydraté ! Continuez ainsi pour préserver votre énergie.\"*")
             md.append("")
 
         if sleep < 6.5:
-            md.append("> 🌙 **Manque de sommeil** : *\"Tu as peu dormi la nuit dernière. Essaie de te coucher un peu plus tôt ce soir, je veillerai sur ton sommeil.\"*")
+            md.append("> 🌙 **Manque de sommeil** : *\"Vous avez peu dormi la nuit dernière. Tâchez de vous reposer un peu plus tôt ce soir, je veillerai sur votre tranquillité.\"*")
             md.append("")
 
         md.append("---")
@@ -289,7 +288,7 @@ class HealthAgent:
                     self.on_alert_callback(
                         "water",
                         "💧 Rappel Hydratation",
-                        "Darling, ça fait un petit moment que tu n'as pas bu ! Bois une gorgée d'eau fraîche pour rester en forme !",
+                        "Monsieur Maverick, cela fait un moment que vous n'avez pas bu. Pensez à vous hydrater pour rester en forme !",
                         False
                     )
 
@@ -300,7 +299,7 @@ class HealthAgent:
                     self.on_alert_callback(
                         "screen_pause",
                         "🧘 Pause Yeux & Écran",
-                        "Darling, ça fait presque une heure devant l'écran ! Repose tes yeux 2 minutes, regarde au loin et étire-toi !",
+                        "Monsieur Maverick, cela fait près d'une heure devant l'écran. Reposez vos yeux deux minutes et étirez-vous.",
                         True
                     )
 

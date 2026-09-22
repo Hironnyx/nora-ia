@@ -173,22 +173,22 @@ def run_security_scan() -> Dict[str, Any]:
     score += 10
     positives.append(f"{len(ports)} ports d'écoute réseau analysés et supervisés.")
 
-    # Synthèse orale pour Zero Two
+    # Synthèse orale pour Nora
     if score >= 90:
         speech = (
-            f"🛡️ Scan de sécurité terminé, Darling ! Ton PC a un score parfait de {score}/100. "
-            "Windows Defender te protège en temps réel, tes définitions de virus sont à jour "
-            f"et tes {len(startups)} programmes au démarrage sont sains. Ton ordinateur est impénétrable !"
+            f"🛡️ Audit de sécurité terminé, Maverick. Votre ordinateur obtient un excellent score de {score}/100. "
+            "Windows Defender vous protège en temps réel, vos définitions antivirales sont à jour "
+            f"et vos {len(startups)} programmes au démarrage sont vérifiés."
         )
     elif score >= 70:
         speech = (
-            f"🛡️ Scan terminé avec un score de {score}/100, Darling. "
-            "La sécurité globale est bonne, mais vérifie tes mises à jour de sécurité."
+            f"🛡️ Audit de sécurité terminé avec un score de {score}/100, Maverick. "
+            "La sécurité globale est correcte, mais pensez à vérifier vos mises à jour système."
         )
     else:
         speech = (
-            f"⚠️ Attention Darling ! Score de sécurité faible ({score}/100). "
-            f"Des anomalies ont été détectées : {', '.join(anomalies[:2])} !"
+            f"⚠️ Attention Maverick ! Score de sécurité faible ({score}/100). "
+            f"Des anomalies ont été détectées : {', '.join(anomalies[:2])}."
         )
 
     return {
@@ -220,7 +220,7 @@ class SecurityWatchdog:
             if self.on_alert:
                 self.on_alert(
                     "Alerte Antivirus !",
-                    "Darling, la protection de Windows Defender semble désactivée ! Vérifie immédiatement ta sécurité.",
+                    "Maverick, la protection en temps réel de Windows Defender semble désactivée. Veuillez vérifier votre sécurité.",
                     True
                 )
 

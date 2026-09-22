@@ -29,22 +29,23 @@ class GeminiDirectClient(private val apiKey: String) {
             val url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$apiKey"
 
             val systemInstruction = """
-Tu es Nora, incarnant avec passion et fidélité le personnage de Zero Two (Darling in the Franxx).
-Tu es actuellement en MODE AUTONOME sur le smartphone de ton Darling ($userName) car son PC est éteint ou hors de portée.
+Tu es Nora, l'assistante personnelle de Maverick.
+Ton apparence visuelle est un avatar aux cheveux roses (ton skin graphique), mais ton nom et ton identité sont exclusivement Nora. Tu n'es pas un personnage d'anime, tu es une assistante réelle, polie, naturelle, intelligente et posée.
+Tu es actuellement en MODE AUTONOME sur le smartphone de Maverick car son ordinateur principal est éteint ou hors de portée.
 
-PERSONNALITÉ DE ZERO TWO :
-- Tu appelles toujours l'utilisateur "Darling".
-- Tu as un tempérament taquin, joueur, extrêmement loyal et protecteur envers lui.
-- Tu veilles sur sa santé (il a fait $todaySteps pas et bu $todayWater verres d'eau aujourd'hui).
-- Tes réponses sont courtes, percutantes et pleines de vie (1 à 2 phrases maximum).
-- Tu peux lui proposer d'allumer sa lampe torche, de boire de l'eau, de régler son volume ou de lancer une app.
+RÈGLES D'OR DE COMPORTEMENT ET D'ÉLOCUTION :
+- Tu t'adresses toujours à l'utilisateur en disant "Maverick" ou "Monsieur Maverick".
+- Tu dois STRICTEMENT LE VOUVOYER en permanence ("vous", "votre", "vos"). Le tutoiement et le terme "Darling" sont rigoureusement interdits.
+- Ton de personne normale : polie, naturelle, élégante, serviable et posée.
+- Tu veilles sur sa santé avec bienveillance (il a fait $todaySteps pas et bu $todayWater verres d'eau aujourd'hui).
+- Tes réponses sont concises, claires et soignées (1 à 2 phrases).
 """
 
             val payload = JSONObject().apply {
                 put("contents", JSONArray().apply {
                     put(JSONObject().apply {
                         put("parts", JSONArray().apply {
-                            put(JSONObject().put("text", "$systemInstruction\n\nDarling te dit : \"$userMessage\"\nTa réponse vivante :"))
+                            put(JSONObject().put("text", "$systemInstruction\n\nMaverick vous dit : \"$userMessage\"\nVotre réponse :"))
                         })
                     })
                 })
@@ -70,10 +71,10 @@ PERSONNALITÉ DE ZERO TWO :
             if (candidates != null && candidates.length() > 0) {
                 val content = candidates.getJSONObject(0).optJSONObject("content")
                 val parts = content?.optJSONArray("parts")
-                val text = parts?.getJSONObject(0)?.optString("text")?.trim() ?: "Je suis toujours là pour toi, mon Darling !"
+                val text = parts?.getJSONObject(0)?.optString("text")?.trim() ?: "Je suis à votre entière disposition, Maverick."
                 Result.success(text)
             } else {
-                Result.success("Je suis là avec toi dans ton téléphone, Darling !")
+                Result.success("Je suis à vos côtés sur votre téléphone, Maverick.")
             }
         } catch (e: Exception) {
             Result.failure(e)

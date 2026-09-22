@@ -501,11 +501,11 @@ class NoraMascot(QWidget):
     def trigger_screen_vision(self, prompt_text: str = ""):
         """Capture l'écran et l'analyse via Gemini 3.6 Flash avec la personnalité de Zero Two."""
         if self.is_mission_running:
-            self.display_message("⏳ Je suis déjà occupée sur une mission Darling, un petit instant !")
+            self.display_message("⏳ Je suis déjà occupée sur une mission Maverick, un instant s'il vous plaît.")
             return
 
         self.set_sprite_state("work")
-        self.display_message("👁️ J'ouvre grand mes yeux sur ton écran, Darling... Laisse-moi regarder !")
+        self.display_message("👁️ J'analyse votre écran, Maverick... Laissez-moi regarder.")
         sound_effects.play_wake_chime()
 
         def vision_worker():
@@ -529,18 +529,18 @@ class NoraMascot(QWidget):
 
     def on_qg_gaming_toggled(self, active: bool):
         if active:
-            msg = "🎮 Mode Gaming ACTIVÉ ! Silence radio et performances max, Darling !"
+            msg = "🎮 Mode Gaming ACTIVÉ ! Silence radio et performances maximales, Maverick."
             self.display_message(msg)
             self.speak_nora(msg, force=True)
         else:
-            msg = "✨ Mode Gaming DÉSACTIVÉ ! Je reprends mes alertes audio normales, Darling !"
+            msg = "✨ Mode Gaming DÉSACTIVÉ ! Je reprends les alertes normales, Maverick."
             self.display_message(msg)
             self.speak_nora(msg, force=True)
 
     def on_qg_voice_cloning_toggled(self, active: bool):
         stat = "activée" if active else "désactivée"
-        self.display_message(f"🎙️ Voix Zero Two {stat} (RTX 4080) !")
-        self.speak_nora(f"Ma voix Zero Two est maintenant {stat}, Darling !", force=True)
+        self.display_message(f"🎙️ Voix de Nora {stat} (RTX 4080) !")
+        self.speak_nora(f"Ma voix Nora est maintenant {stat}, Maverick.", force=True)
 
     def on_qg_ram_boost(self):
         sound_effects.play_wake_chime()
@@ -646,10 +646,10 @@ class NoraMascot(QWidget):
         elif action == act_status:
             rep = agent_home.smart_home.get_status_report()
             self.display_message(rep)
-            self.speak_nora("Voici l'état de notre maison, Darling !")
+            self.speak_nora("Voici l'état des équipements de la maison, Maverick.")
         elif action == act_pair:
             self.display_message("Appuyez sur le gros bouton rond au centre de votre pont Philips Hue (192.168.1.29)...")
-            self.speak_nora("Appuie sur le gros bouton rond au centre de ton pont Hue, Darling ! J'attends...")
+            self.speak_nora("Appuyez sur le gros bouton rond au centre de votre pont Hue, Maverick. Je patiente...")
             ok, msg = agent_home.smart_home.pair_hue_bridge()
             self.display_message(msg)
             self.speak_nora(msg)
@@ -751,7 +751,7 @@ class NoraMascot(QWidget):
 
         sound_effects.play_wake_chime()
         self.set_sprite_state("listen")
-        self.display_message("✨ Oui Darling, je t'écoute !")
+        self.display_message("✨ Oui Maverick, je vous écoute.")
         self.start_voice_input()
 
     # =================================================================
@@ -807,7 +807,7 @@ class NoraMascot(QWidget):
             self.process_user_message(command)
         else:
             self.set_sprite_state("listen")
-            self.display_message("✨ Oui, je t'écoute Darling !")
+            self.display_message("✨ Oui Maverick, je vous écoute.")
             self.start_voice_input()
 
     # =================================================================
@@ -825,19 +825,19 @@ class NoraMascot(QWidget):
 
         def record_thread():
             self.bridge.set_state.emit("listen")
-            self.bridge.update_bubble.emit("🎙️ Je t'écoute Darling... Parle !")
+            self.bridge.update_bubble.emit("🎙️ Je vous écoute Maverick... Vous pouvez parler.")
             spoken = voice_engine.listen_microphone()
             if spoken:
                 self.process_user_message(spoken)
             else:
                 self.bridge.set_state.emit("idle")
-                self.bridge.update_bubble.emit("Je n'ai pas bien entendu Darling. Cliquez sur 🎙️ ou écrivez-moi !")
+                self.bridge.update_bubble.emit("Je n'ai pas bien compris Maverick. Cliquez sur 🎙️ ou écrivez-moi.")
 
         threading.Thread(target=record_thread, daemon=True).start()
 
     def process_user_message(self, user_text: str):
         if self.is_mission_running:
-            self.display_message("⏳ Je suis déjà occupée sur une mission Darling, un petit instant !")
+            self.display_message("⏳ Je suis déjà occupée sur une mission Maverick, un instant s'il vous plaît.")
             return
 
         def analyze_thread():
@@ -873,10 +873,10 @@ class NoraMascot(QWidget):
     def execute_mission(self, mission_goal: str):
         self.is_mission_running = True
         self.bridge.set_state.emit("work")
-        self.bridge.update_bubble.emit(f"⚙️ Mission : '{mission_goal[:35]}...'\nJe mobilise mon équipe, Darling !")
+        self.bridge.update_bubble.emit(f"⚙️ Mission : '{mission_goal[:35]}...'\nJe mobilise mes agents, Maverick.")
         
         sound_effects.play_wake_chime()
-        self.speak_nora("C'est bien noté Darling ! Je lance mes agents pour s'en occuper.")
+        self.speak_nora("C'est bien noté Maverick. Je lance mes agents pour s'en occuper.")
 
         def mission_worker():
             def step_callback(step_type, text):
@@ -895,10 +895,10 @@ class NoraMascot(QWidget):
         self.is_mission_running = False
         sound_effects.play_success_chime()
 
-        summary_preview = "🎉 Mission accomplie à 100 % ! Tout a été terminé avec succès, Darling."
+        summary_preview = "🎉 Mission accomplie à 100 % ! Tout a été terminé avec succès, Maverick."
         self.display_message(summary_preview)
         self.notify_windows("Mission Accomplie !", "Toutes les actions demandées ont été effectuées avec succès !")
-        self.speak_nora("Mission accomplie Darling ! Toutes les actions demandées ont été effectuées.")
+        self.speak_nora("Mission accomplie Maverick ! Toutes les actions demandées ont été effectuées.")
 
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
@@ -1024,13 +1024,13 @@ class NoraMascot(QWidget):
             self.trigger_screen_vision("")
         elif action == act_franxx:
             self.set_outfit("franxx")
-            self.display_message("🚀 Tenue de Pilote Franxx enfilée, Darling !")
+            self.display_message("🚀 Tenue de Pilote Franxx enfilée, Maverick.")
         elif action == act_school:
             self.set_outfit("school")
-            self.display_message("🎓 Tenue d'Écolière Sailor enfilée, Darling !")
+            self.display_message("🎓 Tenue d'Écolière Sailor enfilée, Maverick.")
         elif action == act_hoodie:
             self.set_outfit("hoodie")
-            self.display_message("🧸 Hoodie tout doux enfilé, Darling !")
+            self.display_message("🧸 Hoodie tout doux enfilé, Maverick.")
         elif action == action_gaming:
             new_state, msg = gaming_mode.toggle_gaming_mode()
             if hasattr(self, 'qg') and self.qg:
@@ -1046,10 +1046,10 @@ class NoraMascot(QWidget):
             new_state = not is_vc_on
             memory_manager.set_voice_cloning_enabled(new_state)
             stat = "activée" if new_state else "désactivée"
-            self.display_message(f"🎙️ Voix de Zero Two {stat} (accélérée par RTX 4080) !")
+            self.display_message(f"🎙️ Voix de Nora {stat} (accélérée par RTX 4080) !")
             if hasattr(self, 'qg') and self.qg:
                 self.qg.update_vc_ui()
-            self.speak_nora(f"Ma voix Zero Two est maintenant {stat}, Darling !", force=True)
+            self.speak_nora(f"Ma voix Nora est maintenant {stat}, Maverick.", force=True)
         elif action == action_smart_home:
             self.show_smart_home_menu()
         elif action == action_security:

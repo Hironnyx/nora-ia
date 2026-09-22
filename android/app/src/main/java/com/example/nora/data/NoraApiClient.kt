@@ -33,8 +33,10 @@ data class NoraCapabilities(
 
 data class NoraDeviceCommand(
     val type: String,
-    val action: String?,
-    val value: Int?
+    val action: String? = null,
+    val value: Int? = null,
+    val contact: String? = null,
+    val body: String? = null
 )
 
 data class NoraChatResponse(
@@ -171,7 +173,9 @@ class NoraApiClient {
                 devCmd = NoraDeviceCommand(
                     type = cmdObj.optString("type"),
                     action = if (cmdObj.has("action")) cmdObj.optString("action") else null,
-                    value = if (cmdObj.has("value")) cmdObj.optInt("value") else null
+                    value = if (cmdObj.has("value")) cmdObj.optInt("value") else null,
+                    contact = if (cmdObj.has("contact")) cmdObj.optString("contact") else null,
+                    body = if (cmdObj.has("body")) cmdObj.optString("body") else null
                 )
             }
 

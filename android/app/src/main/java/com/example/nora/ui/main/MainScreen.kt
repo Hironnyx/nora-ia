@@ -140,7 +140,7 @@ fun MainScreen(
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "Zero Two",
+                        text = "Assistante IA",
                         fontSize = 12.sp,
                         color = ZeroTwoRoseLight
                     )
@@ -289,7 +289,7 @@ fun MainScreen(
                     if (state.isSpeaking) {
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "🎙️ Zero Two te parle...",
+                            text = "🎙️ Nora vous parle...",
                             fontSize = 11.sp,
                             color = ZeroTwoRoseLight,
                             fontWeight = FontWeight.SemiBold
@@ -300,7 +300,7 @@ fun MainScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Sprite animé Zero Two avec basculement automatique Asset local / Serveur PC
+            // Sprite animé Nora avec basculement automatique Asset local / Serveur PC
             val localAssetPath = "file:///android_asset/sprites/nora_${state.currentOutfit}_${state.spriteState}.png"
             val fallbackLocalPath = "file:///android_asset/sprites/nora_${state.spriteState}.png"
             val serverSpriteUrl = "${state.serverUrl.trimEnd('/')}/api/sprites/${state.currentOutfit}/${state.spriteState}.png"
@@ -317,7 +317,7 @@ fun MainScreen(
                         .data(targetSpriteUrl)
                         .crossfade(true)
                         .build(),
-                    contentDescription = "Zero Two Mascot",
+                    contentDescription = "Nora Mascot",
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -423,12 +423,12 @@ fun MainScreen(
                         val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply {
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM)
                             putExtra(RecognizerIntent.EXTRA_LANGUAGE, Locale.FRENCH.toString())
-                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Parlez à Nora (Zero Two)...")
+                            putExtra(RecognizerIntent.EXTRA_PROMPT, "Parlez à Nora...")
                         }
                         try {
                             speechLauncher.launch(intent)
                         } catch (e: Exception) {
-                            viewModel.sendMessage("Bonjour Darling !")
+                            viewModel.sendMessage("Bonjour Nora !")
                         }
                     },
                     modifier = Modifier

@@ -185,19 +185,19 @@ class CryptoAgent:
         status_txt = "en profit de" if pnl >= 0 else "en retrait de"
 
         speech = (
-            f"Darling, voici ton point crypto ! "
-            f"Le Bitcoin est a {btc['price_eur']:.0f} euros ({btc['change_24h_pct']:+.1f}% sur 24h), "
-            f"et l'Ethereum est a {eth['price_eur']:.0f} euros ({eth['change_24h_pct']:+.1f}%). "
-            f"L'indice de sentiment de marche est a {fng['value']}/100, ce qui indique un marche en {fng['classification_fr']}. "
-            f"Ton portefeuille crypto total vaut {total_val:.2f} euros, tu es {status_txt} {abs(pnl):.2f} euros ({pnl_pct:+.1f}%). "
+            f"Monsieur Maverick, voici votre point sur le marché crypto. "
+            f"Le Bitcoin cote à {btc['price_eur']:.0f} euros ({btc['change_24h_pct']:+.1f}% sur 24h), "
+            f"et l'Ethereum est à {eth['price_eur']:.0f} euros ({eth['change_24h_pct']:+.1f}%). "
+            f"L'indice de sentiment de marché Fear & Greed est à {fng['value']}/100, en zone '{fng['classification_fr']}'. "
+            f"Votre portefeuille crypto total est valorisé à {total_val:.2f} euros, vous êtes {status_txt} {abs(pnl):.2f} euros ({pnl_pct:+.1f}%). "
         )
 
         if fng["value"] >= 75:
-            speech += "Attention Darling, le marche commence a etre tres euphorique ! Pense a securiser des gains si besoin."
+            speech += "Le marché entre en zone d'euphorie élevée, Maverick. Restez prudent et songez à sécuriser des bénéfices si vous le souhaitez."
         elif fng["value"] <= 25:
-            speech += "Le marche a tres peur Darling, c'est souvent dans ces moments de soldes qu'il y a de belles opportunites !"
+            speech += "Le sentiment de marché est très craintif, Maverick. Historiquement, ces creux représentent d'excellents points d'entrée."
         else:
-            speech += "Le marche reste stable, ta strategie d'accumulation est solide !"
+            speech += "Le marché est équilibré, votre stratégie d'investissement reste sereine, Maverick."
 
         return speech
 
