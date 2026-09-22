@@ -17,10 +17,14 @@ import com.example.nora.data.NoraApiClient
 import com.example.nora.data.NoraOutfit
 import com.example.nora.device.DeviceController
 import com.example.nora.health.HealthManager
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import com.example.nora.net.WakeOnLan
 import com.example.nora.notifications.NoraNotificationManager
 import com.example.nora.receiver.NoraCallReceiver
 import com.example.nora.service.NoraNotificationListenerService
+import com.example.nora.service.NoraOverlayService
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -51,7 +55,8 @@ data class NoraUiState(
     val todayWater: Int = 0,
     val sleepHours: Float = 7.5f,
     val batteryPercent: Int = 80,
-    val isFlashlightOn: Boolean = false
+    val isFlashlightOn: Boolean = false,
+    val isFloatingMascotActive: Boolean = false
 )
 
 class MainScreenViewModel(application: Application) : AndroidViewModel(application) {
@@ -67,6 +72,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
     private val geminiDirectClient = GeminiDirectClient("AQ.Ab8RN6LPugLNpFSWqrzBV6PkJP22OGmqPB_J_lqOwwAuh-ywPw")
 
     private val defaultStandaloneActions = listOf(
+        NoraAction("overlay_mascot", "Mascotte Flottante 🌸", "🌸", "companion", "companion:toggle_mascot", false),
         NoraAction("emails", "Mes Mails 📧", "📧", "comms", "comms:emails", false),
         NoraAction("read_sms", "Lire SMS 📨", "📨", "comms", "comms:read_sms", false),
         NoraAction("standardiste", "Standardiste 👩‍💼", "👩‍💼", "comms", "comms:standardiste", false),
@@ -91,7 +97,8 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
             todayWater = healthManager.getTodayWater(),
             sleepHours = healthManager.getSleepHours(),
             batteryPercent = deviceController.getBatteryLevel(),
-            isFlashlightOn = deviceController.isFlashlightOn()
+            isFlashlightOn = deviceController.isFlashlightOn(),
+            isFloatingMascotActive = NoraOverlayService.isRunning
         )
     )
     val uiState: StateFlow<NoraUiState> = _uiState.asStateFlow()
@@ -304,6 +311,49 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         deviceController.vibrate(50)
     }
 
+    fun toggleFloatingMascot() {
+        val app = getApplication<Application>()
+        if (!Settings.canDrawOverlays(app)) {
+            val intent = Intent(
+                Settings.ACTION_MANAGE_OVERLAY_PERMISSION,
+                Uri.parse("package:${app.packageName}")
+            ).apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            try {
+                app.startActivity(intent)
+                val msg = "Veuillez accorder l'autorisation « Afficher sur d'autres applications » à Nora, Maverick."
+                _uiState.update { it.copy(bubbleMessage = msg) }
+                speakTts(msg)
+            } catch (e: Exception) {
+                val msg = "Impossible d'ouvrir les réglages de superposition d'applications."
+                _uiState.update { it.copy(bubbleMessage = msg) }
+            }
+            return
+        }
+
+        if (NoraOverlayService.isRunning) {
+            NoraOverlayService.stop(app)
+            _uiState.update {
+                it.copy(
+                    isFloatingMascotActive = false,
+                    bubbleMessage = "Mascotte flottante désactivée, Maverick. Je reste dans l'application."
+                )
+            }
+            speakTts("Mascotte flottante désactivée, Maverick.")
+        } else {
+            NoraOverlayService.start(app)
+            _uiState.update {
+                it.copy(
+                    isFloatingMascotActive = true,
+                    bubbleMessage = "Mascotte flottante activée ! Je me balade à vos côtés sur votre téléphone 🌸"
+                )
+            }
+            speakTts("Mascotte flottante activée ! Je vous accompagne sur votre écran, Maverick.")
+        }
+        deviceController.vibrate(60)
+    }
+
     fun addWater() {
         val current = healthManager.addWater(1)
         _uiState.update { it.copy(todayWater = current) }
@@ -415,6 +465,10 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                 return@launch
             } else if (lower.contains("j'ai bu") || lower.contains("verre d'eau") || lower.contains("boire de l'eau")) {
                 addWater()
+                _uiState.update { it.copy(isLoading = false) }
+                return@launch
+            } else if (lower.contains("balade-toi") || lower.contains("balade toi") || lower.contains("active la mascotte") || lower.contains("mascotte flottante") || lower.contains("viens sur mon écran") || lower.contains("fais ta vie")) {
+                toggleFloatingMascot()
                 _uiState.update { it.copy(isLoading = false) }
                 return@launch
             }
@@ -614,6 +668,10 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             // Traitement des actions locales smartphone & communications
             when (action.action) {
+                "companion:toggle_mascot", "toggle_mascot" -> {
+                    toggleFloatingMascot()
+                    return@launch
+                }
                 "comms:emails", "check_emails" -> {
                     sendMessage("Résume-moi mes derniers emails")
                     return@launch

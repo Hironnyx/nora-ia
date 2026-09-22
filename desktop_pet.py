@@ -88,6 +88,7 @@ import qg_dashboard
 import nora_initiatives
 import gaming_mode
 import tools_vision
+import nora_autonomous_life
 from wake_word_listener import WakeWordDetector
 
 
@@ -154,6 +155,13 @@ class NoraMascot(QWidget):
         self.hands_free_enabled = False
         self.system_alerts_enabled = True
 
+        # Moteur de Vie Autonome & Balade Libre (Roaming)
+        self.life_engine = nora_autonomous_life.life_engine
+        self.is_walking = False
+        self.walk_target_x = 0
+        self.walk_speed = 2
+        self.walk_step_counter = 0
+
         self.init_ui()
         self.init_system_tray()
         self.init_animations()
@@ -162,6 +170,7 @@ class NoraMascot(QWidget):
         self.init_security_watchdog()
         self.init_global_hotkey()
         self.init_qg()
+        self.init_autonomous_life()
 
         # Salutation personnalisée au démarrage avec synchronisation labiale
         QTimer.singleShot(800, self.welcome_greeting)
@@ -494,6 +503,114 @@ class NoraMascot(QWidget):
         msg = memory_manager.get_welcome_message()
         self.display_message(msg)
         self.speak_nora(msg)
+
+    # =================================================================
+    # MOTEUR DE VIE AUTONOME & DÉPLACEMENT LIBRE (ROAMING)
+    # =================================================================
+    def init_autonomous_life(self):
+        """Initialise la boucle de déplacement autonome (balade) et le cycle de vie."""
+        # 1. Timer de marche fluide (30 FPS)
+        self.walk_timer = QTimer(self)
+        self.walk_timer.timeout.connect(self.walk_step)
+        self.walk_timer.start(35)
+
+        # 2. Timer de décisions de vie autonome (toutes les 7 secondes)
+        self.life_timer = QTimer(self)
+        self.life_timer.timeout.connect(self.check_autonomous_life)
+        self.life_timer.start(7000)
+
+    def start_walking_to(self, target_x: int, speed: int = 2, announcement: str = None):
+        """Lance une balade autonome vers une coordonnée horizontale."""
+        if getattr(self, 'is_dragging', False) or self.is_mission_running:
+            return
+        self.walk_target_x = target_x
+        self.walk_speed = max(1, speed)
+        self.is_walking = True
+        if announcement:
+            self.display_message(announcement)
+
+    def walk_step(self):
+        """Effectue un pas fluide vers la destination de balade."""
+        if not getattr(self, 'is_walking', False) or getattr(self, 'is_dragging', False) or self.is_mission_running:
+            return
+
+        current_pos = self.pos()
+        dx = self.walk_target_x - current_pos.x()
+
+        # Destination atteinte
+        if abs(dx) <= abs(self.walk_speed) + 2:
+            self.move(self.walk_target_x, current_pos.y())
+            self.is_walking = False
+            self.set_sprite_state("idle")
+            return
+
+        # Direction et translation
+        step = self.walk_speed if dx > 0 else -self.walk_speed
+        new_x = current_pos.x() + step
+        self.move(new_x, current_pos.y())
+
+        # Suivi du Dashboard QG s'il est ouvert
+        if hasattr(self, 'qg') and self.qg.isVisible():
+            self.qg.position_near(QPoint(new_x, current_pos.y()), self.width())
+
+        # Oscillation organique de marche (pas à pas)
+        self.walk_step_counter += 1
+        bobbing = 3 if (self.walk_step_counter // 8) % 2 == 0 else -1
+        self.avatar_label.setContentsMargins(0, 4 + bobbing, 0, 4 - bobbing)
+
+    def check_autonomous_life(self):
+        """Interroge le moteur de vie autonome pour déclencher balades, pensées ou pauses."""
+        if getattr(self, 'is_walking', False) or getattr(self, 'is_dragging', False) or self.is_mission_running or getattr(self, 'is_speaking_now', False):
+            return
+
+        # En mode Gaming, Nora respecte l'immersion et ne se balade pas
+        if gaming_mode.is_gaming_mode():
+            return
+
+        screen = QApplication.primaryScreen().availableGeometry()
+        min_x = screen.left() + 20
+        max_x = max(min_x + 100, screen.right() - self.width() - 20)
+
+        action = self.life_engine.decide_next_action(self.x(), min_x, max_x)
+        action_type = action.get("type")
+
+        if action_type == "WALK":
+            self.start_walking_to(action["target_x"], action.get("speed", 2), action.get("bubble"))
+        elif action_type in ["THOUGHT", "WATER", "MAINTENANCE"]:
+            if action.get("bubble"):
+                self.display_message(action["bubble"])
+            if action.get("speech"):
+                self.speak_nora(action["bubble"])
+        elif action_type == "SLEEP":
+            self.display_message(action["bubble"])
+            self.set_sprite_state("blink")
+        elif action_type == "WAKE_UP":
+            self.display_message(action["bubble"])
+            self.set_sprite_state("idle")
+            if action.get("speech"):
+                self.speak_nora(action["bubble"])
+
+    def toggle_roaming_mode(self):
+        """Active ou désactive la balade libre de Nora."""
+        active = self.life_engine.toggle_roaming()
+        if not active:
+            self.is_walking = False
+            self.set_sprite_state("idle")
+            self.display_message("Mode balade désactivé. Je reste ici, Maverick.")
+        else:
+            self.display_message("Mode balade activé ! Je me dégourdis les jambes, Maverick.")
+
+    def force_nap_mode(self):
+        """Met Nora en sieste paisible."""
+        self.is_walking = False
+        self.life_engine.is_sleeping = True
+        self.set_sprite_state("blink")
+        self.display_message("Je fais une petite sieste discrète, Maverick. Zzz... 🌙")
+
+    def read_learning_note(self):
+        """Fait lire à haute voix ou afficher une note du carnet."""
+        thought = self.life_engine.generate_spontaneous_thought("day")
+        self.display_message(thought["text"])
 
     # =================================================================
     # VISION D'ÉCRAN MULTIMODALE & LE QG DE NORA
@@ -903,6 +1020,7 @@ class NoraMascot(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = True
+            self.is_walking = False  # Pause la balade libre si Maverick déplace Nora
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
 
@@ -916,7 +1034,9 @@ class NoraMascot(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = False
+            self.walk_target_x = self.x()
             event.accept()
+
     def contextMenuEvent(self, event):
         self.show_context_menu(event.globalPosition().toPoint())
 
@@ -939,6 +1059,15 @@ class NoraMascot(QWidget):
         action_voice = menu.addAction("🎙️ Parler au micro (Ctrl+Alt+N)")
         action_handsfree = menu.addAction("🎧 Activer / Désactiver Mains-Libres")
         action_vision = menu.addAction("👁️ Regarder mon Écran (Vision IA)")
+        
+        # Vie Autonome & Balade Libre
+        menu.addSeparator()
+        is_roaming = self.life_engine.roaming_enabled
+        roam_label = "🚶 Désactiver la Balade Libre" if is_roaming else "🚶 Activer la Balade Libre"
+        action_roam = menu.addAction(roam_label)
+        action_walk_now = menu.addAction("🚶 Se balader maintenant")
+        action_nap = menu.addAction("😴 Faire une sieste")
+        action_read = menu.addAction("📖 Lire une note du carnet")
         menu.addSeparator()
 
         # Garde-Robe Zero Two
@@ -1022,6 +1151,19 @@ class NoraMascot(QWidget):
             self.toggle_hands_free()
         elif action == action_vision:
             self.trigger_screen_vision("")
+        elif action == action_roam:
+            self.toggle_roaming_mode()
+        elif action == action_walk_now:
+            screen = QApplication.primaryScreen().availableGeometry()
+            min_x = screen.left() + 20
+            max_x = max(min_x + 100, screen.right() - self.width() - 20)
+            import random
+            target = random.randint(min_x, max_x)
+            self.start_walking_to(target, speed=3, announcement="C'est parti pour une petite promenade sur votre écran, Maverick !")
+        elif action == action_nap:
+            self.force_nap_mode()
+        elif action == action_read:
+            self.read_learning_note()
         elif action == act_franxx:
             self.set_outfit("franxx")
             self.display_message("🚀 Tenue de Pilote Franxx enfilée, Maverick.")

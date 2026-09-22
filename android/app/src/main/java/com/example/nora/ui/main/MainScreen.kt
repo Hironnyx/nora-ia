@@ -177,8 +177,22 @@ fun MainScreen(
                 }
             }
 
-            // Boutons d'actions rapides (Torche, WoL, Actualiser, Réglages)
+            // Boutons d'actions rapides (Mascotte Flottante, Torche, WoL, Actualiser, Réglages)
             Row(verticalAlignment = Alignment.CenterVertically) {
+                // Mascotte Flottante rapide
+                IconButton(
+                    onClick = { viewModel.toggleFloatingMascot() },
+                    modifier = Modifier
+                        .size(36.dp)
+                        .clip(CircleShape)
+                        .background(if (state.isFloatingMascotActive) ZeroTwoPink.copy(alpha = 0.35f) else Color.Transparent)
+                ) {
+                    Text(
+                        text = "🌸",
+                        fontSize = 18.sp
+                    )
+                }
+
                 // Lampe torche rapide
                 IconButton(
                     onClick = { viewModel.toggleTorch() },
@@ -487,6 +501,29 @@ fun MainScreen(
                         fontSize = 10.sp,
                         color = ZeroTwoTextMuted
                     )
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Button(
+                        onClick = {
+                            viewModel.toggleFloatingMascot()
+                            showSettingsDialog = false
+                        },
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (state.isFloatingMascotActive) ZeroTwoCrimson else ZeroTwoCardBg
+                        ),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .border(1.dp, ZeroTwoPink, RoundedCornerShape(12.dp)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            text = if (state.isFloatingMascotActive) "🌸 Mascotte Flottante (Désactiver)" else "🌸 Mascotte Flottante (Faire se balader)",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
                 }
             },
             confirmButton = {
