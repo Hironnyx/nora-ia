@@ -1,23 +1,23 @@
 {
   "accounts": {
     "Courant": {
-      "balance": 1820.0,
+      "balance": 0.0,
       "currency": "EUR",
       "type": "checking"
     },
     "Livret A": {
-      "balance": 6200.0,
+      "balance": 0.0,
       "currency": "EUR",
       "type": "savings"
     },
     "Epargne": {
-      "balance": 3500.0,
+      "balance": 0.0,
       "currency": "EUR",
       "type": "savings"
     }
   },
   "monthly_budget": {
-    "max_expenses": 1600.0,
+    "max_expenses": 0.0,
     "target_savings_rate": 0.2
   },
   "categories": [
@@ -32,30 +32,5 @@
     "Salaire",
     "Autre"
   ],
-  "transactions": [
-    {
-      "id": 3,
-      "date": "2026-09-22 01:42",
-      "amount": -30.0,
-      "category": "Alimentation",
-      "account": "Courant",
-      "description": "J'ai dépensé 30 euros pour des courses"
-    },
-    {
-      "id": 1,
-      "date": "2026-09-22",
-      "amount": -38.5,
-      "category": "Courses",
-      "account": "Courant",
-      "description": "Supermarché réapprovisionnement"
-    },
-    {
-      "id": 2,
-      "date": "2026-09-22",
-      "amount": -14.9,
-      "category": "Loisirs",
-      "account": "Courant",
-      "description": "Abonnement streaming"
-    }
-  ]
+  "transactions": []
 }

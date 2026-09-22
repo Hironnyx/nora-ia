@@ -13,7 +13,7 @@ from pathlib import Path
 BASE_DIR = Path(__file__).resolve().parent
 CONFIG_FILE = BASE_DIR / "smart_home_config.json"
 
-def run_pairing_listener(timeout_seconds: int = 60):
+def run_pairing_listener(timeout_seconds: int = 120):
     bridge_ip = "192.168.1.29"
     url = f"http://{bridge_ip}/api"
     payload = {"devicetype": "NoraFranxx#DesktopPC"}
@@ -72,5 +72,5 @@ def run_pairing_listener(timeout_seconds: int = 60):
     return False, None
 
 if __name__ == "__main__":
-    success, user = run_pairing_listener(60)
+    success, user = run_pairing_listener(300)
     sys.exit(0 if success else 1)

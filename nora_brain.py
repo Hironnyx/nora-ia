@@ -207,7 +207,7 @@ def analyze_intent_and_respond(user_text: str) -> tuple[str, str]:
         return "CHAT", reply_pc
 
     # 8. Gestion des Courriels (Emails / Mails)
-    if any(w in clean_input for w in ["mes mails", "mes emails", "mes courriels", "boite mail", "boîte mail", "nouveaux mails", "releve mes mails", "relève mes mails"]):
+    if any(w in clean_input for w in ["mes mails", "mes emails", "mes courriels", "boite mail", "boîte mail", "nouveaux mails", "releve mes mails", "relève mes mails", "derniers emails", "derniers mails", "mes derniers emails", "mes derniers mails", "résume-moi mes", "resume-moi mes"]):
         import agent_mail
         return "CHAT", agent_mail.mail_agent.get_summary_speech()
 
