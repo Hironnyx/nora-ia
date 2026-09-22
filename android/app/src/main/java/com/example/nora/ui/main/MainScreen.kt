@@ -11,6 +11,9 @@ import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -389,8 +392,17 @@ fun MainScreen(
                 placeholder = { Text("Parler à Nora ou donner un ordre...", color = ZeroTwoTextMuted, fontSize = 12.sp) },
                 modifier = Modifier
                     .weight(1f)
-                    .height(50.dp),
+                    .height(52.dp),
                 shape = RoundedCornerShape(25.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
+                keyboardActions = KeyboardActions(
+                    onSend = {
+                        if (inputText.isNotBlank()) {
+                            viewModel.sendMessage(inputText)
+                            inputText = ""
+                        }
+                    }
+                ),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = ZeroTwoPink,
                     unfocusedBorderColor = ZeroTwoBorder,

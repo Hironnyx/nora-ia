@@ -360,6 +360,31 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    private fun parseSmsCommand(text: String): Pair<String, String>? {
+        val clean = text.trim()
+        // 1. Avec séparateur explicite (:, pour lui dire, disant, qui dit, de lui dire, que)
+        val m1 = Regex("""^(?:envoie|envoyer|écris|ecris)\s+(?:un\s+)?(?:sms|message|texte)\s+(?:à|a)\s+([a-zA-ZÀ-ÿ0-9_\-\.\+ ]+?)\s*(?::|pour lui dire|disant|qui dit|de lui dire|que)\s*(.+)$""", RegexOption.IGNORE_CASE).find(clean)
+        if (m1 != null) {
+            return Pair(m1.groupValues[1].trim(), m1.groupValues[2].trim())
+        }
+        // 2. Si le destinataire est un numéro de téléphone suivi du texte
+        val m2 = Regex("""^(?:envoie|envoyer|écris|ecris)\s+(?:un\s+)?(?:sms|message|texte)\s+(?:à|a)\s*(\+?[0-9]{2,4}(?:[ \.\-]?[0-9]{2}){3,5})\s+(.+)$""", RegexOption.IGNORE_CASE).find(clean)
+        if (m2 != null) {
+            return Pair(m2.groupValues[1].trim(), m2.groupValues[2].trim())
+        }
+        // 3. Premier mot après 'à' est le nom du contact (ex: 'envoie un message à Alex salut comment ça va')
+        val m3 = Regex("""^(?:envoie|envoyer|écris|ecris)\s+(?:un\s+)?(?:sms|message|texte)\s+(?:à|a)\s+([a-zA-ZÀ-ÿ0-9_\-\+]+)\s+(.+)$""", RegexOption.IGNORE_CASE).find(clean)
+        if (m3 != null) {
+            return Pair(m3.groupValues[1].trim(), m3.groupValues[2].trim())
+        }
+        // 4. Juste le contact sans texte (ex: 'envoie un sms à Alex')
+        val m4 = Regex("""^(?:envoie|envoyer|écris|ecris)\s+(?:un\s+)?(?:sms|message|texte)\s+(?:à|a)\s+([a-zA-ZÀ-ÿ0-9_\-\+ ]+)$""", RegexOption.IGNORE_CASE).find(clean)
+        if (m4 != null) {
+            return Pair(m4.groupValues[1].trim(), "")
+        }
+        return null
+    }
+
     fun sendMessage(text: String) {
         if (text.isBlank()) return
         viewModelScope.launch {
@@ -395,20 +420,19 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
             }
 
             // 2. Gestion prioritaire et directe des SMS sur le smartphone (même si le PC est éteint)
-            val smsRegex = Regex("""(?:envoie|envoyer|écris|ecris)\s+(?:un\s+)?(?:sms|message|texte)\s+(?:à|a)\s+([a-zA-ZÀ-ÿ0-9_\-\s]+?)(?:\s*(?:pour lui dire|disant|qui dit|:|de|que)\s*(.*))?$""", RegexOption.IGNORE_CASE)
-            val smsMatch = smsRegex.find(clean)
-            if (smsMatch != null) {
-                val target = smsMatch.groupValues[1].trim()
-                val body = smsMatch.groupValues[2].trim().ifEmpty { "Message envoyé par Nora pour Maverick." }
+            val smsParsed = parseSmsCommand(clean)
+            if (smsParsed != null) {
+                val target = smsParsed.first
+                val body = smsParsed.second.ifEmpty { "Bonjour de la part de Maverick !" }
                 if (target.isNotBlank()) {
                     val result = smsManager.sendSms(target, body)
                     result.onSuccess { msg ->
                         _uiState.update { it.copy(isLoading = false, bubbleMessage = msg, spriteState = "idle") }
                         speakTts(msg)
                     }.onFailure { err ->
-                        val errMsg = "Échec d'envoi du SMS : ${err.message}. Veuillez vérifier que les autorisations SMS et Contacts sont accordées."
+                        val errMsg = "Échec d'envoi du SMS : ${err.message}"
                         _uiState.update { it.copy(isLoading = false, bubbleMessage = errMsg, spriteState = "idle") }
-                        speakTts("Impossible d'envoyer le SMS, Maverick. Veuillez vérifier les permissions.")
+                        speakTts(errMsg)
                     }
                     return@launch
                 }
@@ -590,14 +614,14 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch {
             // Traitement des actions locales smartphone & communications
             when (action.action) {
-                "comms:emails" -> {
+                "comms:emails", "check_emails" -> {
                     sendMessage("Résume-moi mes derniers emails")
                     return@launch
                 }
-                "comms:read_sms" -> {
+                "comms:read_sms", "read_sms" -> {
                     val recent = smsManager.getRecentSms(3)
                     if (recent.isEmpty()) {
-                        val emptyMsg = "Aucun SMS récent trouvé, Maverick."
+                        val emptyMsg = "Aucun SMS récent trouvé sur votre téléphone, Maverick."
                         _uiState.update { it.copy(bubbleMessage = emptyMsg) }
                         speakTts(emptyMsg)
                     } else {
@@ -611,7 +635,7 @@ class MainScreenViewModel(application: Application) : AndroidViewModel(applicati
                     }
                     return@launch
                 }
-                "comms:standardiste" -> {
+                "comms:standardiste", "call_standardiste" -> {
                     phoneManager.isStandardisteModeActive = !phoneManager.isStandardisteModeActive
                     val state = if (phoneManager.isStandardisteModeActive) "activé" else "désactivé"
                     val msg = "Mode Standardiste $state, Monsieur Maverick. Je filtre et gère vos appels."

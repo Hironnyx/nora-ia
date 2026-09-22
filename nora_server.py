@@ -422,7 +422,7 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
 
     def _handle_action(self, data: dict):
         action_name = data.get("action", "")
-        reply = "Action effectuée, Darling !"
+        reply = "Action effectuée, Maverick."
 
         if action_name.startswith("toggle_light:"):
             room = action_name.split(":")[1]
@@ -441,14 +441,21 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             reply = agent_home.smart_home.get_status_report()
         elif action_name == "boost_ram":
             system_monitor.clean_ram_cache()
-            reply = "Cache RAM vidé ! Les performances de ton PC sont au top, Darling !"
+            reply = "Cache RAM vidé ! Les performances de votre PC sont optimales, Maverick."
         elif action_name == "create_video":
             import nora_video_studio
             res = nora_video_studio.create_video_from_latest_learning(format_type="shorts")
             if res.get("success"):
-                reply = f"Vidéo générée avec succès sur '{res['title']}' ! Elle t'attend dans le dossier creations_videos, Darling !"
+                reply = f"Vidéo générée avec succès sur '{res['title']}' ! Elle vous attend dans le dossier creations_videos, Maverick."
             else:
                 reply = f"J'ai rencontré un petit souci pendant le montage de la vidéo : {res.get('error')}"
+        elif action_name in ["read_sms", "comms:read_sms"]:
+            reply = "Je vous invite à consulter vos SMS directement sur l'écran de votre smartphone, Maverick."
+        elif action_name in ["check_emails", "comms:emails"]:
+            import agent_mail
+            reply = agent_mail.mail_agent.get_summary_speech()
+        elif action_name in ["call_standardiste", "comms:standardiste"]:
+            reply = "Le mode standardiste est prêt sur votre téléphone, Maverick."
         elif action_name == "learn_new":
             import nora_learner
             res = nora_learner.learn_something_new()

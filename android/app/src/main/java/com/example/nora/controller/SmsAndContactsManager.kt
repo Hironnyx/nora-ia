@@ -29,11 +29,12 @@ class SmsAndContactsManager(private val context: Context) {
 
     fun resolveContactNumber(nameOrNumber: String): String {
         val clean = nameOrNumber.trim()
-        if (clean.matches(Regex("^[+0-9 ]+$"))) {
-            return clean.replace(" ", "")
+        val digitsOnly = clean.replace(Regex("[^0-9+]"), "")
+        if (digitsOnly.length >= 8 && digitsOnly.matches(Regex("""^\+?[0-9]{8,15}$"""))) {
+            return digitsOnly
         }
 
-        if (!hasContactsPermission()) return clean
+        if (!hasContactsPermission()) return digitsOnly.ifEmpty { clean }
 
         try {
             val uri = ContactsContract.CommonDataKinds.Phone.CONTENT_URI
@@ -48,14 +49,14 @@ class SmsAndContactsManager(private val context: Context) {
                 if (cursor.moveToFirst()) {
                     val numIndex = cursor.getColumnIndex(ContactsContract.CommonDataKinds.Phone.NUMBER)
                     if (numIndex >= 0) {
-                        return cursor.getString(numIndex).replace(" ", "")
+                        return cursor.getString(numIndex).replace(" ", "").replace("-", "").replace(".", "")
                     }
                 }
             }
         } catch (e: Exception) {
             e.printStackTrace()
         }
-        return clean
+        return digitsOnly.ifEmpty { clean }
     }
 
     fun resolveContactName(phoneNumber: String): String {
@@ -83,6 +84,11 @@ class SmsAndContactsManager(private val context: Context) {
         }
         return try {
             val number = resolveContactNumber(contactOrNumber)
+            val cleanDigits = number.replace(Regex("[^0-9+]"), "")
+            if (cleanDigits.length < 4) {
+                return Result.failure(IllegalArgumentException("Destinataire introuvable : aucun contact nommé \"$contactOrNumber\" n'a été trouvé dans votre répertoire."))
+            }
+
             val smsMgr: SmsManager = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                 context.getSystemService(SmsManager::class.java)
             } else {
