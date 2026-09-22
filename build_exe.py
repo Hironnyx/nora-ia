@@ -95,6 +95,7 @@ def run_pyinstaller():
         "--hidden-import=mascot_assets",
         "--hidden-import=memory_manager",
         "--hidden-import=mission_engine",
+        "--hidden-import=nora_autonomous_life",
         "--hidden-import=nora_brain",
         "--hidden-import=nora_initiatives",
         "--hidden-import=qg_dashboard",
@@ -172,6 +173,11 @@ def post_build():
     if state_src.exists():
         shutil.copyfile(str(state_src), str(OUTPUT_DIR / "smart_home_state.json"))
         print("✔ État smart_home_state.json synchronisé.")
+
+    carnet_src = PROJECT_DIR / "carnet_apprentissage_nora.md"
+    if carnet_src.exists():
+        shutil.copyfile(str(carnet_src), str(OUTPUT_DIR / "carnet_apprentissage_nora.md"))
+        print("✔ Carnet d'apprentissage synchronisé.")
 
     # 3. Synchroniser les dossiers d'assets au cas où
     mascot_dest = OUTPUT_DIR / "mascot_assets"

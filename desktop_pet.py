@@ -514,12 +514,29 @@ class NoraMascot(QWidget):
         self.walk_timer.timeout.connect(self.walk_step)
         self.walk_timer.start(35)
 
-        # 2. Timer de décisions de vie autonome (toutes les 7 secondes)
+        # 2. Timer de décisions de vie autonome (toutes les 4 secondes)
         self.life_timer = QTimer(self)
         self.life_timer.timeout.connect(self.check_autonomous_life)
-        self.life_timer.start(7000)
+        self.life_timer.start(4000)
 
-    def start_walking_to(self, target_x: int, speed: int = 2, announcement: str = None):
+        # 3. Première balade visible 4.5 secondes après le lancement
+        QTimer.singleShot(4500, self.initial_autonomous_walk)
+
+    def initial_autonomous_walk(self):
+        """Déclenche une première balade visible peu après le démarrage."""
+        if getattr(self, 'is_walking', False) or getattr(self, 'is_dragging', False):
+            return
+        screen = QApplication.primaryScreen().availableGeometry()
+        min_x = screen.left() + 20
+        max_x = max(min_x + 100, screen.right() - self.width() - 20)
+        current_x = self.x()
+        if current_x > (min_x + max_x) / 2:
+            target_x = max(min_x, current_x - 280)
+        else:
+            target_x = min(max_x, current_x + 280)
+        self.start_walking_to(target_x, speed=3, announcement="Je commence ma petite balade sur votre écran, Maverick !")
+
+    def start_walking_to(self, target_x: int, speed: int = 3, announcement: str = None):
         """Lance une balade autonome vers une coordonnée horizontale."""
         if getattr(self, 'is_dragging', False) or self.is_mission_running:
             return

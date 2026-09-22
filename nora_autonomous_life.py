@@ -24,11 +24,12 @@ class NoraLifeEngine:
         self.last_maintenance_time = time.time()
         self.last_water_reminder_time = time.time()
 
-        # Intervalles en secondes
-        self.min_walk_interval = 45
-        self.max_walk_interval = 140
-        self.min_thought_interval = 180
-        self.max_thought_interval = 420
+        # Intervalles en secondes pour un compagnon vivant et réactif
+        self.min_walk_interval = 25
+        self.max_walk_interval = 55
+        self.min_thought_interval = 120
+        self.max_thought_interval = 260
+        self.last_walk_time = 0  # Permet une première balade rapide après le lancement
 
     def get_time_period(self) -> str:
         """Détermine le moment de la journée pour adapter le comportement."""
@@ -42,30 +43,17 @@ class NoraLifeEngine:
         else:
             return "night"
 
-    def should_sleep_now(self) -> bool:
-        """La nuit (23h à 7h), Nora passe naturellement en mode sommeil léger."""
-        period = self.get_time_period()
-        return period == "night"
-
     def decide_next_action(self, current_x: int, min_x: int, max_x: int) -> dict:
         """
         Décide de la prochaine action autonome selon la routine, l'heure et l'humeur.
+        Nora reste éveillée et active aux côtés de Maverick tant que le PC est utilisé.
         """
         now = time.time()
         period = self.get_time_period()
 
-        # 1. Mode Nuit / Sommeil
-        if self.should_sleep_now() or self.is_sleeping:
-            if not self.is_sleeping:
-                self.is_sleeping = True
-                return {
-                    "type": "SLEEP",
-                    "bubble": "Je me repose dans un coin de l'écran, Maverick. Bonne nuit... 🌙",
-                    "sprite": "blink",
-                    "speech": False
-                }
-            # Durant la nuit, très peu d'actions : juste un soupir paisible ou Zzz
-            if now - self.last_thought_time > 600:
+        # 1. Mode Sieste explicite (demandé via le menu contextuel ou commande)
+        if self.is_sleeping:
+            if now - self.last_thought_time > 300:
                 self.last_thought_time = now
                 return {
                     "type": "SLEEP_IDLE",
@@ -75,17 +63,7 @@ class NoraLifeEngine:
                 }
             return {"type": "WAIT"}
 
-        # Si le jour se lève, se réveiller
-        if self.is_sleeping and not self.should_sleep_now():
-            self.is_sleeping = False
-            return {
-                "type": "WAKE_UP",
-                "bubble": "Bonjour Maverick ! Je suis bien réveillée et prête pour cette belle journée.",
-                "sprite": "talk_open",
-                "speech": True
-            }
-
-        # 2. Balade libre (Wandering)
+        # 2. Balade libre (Wandering) - Active le jour comme la nuit
         if self.roaming_enabled and (now - self.last_walk_time > random.randint(self.min_walk_interval, self.max_walk_interval)):
             self.last_walk_time = now
             # Choisir une nouvelle position cible réaliste sur l'écran
@@ -97,17 +75,27 @@ class NoraLifeEngine:
                 target_x = max_x if current_x < (min_x + max_x) / 2 else min_x
 
             direction = "right" if target_x > current_x else "left"
+            
+            night_phrases = [
+                "Je veille sur vous en cette heure tardive, Maverick.",
+                "Je me dégourdis les jambes pour rester bien éveillée avec vous !",
+                "Une petite marche nocturne à vos côtés.",
+                "Tout est calme cette nuit... Je change un peu de place."
+            ]
+            day_phrases = [
+                "Je me dégourdis un peu les jambes, Maverick.",
+                "Je change un peu d'angle de vue...",
+                "Je viens jeter un œil par ici.",
+                "Une petite promenade sur votre écran !"
+            ]
+            phrases_pool = night_phrases if period == "night" else day_phrases
+            
             return {
                 "type": "WALK",
                 "target_x": target_x,
                 "direction": direction,
                 "speed": random.choice([2, 3]),
-                "bubble": random.choice([
-                    "Je me dégourdis un peu les jambes, Maverick.",
-                    "Je change un peu d'angle de vue...",
-                    "Je viens jeter un œil par ici.",
-                    "Une petite promenade sur votre écran !"
-                ]) if random.random() < 0.35 else None
+                "bubble": random.choice(phrases_pool) if random.random() < 0.65 else None
             }
 
         # 3. Entretien silencieux du système (RAM) toutes les 25 minutes
