@@ -14,7 +14,7 @@ import os
 from pathlib import Path
 from PyQt6.QtWidgets import (
     QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout,
-    QProgressBar, QFrame, QScrollArea, QGraphicsDropShadowEffect
+    QProgressBar, QFrame, QScrollArea, QGraphicsDropShadowEffect, QLineEdit
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint
 from PyQt6.QtGui import QColor, QFont, QCursor
@@ -67,7 +67,7 @@ class QGDashboard(QWidget):
             Qt.WindowType.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedSize(440, 715)
+        self.setFixedSize(450, 775)
 
         layout = QVBoxLayout()
         layout.setContentsMargins(10, 10, 10, 10)
@@ -87,9 +87,9 @@ class QGDashboard(QWidget):
         container_layout.setContentsMargins(14, 14, 14, 14)
         container_layout.setSpacing(10)
 
-        # 1. En-tête HUD
+        # 1. En-tête HUD Classique & Esthétique
         header_layout = QHBoxLayout()
-        title_label = QLabel("🌸 QG DE NORA - FRANXX HUD")
+        title_label = QLabel("🌸 QG DE NORA - QUARTIER GÉNÉRAL")
         title_label.setStyleSheet("""
             color: #fda4af;
             font-weight: 800;
@@ -99,9 +99,32 @@ class QGDashboard(QWidget):
         """)
         header_layout.addWidget(title_label)
 
+        # Bouton Réduire / Masquer
+        min_btn = QPushButton("—")
+        min_btn.setFixedSize(26, 26)
+        min_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        min_btn.setToolTip("Réduire / Masquer le QG")
+        min_btn.setStyleSheet("""
+            QPushButton {
+                background-color: #334155;
+                color: #ffffff;
+                border: none;
+                border-radius: 13px;
+                font-size: 13px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background-color: #475569;
+            }
+        """)
+        min_btn.clicked.connect(self.hide)
+        header_layout.addWidget(min_btn)
+
+        # Bouton Fermer
         close_btn = QPushButton("✕")
         close_btn.setFixedSize(26, 26)
         close_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        close_btn.setToolTip("Fermer le QG")
         close_btn.setStyleSheet("""
             QPushButton {
                 background-color: #334155;
@@ -475,8 +498,123 @@ class QGDashboard(QWidget):
         actions_row.addWidget(btn_web)
         container_layout.addLayout(actions_row)
 
+        # 8. Barre de Saisie & Chat Direct Classique
+        chat_box = QFrame()
+        chat_box.setStyleSheet("""
+            QFrame {
+                background-color: rgba(15, 23, 42, 0.95);
+                border: 2px solid #f43f5e;
+                border-radius: 12px;
+            }
+        """)
+        chat_layout = QHBoxLayout(chat_box)
+        chat_layout.setContentsMargins(8, 4, 8, 4)
+        chat_layout.setSpacing(6)
+
+        self.input_field = QLineEdit()
+        self.input_field.setPlaceholderText("Écrire à Nora ou lui donner un ordre... (Entrée pour envoyer)")
+        self.input_field.setStyleSheet("""
+            QLineEdit {
+                background: transparent;
+                color: #ffffff;
+                border: none;
+                font-size: 12px;
+                font-weight: 500;
+                padding: 4px;
+            }
+        """)
+        self.input_field.returnPressed.connect(self.submit_qg_chat)
+        chat_layout.addWidget(self.input_field)
+
+        self.btn_send = QPushButton("➤")
+        self.btn_send.setFixedSize(28, 28)
+        self.btn_send.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_send.setToolTip("Envoyer le message")
+        self.btn_send.setStyleSheet("""
+            QPushButton {
+                background-color: #e11d48;
+                color: white;
+                border-radius: 14px;
+                font-size: 13px;
+                border: none;
+            }
+            QPushButton:hover { background-color: #f43f5e; }
+        """)
+        self.btn_send.clicked.connect(self.submit_qg_chat)
+        chat_layout.addWidget(self.btn_send)
+
+        self.btn_mic = QPushButton("🎙️")
+        self.btn_mic.setFixedSize(28, 28)
+        self.btn_mic.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_mic.setToolTip("Parler au micro à Nora")
+        self.btn_mic.setStyleSheet("""
+            QPushButton {
+                background-color: #be185d;
+                color: white;
+                border-radius: 14px;
+                font-size: 13px;
+                border: none;
+            }
+            QPushButton:hover { background-color: #db2777; }
+        """)
+        self.btn_mic.clicked.connect(self.on_mic_click)
+        chat_layout.addWidget(self.btn_mic)
+
+        self.btn_handsfree = QPushButton("🎧")
+        self.btn_handsfree.setFixedSize(28, 28)
+        self.btn_handsfree.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_handsfree.setToolTip("Mode Mains-Libres ('Dis Nora')")
+        self.btn_handsfree.setStyleSheet("""
+            QPushButton {
+                background-color: #334155;
+                color: #94a3b8;
+                border-radius: 14px;
+                font-size: 13px;
+                border: none;
+            }
+            QPushButton:hover { background-color: #475569; }
+        """)
+        self.btn_handsfree.clicked.connect(self.on_handsfree_click)
+        chat_layout.addWidget(self.btn_handsfree)
+
+        container_layout.addWidget(chat_box)
+
         layout.addWidget(self.container)
         self.setLayout(layout)
+
+    def submit_qg_chat(self):
+        """Envoie le message saisi dans le QG à Nora."""
+        text = self.input_field.text().strip()
+        if text:
+            self.input_field.clear()
+            if self.parent_mascot:
+                self.parent_mascot.process_user_message(text)
+
+    def on_mic_click(self):
+        """Déclenche la capture vocale via Nora."""
+        if self.parent_mascot:
+            self.parent_mascot.start_voice_input()
+
+    def on_handsfree_click(self):
+        """Bascule le mode mains-libres 'Dis Nora'."""
+        if self.parent_mascot:
+            self.parent_mascot.toggle_hands_free()
+            self.update_handsfree_button()
+
+    def update_handsfree_button(self):
+        """Met à jour l'apparence du bouton mains-libres selon son état."""
+        if self.parent_mascot:
+            active = getattr(self.parent_mascot, 'hands_free_enabled', False)
+            if active:
+                self.btn_handsfree.setStyleSheet("""
+                    QPushButton { background-color: #10b981; color: white; border-radius: 14px; font-size: 13px; border: none; }
+                    QPushButton:hover { background-color: #059669; }
+                """)
+            else:
+                self.btn_handsfree.setStyleSheet("""
+                    QPushButton { background-color: #334155; color: #94a3b8; border-radius: 14px; font-size: 13px; border: none; }
+                    QPushButton:hover { background-color: #475569; }
+                """)
 
     def on_select_outfit(self, outfit: str):
         """Sélectionne une tenue et prévient les écouteurs."""
@@ -663,7 +801,7 @@ class QGDashboard(QWidget):
             self.btn_refuse.show()
         else:
             self.init_title.setText("💡 VEILLE PROACTIVE :")
-            self.init_text.setText("Tout est propre et sous haute sécurité, Darling. Aucune action requise !")
+            self.init_text.setText("Tout est propre et sous haute sécurité, Maverick. Aucune action requise !")
             self.btn_validate.hide()
             self.btn_refuse.hide()
 
@@ -689,21 +827,27 @@ class QGDashboard(QWidget):
     def mouseMoveEvent(self, event):
         """Déplacement fluide du QG sur n'importe quel écran."""
         if event.buttons() == Qt.MouseButton.LeftButton and hasattr(self, 'drag_pos'):
+            self._user_moved = True
             self.move(event.globalPosition().toPoint() - self.drag_pos)
             event.accept()
 
-    def toggle_near(self, point: QPoint, mascot_width: int = 310):
-        """Ouvre ou ferme le dashboard à côté de la mascotte."""
+    def toggle_near(self, point: QPoint, mascot_width: int = 240):
+        """Ouvre ou ferme le dashboard de façon esthétique."""
         if self.isVisible():
             self.hide()
         else:
-            self.position_near(point, mascot_width)
+            if not getattr(self, '_user_moved', False):
+                self.position_near(point, mascot_width)
             self.update_telemetry()
             self.update_outfit_buttons(memory_manager.get_current_outfit())
             self.update_gaming_ui()
             self.update_vc_ui()
+            self.update_handsfree_button()
             self.show()
             self.raise_()
+            self.activateWindow()
+            if hasattr(self, 'input_field'):
+                self.input_field.setFocus()
 
     def position_near(self, point: QPoint, mascot_width: int = 310):
         """Positionne le QG intelligemment sans AUCUN chevauchement sur tous les écrans."""

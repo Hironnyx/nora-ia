@@ -59,6 +59,16 @@ def run_pyinstaller():
     """Lance la compilation PyInstaller."""
     print("⚙️ [2/4] Compilation PyInstaller en mode 'onedir' haute performance...")
 
+    if OUTPUT_DIR.exists():
+        import time
+        for _ in range(5):
+            try:
+                shutil.rmtree(OUTPUT_DIR, ignore_errors=True)
+                if not OUTPUT_DIR.exists():
+                    break
+            except Exception:
+                time.sleep(1)
+
     args = [
         str(PROJECT_DIR / "desktop_pet.py"),
         "--name=Nora",

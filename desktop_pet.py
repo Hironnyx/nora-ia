@@ -212,130 +212,62 @@ class NoraMascot(QWidget):
             Qt.WindowType.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedWidth(310)
+        self.setFixedWidth(240)
 
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(10, 10, 10, 10)
-        main_layout.setSpacing(8)
+        main_layout.setContentsMargins(4, 4, 4, 4)
+        main_layout.setSpacing(2)
         main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
 
-        # 1. Bulle de dialogue stylée Zero Two (Agrandie et très lisible)
-        self.bubble_label = QLabel("Bonjour ! Je suis Nora.")
+        # 1. Bulle de dialogue style Manga / Comic (Apparaît uniquement quand Nora s'exprime)
+        self.bubble_container = QWidget()
+        bubble_layout = QVBoxLayout(self.bubble_container)
+        bubble_layout.setContentsMargins(0, 0, 0, 0)
+        bubble_layout.setSpacing(0)
+        bubble_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+        self.bubble_label = QLabel("")
         self.bubble_label.setWordWrap(True)
-        self.bubble_label.setMaximumWidth(300)
+        self.bubble_label.setMaximumWidth(225)
+        self.bubble_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.bubble_label.setStyleSheet("""
-            background-color: rgba(15, 23, 42, 0.97);
+            background-color: rgba(15, 23, 42, 0.95);
             color: #ffffff;
             border: 2px solid #fb7185;
             border-radius: 14px;
-            padding: 10px 14px;
-            font-size: 13px;
+            padding: 8px 12px;
+            font-size: 11.5px;
             font-weight: 600;
         """)
-        self.bubble_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        main_layout.addWidget(self.bubble_label)
+        bubble_layout.addWidget(self.bubble_label)
 
-        # 2. Sprite animé de Zero Two
+        # Flèche manga de la bulle vers la tête de Nora
+        self.bubble_tail = QLabel("▼")
+        self.bubble_tail.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.bubble_tail.setStyleSheet("color: #fb7185; font-size: 10px; margin-top: -3px; border: none; background: transparent;")
+        bubble_layout.addWidget(self.bubble_tail)
+
+        main_layout.addWidget(self.bubble_container)
+        self.bubble_container.hide()  # Cachée par défaut pour un personnage 100% épuré
+
+        # Timer pour masquer la bulle automatiquement
+        self.bubble_hide_timer = QTimer(self)
+        self.bubble_hide_timer.setSingleShot(True)
+        self.bubble_hide_timer.timeout.connect(self.hide_speech_bubble)
+
+        # 2. Sprite animé de Nora (Zero Two)
         self.avatar_label = QLabel()
         self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.avatar_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.set_sprite_state("idle")
         main_layout.addWidget(self.avatar_label)
 
-        # 3. Barre de commande
-        self.control_panel = QWidget()
-        ctrl_layout = QHBoxLayout()
-        ctrl_layout.setContentsMargins(0, 0, 0, 0)
-        ctrl_layout.setSpacing(5)
-
-        self.input_field = QLineEdit()
-        self.input_field.setPlaceholderText("Parler ou donner un ordre... (Ctrl+Alt+N)")
-        self.input_field.setStyleSheet("""
-            QLineEdit {
-                background-color: rgba(17, 24, 39, 0.95);
-                color: #ffffff;
-                border: 2px solid #f43f5e;
-                border-radius: 12px;
-                padding: 6px 10px;
-                font-size: 11px;
-            }
-            QLineEdit:focus {
-                border: 2px solid #fda4af;
-            }
-        """)
-        self.input_field.returnPressed.connect(self.submit_text_input)
-        ctrl_layout.addWidget(self.input_field)
-
-        # Bouton Microphone manuel (couleur rouge Zero Two)
-        self.mic_btn = QPushButton("🎙️")
-        self.mic_btn.setFixedSize(32, 32)
-        self.mic_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.mic_btn.setToolTip("Cliquer pour parler au micro (ou Ctrl+Alt+N)")
-        self.mic_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #e11d48;
-                color: white;
-                border-radius: 16px;
-                font-size: 14px;
-                border: 1px solid #fda4af;
-            }
-            QPushButton:hover {
-                background-color: #f43f5e;
-            }
-        """)
-        self.mic_btn.clicked.connect(self.start_voice_input)
-        ctrl_layout.addWidget(self.mic_btn)
-
-        # Bouton Mains-Libres (Dis Nora)
-        self.handsfree_btn = QPushButton("🎧")
-        self.handsfree_btn.setFixedSize(32, 32)
-        self.handsfree_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.handsfree_btn.setToolTip("Activer/Désactiver le mot-clé mains-libres 'Dis Nora'")
-        self.handsfree_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #334155;
-                color: #94a3b8;
-                border-radius: 16px;
-                font-size: 14px;
-                border: 1px solid #475569;
-            }
-            QPushButton:hover {
-                background-color: #475569;
-            }
-        """)
-        self.handsfree_btn.clicked.connect(self.toggle_hands_free)
-        ctrl_layout.addWidget(self.handsfree_btn)
-
-        # Bouton QG Dashboard de Nora
-        self.qg_btn = QPushButton("📊")
-        self.qg_btn.setFixedSize(32, 32)
-        self.qg_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.qg_btn.setToolTip("Ouvrir / Rétracter le QG de Nora (Dashboard)")
-        self.qg_btn.setStyleSheet("""
-            QPushButton {
-                background-color: #0f172a;
-                color: #fb7185;
-                border-radius: 16px;
-                font-size: 14px;
-                border: 2px solid #e11d48;
-            }
-            QPushButton:hover {
-                background-color: #1e293b;
-                border-color: #fda4af;
-            }
-        """)
-        self.qg_btn.clicked.connect(self.toggle_qg)
-        ctrl_layout.addWidget(self.qg_btn)
-
-        self.control_panel.setLayout(ctrl_layout)
-        main_layout.addWidget(self.control_panel)
-
         self.setLayout(main_layout)
 
-        # Position initiale : bas droite de l'écran principal
+        # Position initiale : bord inférieur droit de l'écran principal
         screen = QApplication.primaryScreen().availableGeometry()
-        pos_x = max(100, screen.right() - 350)
-        pos_y = max(100, screen.bottom() - 380)
+        pos_x = max(100, screen.right() - 280)
+        pos_y = max(100, screen.bottom() - 320)
         self.move(pos_x, pos_y)
 
     # =================================================================
@@ -431,6 +363,11 @@ class NoraMascot(QWidget):
         self.lip_phase = 0
         self.set_sprite_state("talk_open")
         self.lip_timer.start(135)
+        # Maintenir la bulle manga visible tant que Nora parle
+        if hasattr(self, 'bubble_hide_timer'):
+            self.bubble_hide_timer.stop()
+        if hasattr(self, 'bubble_container'):
+            self.bubble_container.show()
 
     def lip_sync_step(self):
         """Alterne la bouche ouverte et entrouverte pendant l'articulation."""
@@ -447,6 +384,28 @@ class NoraMascot(QWidget):
         self.lip_timer.stop()
         if not self.is_mission_running:
             self.set_sprite_state("idle")
+        # Masquer automatiquement la bulle de dialogue 3.5s après la parole
+        if hasattr(self, 'bubble_hide_timer'):
+            self.bubble_hide_timer.start(3500)
+
+    def hide_speech_bubble(self):
+        """Masque la bulle de dialogue manga pour laisser le personnage pur et épuré."""
+        if hasattr(self, 'bubble_container') and self.bubble_container.isVisible():
+            self.bubble_container.hide()
+
+    def display_message(self, text: str, duration_ms: int = 6500):
+        """Affiche un message dans la bulle manga au-dessus de Nora et planifie sa disparition."""
+        if not text:
+            self.hide_speech_bubble()
+            return
+        self.bubble_label.setText(text)
+        self.bubble_label.adjustSize()
+        if hasattr(self, 'bubble_container'):
+            self.bubble_container.show()
+        if hasattr(self, 'bubble_hide_timer'):
+            self.bubble_hide_timer.stop()
+            if duration_ms > 0:
+                self.bubble_hide_timer.start(duration_ms)
 
     def speak_nora(self, text: str, on_finished=None, force: bool = False):
         """Fait parler Nora avec synchronisation labiale et animation."""
@@ -494,10 +453,6 @@ class NoraMascot(QWidget):
         pix = self.get_cached_pixmap(self.current_outfit, state)
         if pix:
             self.avatar_label.setPixmap(pix)
-
-    def display_message(self, text: str):
-        self.bubble_label.setText(text)
-        self.bubble_label.adjustSize()
 
     def welcome_greeting(self):
         msg = memory_manager.get_welcome_message()
@@ -565,10 +520,6 @@ class NoraMascot(QWidget):
         step = self.walk_speed if dx > 0 else -self.walk_speed
         new_x = current_pos.x() + step
         self.move(new_x, current_pos.y())
-
-        # Suivi du Dashboard QG s'il est ouvert
-        if hasattr(self, 'qg') and self.qg.isVisible():
-            self.qg.position_near(QPoint(new_x, current_pos.y()), self.width())
 
         # Oscillation organique de marche (pas à pas)
         self.walk_step_counter += 1
@@ -906,29 +857,14 @@ class NoraMascot(QWidget):
     def toggle_hands_free(self):
         """Active ou désactive l'écoute continue 'Dis Nora'."""
         self.hands_free_enabled = not self.hands_free_enabled
+        if hasattr(self, 'qg') and self.qg:
+            self.qg.update_handsfree_button()
+
         if self.hands_free_enabled:
-            self.handsfree_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #10b981;
-                    color: white;
-                    border-radius: 16px;
-                    font-size: 14px;
-                    border: 2px solid #34d399;
-                }
-            """)
             self.wake_detector.start()
             sound_effects.play_wake_chime()
             self.display_message("🎧 Mode Mains-Libres ACTIF !\nDis simplement 'Dis Nora' ou 'Hey Nora' à voix haute.")
         else:
-            self.handsfree_btn.setStyleSheet("""
-                QPushButton {
-                    background-color: #334155;
-                    color: #94a3b8;
-                    border-radius: 16px;
-                    font-size: 14px;
-                    border: 1px solid #475569;
-                }
-            """)
             self.wake_detector.stop()
             self.display_message("🎧 Mode Mains-Libres désactivé.")
 
@@ -948,10 +884,11 @@ class NoraMascot(QWidget):
     # GESTION DES ENTRÉES : DISCUSSION VS MISSION
     # =================================================================
     def submit_text_input(self):
-        text = self.input_field.text().strip()
-        if text:
-            self.input_field.clear()
-            self.process_user_message(text)
+        if hasattr(self, 'input_field'):
+            text = self.input_field.text().strip()
+            if text:
+                self.input_field.clear()
+                self.process_user_message(text)
 
     def start_voice_input(self):
         if self.is_mission_running:
@@ -1037,21 +974,33 @@ class NoraMascot(QWidget):
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = True
-            self.is_walking = False  # Pause la balade libre si Maverick déplace Nora
+            self.drag_start_pos = event.globalPosition().toPoint()
             self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            self.drag_has_moved = False
             event.accept()
 
     def mouseMoveEvent(self, event):
         if getattr(self, 'is_dragging', False) and self.drag_position is not None and event.buttons() == Qt.MouseButton.LeftButton:
-            new_pos = event.globalPosition().toPoint() - self.drag_position
+            curr_pos = event.globalPosition().toPoint()
+            if hasattr(self, 'drag_start_pos') and (curr_pos - self.drag_start_pos).manhattanLength() > 6:
+                self.drag_has_moved = True
+                self.is_walking = False  # Pause la balade libre si Maverick déplace Nora
+            new_pos = curr_pos - self.drag_position
             self.move(new_pos)
-            if hasattr(self, 'qg') and self.qg.isVisible():
-                self.qg.position_near(new_pos, self.width())
+            event.accept()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = False
             self.walk_target_x = self.x()
+            if not getattr(self, 'drag_has_moved', False):
+                # Un clic direct sur Nora ouvre / ferme son QG de commande classique et esthétique
+                self.toggle_qg()
+            event.accept()
+
+    def mouseDoubleClickEvent(self, event):
+        if event.button() == Qt.MouseButton.LeftButton:
+            self.toggle_qg()
             event.accept()
 
     def contextMenuEvent(self, event):
