@@ -16,11 +16,7 @@ BASE_DIR = Path(__file__).resolve().parent
 CRYPTO_FILE = BASE_DIR / "crypto_darling.json"
 
 DEFAULT_CRYPTO = {
-    "portfolio": [
-        {"symbol": "BTC", "name": "Bitcoin", "amount": 0.12, "pru_eur": 62000.0},
-        {"symbol": "ETH", "name": "Ethereum", "amount": 1.8, "pru_eur": 2800.0},
-        {"symbol": "SOL", "name": "Solana", "amount": 15.0, "pru_eur": 135.0}
-    ],
+    "portfolio": [],
     "watchlist": ["BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT"],
     "eur_usd_rate": 1.08
 }
@@ -173,11 +169,21 @@ class CryptoAgent:
         self._save_data()
 
     def get_summary_speech(self) -> str:
-        """Génère le bulletin crypto oral de Zero Two."""
+        """Génère le bulletin crypto oral de Nora."""
         btc = self.fetch_crypto_price_usd("BTC")
         eth = self.fetch_crypto_price_usd("ETH")
         fng = self.fetch_fear_and_greed_index()
         val = self.get_portfolio_valuation()
+
+        if not val["positions"]:
+            speech = (
+                f"Monsieur Maverick, voici votre point sur le marché crypto. "
+                f"Le Bitcoin cote à {btc['price_eur']:.0f} euros ({btc['change_24h_pct']:+.1f}% sur 24h), "
+                f"et l'Ethereum est à {eth['price_eur']:.0f} euros ({eth['change_24h_pct']:+.1f}%). "
+                f"L'indice de sentiment Fear & Greed est à {fng['value']}/100, en zone '{fng['classification_fr']}'. "
+                f"Vous n'avez pas encore renseigné d'actifs dans votre portefeuille crypto. Vous pouvez m'indiquer vos détentions pour que je les intègre à votre patrimoine."
+            )
+            return speech
 
         total_val = val["total_value_eur"]
         pnl = val["total_pnl_eur"]

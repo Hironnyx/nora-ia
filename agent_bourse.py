@@ -15,11 +15,7 @@ BASE_DIR = Path(__file__).resolve().parent
 BOURSE_FILE = BASE_DIR / "bourse_darling.json"
 
 DEFAULT_BOURSE = {
-    "portfolio": [
-        {"ticker": "CW8.PA", "name": "Amundi MSCI World ETF", "shares": 10.0, "pru": 510.0, "currency": "EUR"},
-        {"ticker": "NVDA", "name": "Nvidia Corporation", "shares": 12.0, "pru": 115.0, "currency": "USD"},
-        {"ticker": "MC.PA", "name": "LVMH Moët Hennessy", "shares": 3.0, "pru": 680.0, "currency": "EUR"}
-    ],
+    "portfolio": [],
     "watchlist": [
         "^GSPC", "^FCHI", "CW8.PA", "NVDA", "AAPL", "MSFT", "TSLA", "MC.PA", "TTE.PA"
     ],
@@ -160,7 +156,7 @@ class BourseAgent:
         self._save_data()
 
     def get_summary_speech(self) -> str:
-        """Génère un compte-rendu oral vivant pour Zero Two."""
+        """Génère un compte-rendu oral vivant pour Nora."""
         val = self.get_portfolio_valuation()
         total_val = val["total_value_eur"]
         pnl = val["total_pnl_eur"]
@@ -169,6 +165,15 @@ class BourseAgent:
         # Indices majeurs
         sp500 = self.fetch_ticker_quote("^GSPC")
         cac = self.fetch_ticker_quote("^FCHI")
+
+        if not val["positions"]:
+            speech = "Monsieur Maverick, vous n'avez pas encore enregistré de positions dans votre portefeuille boursier. "
+            if sp500.get("price"):
+                speech += f"Côté indices, le S&P 500 est à {sp500['price']:.0f} points ({sp500['change_pct']:+.2f}%), "
+            if cac.get("price"):
+                speech += f"et le CAC 40 est à {cac['price']:.0f} points ({cac['change_pct']:+.2f}%). "
+            speech += "Vous pouvez m'indiquer vos actions ou ETF à tout moment pour que je commence à les suivre."
+            return speech
 
         status_txt = "en hausse de" if pnl >= 0 else "en baisse de"
 

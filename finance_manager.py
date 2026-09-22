@@ -41,7 +41,7 @@ def get_patrimoine_global() -> dict:
     }
 
 def get_global_speech_report() -> str:
-    """Rapport oral complet du patrimoine pour Zero Two."""
+    """Rapport oral complet du patrimoine pour Nora."""
     pat = get_patrimoine_global()
     net = pat["net_worth_eur"]
     bank = pat["bank_total_eur"]
@@ -49,13 +49,21 @@ def get_global_speech_report() -> str:
     crypto = pat["crypto_total_eur"]
     alloc = pat["allocation"]
 
+    if bourse == 0 and crypto == 0:
+        return (
+            f"Monsieur Maverick, voici votre bilan financier. "
+            f"Vos liquidités bancaires s'élèvent à {bank:.2f} euros. "
+            f"Vous n'avez actuellement aucune position boursière ou crypto enregistrée. "
+            f"Indiquez-moi vos investissements dès que vous le souhaitez pour que je les intègre."
+        )
+
     speech = (
         f"Monsieur Maverick, voici votre bilan patrimonial global. "
         f"Votre patrimoine net s'élève à {net:.2f} euros. "
         f"Vous disposez de {bank:.2f} euros de liquidités bancaires ({alloc['bank_pct']}%), "
         f"{bourse:.2f} euros investis en bourse et ETF ({alloc['bourse_pct']}%), "
         f"et {crypto:.2f} euros en actifs cryptomonnaies ({alloc['crypto_pct']}%). "
-        f"Votre portefeuille est bien diversifié et vos avoirs sont sous contrôle."
+        f"Votre portefeuille est sous contrôle, Maverick."
     )
     return speech
 

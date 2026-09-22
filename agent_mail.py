@@ -33,35 +33,6 @@ DEFAULT_MAIL_CONFIG = {
     "use_ssl": True
 }
 
-DEMO_EMAILS = [
-    {
-        "id": "demo-1",
-        "sender": "Banque Populaire <alerte@banquepopulaire.fr>",
-        "subject": "Relevé mensuel et synthèse de vos comptes",
-        "date": "Aujourd'hui à 08:30",
-        "unread": True,
-        "priority": "important",
-        "snippet": "Monsieur Maverick, votre relevé de compte pour la période passée est disponible sur votre espace sécurisé."
-    },
-    {
-        "id": "demo-2",
-        "sender": "Service Livraison <suivi@transporteur.fr>",
-        "subject": "Votre commande sera livrée aujourd'hui",
-        "date": "Aujourd'hui à 09:15",
-        "unread": True,
-        "priority": "normal",
-        "snippet": "Votre colis n°FR-89423 est pris en charge par notre livreur. Créneau estimé : entre 14h00 et 16h30."
-    },
-    {
-        "id": "demo-3",
-        "sender": "Cabinet Juridique & Conseil <contact@cabinet-conseil.fr>",
-        "subject": "Validation des documents et calendrier",
-        "date": "Hier à 17:45",
-        "unread": False,
-        "priority": "normal",
-        "snippet": "Bonjour Monsieur Maverick, nous vous confirmons la bonne réception des pièces justificatives. Nous attendons votre retour pour valider la date de signature."
-    }
-]
 
 def _decode_mime_words(s: str) -> str:
     """Décode les en-têtes MIME encodés en utf-8 ou base64."""
@@ -108,9 +79,9 @@ class MailAgent:
         )
 
     def fetch_recent_emails(self, unread_only: bool = True, limit: int = 5) -> List[Dict[str, Any]]:
-        """Récupère les courriels récents via IMAP avec fallback démo si non configuré."""
+        """Récupère les courriels récents via IMAP."""
         if not self.is_configured():
-            return DEMO_EMAILS[:limit]
+            return []
 
         results = []
         try:
@@ -169,23 +140,22 @@ class MailAgent:
 
         except Exception as e:
             print(f"[MailAgent] Erreur relève IMAP : {e}")
-            return DEMO_EMAILS[:limit]
+            return []
 
     def get_summary_speech(self) -> str:
         """Génère la synthèse vocale pour Maverick avec vouvoiement systématique."""
+        if not self.is_configured():
+            return "Monsieur Maverick, votre messagerie n'est pas encore connectée. Veuillez renseigner votre adresse et mot de passe d'application dans config_mail.json pour que je puisse relever vos vrais courriels."
+
         emails = self.fetch_recent_emails(unread_only=True, limit=3)
         if not emails:
             return "Monsieur Maverick, vous n'avez aucun nouveau courriel non lu dans votre boîte de réception. Tout est à jour."
 
         nb = len(emails)
         if nb == 1:
-            speech = f"Monsieur Maverick, vous avez un nouveau courriel non lu de {emails[0]['sender'].split('<')[0].strip()} concernant '{emails[0]['subject']}'."
+            return f"Monsieur Maverick, vous avez un nouveau courriel non lu de {emails[0]['sender'].split('<')[0].strip()} concernant '{emails[0]['subject']}'."
         else:
-            speech = f"Monsieur Maverick, vous avez {nb} nouveaux courriels non lus. Notamment un message de {emails[0]['sender'].split('<')[0].strip()} ayant pour objet '{emails[0]['subject']}', et un autre de {emails[1]['sender'].split('<')[0].strip()}."
-
-        if not self.is_configured():
-            speech += " (Ces messages sont des exemples d'illustration, vous pouvez associer votre compte dans config_mail.json)."
-        return speech
+            return f"Monsieur Maverick, vous avez {nb} nouveaux courriels non lus. Notamment un message de {emails[0]['sender'].split('<')[0].strip()} ayant pour objet '{emails[0]['subject']}', et un autre de {emails[1]['sender'].split('<')[0].strip()}."
 
     def draft_reply(self, recipient: str, original_subject: str, instructions: str) -> str:
         """Rédige une réponse d'email professionnelle et soignée au nom de Maverick."""
