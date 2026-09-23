@@ -39,103 +39,22 @@ def find_prusaslicer_exe() -> Optional[str]:
 
 DEFAULT_3D_STATE = {
     "printer_telemetry": {
-        "status": "Prête",          # Prête, En impression, En pause, Refroidissement
-        "nozzle_temp": 215,         # Température actuelle
-        "nozzle_target": 215,       # Température cible
-        "bed_temp": 60,             # Température plateau actuelle
-        "bed_target": 60,           # Température plateau cible
-        "fan_speed": 100,           # Pourcentage ventilateur
-        "progress_percent": 0,      # 0 à 100%
+        "status": "Non connectée",
+        "nozzle_temp": 0,
+        "nozzle_target": 0,
+        "bed_temp": 0,
+        "bed_target": 0,
+        "fan_speed": 0,
+        "progress_percent": 0,
         "current_layer": 0,
-        "total_layers": 420,
-        "print_duration": "00:00:00",
-        "time_remaining": "02h 15m",
-        "active_file": "Support_Bureau_ZeroTwo.3mf"
+        "total_layers": 0,
+        "print_duration": "--",
+        "time_remaining": "--",
+        "active_file": "Aucun",
+        "endpoint": ""
     },
-    "filament_spools": [
-        {
-            "id": "spool_1",
-            "material": "PLA+",
-            "brand": "Sunlu",
-            "color_name": "Rouge Écarlate Zero Two",
-            "color_hex": "#ff2a85",
-            "total_weight_g": 1000,
-            "remaining_weight_g": 780,
-            "temp_nozzle": 210,
-            "temp_bed": 60
-        },
-        {
-            "id": "spool_2",
-            "material": "PETG",
-            "brand": "Prusament",
-            "color_name": "Noir Galactique",
-            "color_hex": "#0f172a",
-            "total_weight_g": 1000,
-            "remaining_weight_g": 620,
-            "temp_nozzle": 240,
-            "temp_bed": 85
-        },
-        {
-            "id": "spool_3",
-            "material": "PLA",
-            "brand": "eSun",
-            "color_name": "Cyan Néon Cyberpunk",
-            "color_hex": "#00f0ff",
-            "total_weight_g": 1000,
-            "remaining_weight_g": 910,
-            "temp_nozzle": 205,
-            "temp_bed": 55
-        },
-        {
-            "id": "spool_4",
-            "material": "TPU 95A",
-            "brand": "Polymaker",
-            "color_name": "Blanc Flexible",
-            "color_hex": "#f8fafc",
-            "total_weight_g": 500,
-            "remaining_weight_g": 410,
-            "temp_nozzle": 225,
-            "temp_bed": 50
-        }
-    ],
-    "print_queue": [
-        {
-            "id": "print_1",
-            "title": "Support_Bureau_ZeroTwo.3mf",
-            "format": "3MF",
-            "material": "PLA+",
-            "estimated_time": "2h 30m",
-            "estimated_grams": 65,
-            "layer_height": "0.20mm",
-            "infill": "20% Gyroid",
-            "status": "En attente",
-            "path": ""
-        },
-        {
-            "id": "print_2",
-            "title": "Boitier_Capteur_Environnement.stl",
-            "format": "STL",
-            "material": "PETG",
-            "estimated_time": "1h 45m",
-            "estimated_grams": 42,
-            "layer_height": "0.20mm",
-            "infill": "25% Grid",
-            "status": "En attente",
-            "path": ""
-        },
-        {
-            "id": "print_3",
-            "title": "Organiseur_Cables_Magnétique.stl",
-            "format": "STL",
-            "material": "PLA",
-            "estimated_time": "45m",
-            "estimated_grams": 18,
-            "layer_height": "0.20mm",
-            "infill": "15% Gyroid",
-            "status": "Terminé",
-            "path": ""
-        }
-    ]
+    "filament_spools": [],
+    "print_queue": []
 }
 
 class Print3DManager:
@@ -234,6 +153,53 @@ class Print3DManager:
         return False
 
     # =========================================================================
+    # FICHIERS RÉELS DU DOSSIER IMPRESSION 3D
+    # =========================================================================
+    def scan_models_dir(self) -> List[Dict[str, Any]]:
+        """Scanne le dossier réel Documents/Impression3D pour trouver les fichiers 3D."""
+        MODELS_DIR.mkdir(parents=True, exist_ok=True)
+        found = []
+        exts = {".stl", ".3mf", ".obj", ".step", ".gcode"}
+        try:
+            for f in MODELS_DIR.iterdir():
+                if f.is_file() and f.suffix.lower() in exts:
+                    size_mb = f.stat().st_size / (1024 * 1024)
+                    found.append({
+                        "name": f.name,
+                        "stem": f.stem,
+                        "format": f.suffix[1:].upper(),
+                        "path": str(f.resolve()),
+                        "size_mb": round(size_mb, 2),
+                        "modified": time.strftime("%d/%m/%Y %H:%M", time.localtime(f.stat().st_mtime))
+                    })
+        except Exception as e:
+            print(f"Erreur scan dossier Impression3D : {e}")
+        return found
+
+    def import_model_file(self, src_path: str) -> Optional[Dict[str, Any]]:
+        """Copie un fichier 3D réel dans Documents/Impression3D."""
+        p = Path(src_path)
+        if not p.exists() or not p.is_file():
+            return None
+        MODELS_DIR.mkdir(parents=True, exist_ok=True)
+        dest = MODELS_DIR / p.name
+        import shutil
+        shutil.copy2(p, dest)
+        return {
+            "name": dest.name,
+            "stem": dest.stem,
+            "format": dest.suffix[1:].upper(),
+            "path": str(dest.resolve()),
+            "size_mb": round(dest.stat().st_size / (1024 * 1024), 2)
+        }
+
+    def open_models_folder(self):
+        """Ouvre l'explorateur Windows dans Documents/Impression3D."""
+        MODELS_DIR.mkdir(parents=True, exist_ok=True)
+        if sys.platform == "win32":
+            os.startfile(str(MODELS_DIR))
+
+    # =========================================================================
     # GESTIONNAIRE DE BOBINES DE FILAMENT
     # =========================================================================
     def get_spools(self) -> List[Dict[str, Any]]:
@@ -242,7 +208,7 @@ class Print3DManager:
     def add_spool(self, material: str, brand: str, color_name: str, color_hex: str,
                   total_weight_g: int = 1000, temp_nozzle: int = 210, temp_bed: int = 60) -> Dict[str, Any]:
         new_spool = {
-            "id": f"spool_{int(time.time())}",
+            "id": f"spool_{int(time.time())}_{len(self.state.get('filament_spools', [])) + 1}",
             "material": material.strip(),
             "brand": brand.strip(),
             "color_name": color_name.strip(),
@@ -255,6 +221,15 @@ class Print3DManager:
         self.state.setdefault("filament_spools", []).append(new_spool)
         self._save_state()
         return new_spool
+
+    def delete_spool(self, spool_id: str) -> bool:
+        spools = self.state.get("filament_spools", [])
+        init_len = len(spools)
+        self.state["filament_spools"] = [s for s in spools if s.get("id") != spool_id]
+        if len(self.state["filament_spools"]) != init_len:
+            self._save_state()
+            return True
+        return False
 
     def consume_filament_auto(self, material_pref: str, grams: int):
         """Déduit automatiquement les grammes de filament de la bobine correspondante."""

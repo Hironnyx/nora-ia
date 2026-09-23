@@ -36,10 +36,10 @@ load_dotenv()
 
 # Modèles neuronaux Gemini candidats par ordre de réactivité
 NEURAL_MODELS = [
-    "gemini-2.5-flash",
-    "gemini-2.0-flash",
-    "gemini-1.5-flash",
-    "gemini-flash-latest"
+    "gemini-3.6-flash",
+    "gemini-3.7-flash",
+    "gemini-flash-latest",
+    "gemini-3.5-flash"
 ]
 
 # Définition des outils opérationnels accessibles à l'Agent Exécuteur
@@ -143,11 +143,7 @@ Ton rôle : écouter les propositions de l'Architecte, de l'Exécuteur, du Gardi
             "Mémorisation sémantique et apprentissage continu",
             "Liaison mobile 4G/5G et gestion du compagnon virtuel"
         ],
-        "recent_stances": [
-            "Validation de l'intégration de PrusaSlicer pour enrichir l'atelier 3D de Maverick.",
-            "Adoption officielle de Klaxo le Dragonnet comme animal de compagnie du bureau.",
-            "Maintien de l'ancrage au sol fixe du personnage sans distorsion d'échelle."
-        ]
+        "recent_stances": []
     },
     "Architecte": {
         "id": "architecte",
@@ -166,11 +162,7 @@ Ton rôle : analyser l'objectif global de Maverick, décomposer la complexité e
             "Revue stratégique du gestionnaire de projets de Maverick",
             "Structuration des formats de données JSON et flux d'état"
         ],
-        "recent_stances": [
-            "Proposition d'un découpage modulaire du QG en 11 panneaux indépendants.",
-            "Recommandation de structurer les projets avec des checklists à cases à cocher en direct.",
-            "Organisation de l'arène de débat en 3 tours successifs (Idéation, Contradiction, Consensus)."
-        ]
+        "recent_stances": []
     },
     "Executeur": {
         "id": "executeur",
@@ -189,11 +181,7 @@ Ton rôle : déterminer précisément quelles commandes, outils système, fichie
             "Nettoyage de la mémoire vive RAM et purge des caches",
             "Lancement automatisé d'applications (PrusaSlicer, Explorateur)"
         ],
-        "recent_stances": [
-            "Élimination des fenêtres d'invite de commande résiduelles avec --noconsole.",
-            "Mise en place de threads de préchauffage asynchrones pour un démarrage à 0 ms.",
-            "Automatisation de la déduction de filament lors de la fin d'une impression."
-        ]
+        "recent_stances": []
     },
     "Gardien": {
         "id": "gardien",
@@ -212,11 +200,7 @@ Ton rôle : vérifier la sécurité des actions (Windows Defender, intégrité d
             "Chiffrement et sécurisation des tokens d'API et tunnels Cloudflare",
             "Garantie d'absence de fuite de données hors du PC"
         ],
-        "recent_stances": [
-            "Audit et validation du kill propre des processus fantômes cloudflared.",
-            "Vérification de l'absence de commandes destructrices dans l'atelier 3D.",
-            "Validation du protocole de sécurité et de l'isolement du tunnel distant."
-        ]
+        "recent_stances": []
     },
     "Critique": {
         "id": "critique",
@@ -235,11 +219,7 @@ Ton rôle : chercher impitoyablement les failles, ambiguïtés, hallucinations, 
             "Chasse aux saccades visuelles, sursauts d'ancrage et bugs d'échelle",
             "Évaluation du taux de robustesse et notation du consensus"
         ],
-        "recent_stances": [
-            "Exigence d'éliminer la rotation dynamique QPixmap qui secouait la fenêtre de marche.",
-            "Signalement du bug de compression 220x220 lors des micro-respirations.",
-            "Demande d'une déformation bilinéaire continue pour les jambes sans coupure nette."
-        ]
+        "recent_stances": []
     },
     "Maker 3D": {
         "id": "maker",
@@ -258,11 +238,7 @@ Ton rôle : conseiller Maverick sur ses impressions 3D, analyser les fichiers ST
             "Diagnostic expert des défauts (stringing, warping, sous-extrusion)",
             "Liaison automatique entre les projets de Maverick et les modèles 3D"
         ],
-        "recent_stances": [
-            "Recommandation du remplissage Gyroid à 20% pour une solidité isotrope.",
-            "Paramétrage du plateau à 85°C pour le PETG avec ventilation modérée.",
-            "Intégration d'un avertisseur intelligent si une bobine approche de son terme."
-        ]
+        "recent_stances": []
     }
 }
 

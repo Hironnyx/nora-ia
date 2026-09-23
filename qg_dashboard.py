@@ -24,7 +24,7 @@ from PyQt6.QtWidgets import (
     QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout,
     QProgressBar, QFrame, QScrollArea, QGraphicsDropShadowEffect,
     QLineEdit, QStackedWidget, QTextEdit, QSlider, QGridLayout,
-    QCheckBox, QComboBox, QDialog
+    QCheckBox, QComboBox, QDialog, QFileDialog, QMessageBox, QSpinBox
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QSize
 from PyQt6.QtGui import QColor, QFont, QCursor, QPixmap, QIcon
@@ -39,6 +39,7 @@ import nora_recursive_swarm
 import nora_companion
 import project_manager
 import print3d_manager
+import agent_home
 
 if sys.platform == "win32":
     if hasattr(sys.stdout, "reconfigure"):
@@ -53,6 +54,96 @@ else:
 
 ASSETS_DIR = BASE_DIR / "mascot_assets"
 COMPANION_ASSETS = ASSETS_DIR / "companion"
+
+
+class AddSpoolDialog(QDialog):
+    """Dialogue stylisé pour ajouter une véritable bobine de filament."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("Ajouter une bobine de filament")
+        self.setFixedSize(380, 420)
+        self.setStyleSheet("""
+            QDialog {
+                background: #0f172a;
+                color: #f1f5f9;
+                border: 1px solid rgba(236, 72, 153, 0.4);
+                border-radius: 12px;
+            }
+            QLabel { color: #cbd5e1; font-size: 11px; font-weight: bold; }
+            QLineEdit, QComboBox, QSpinBox {
+                background: rgba(30, 41, 59, 0.8);
+                color: #f8fafc;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+                padding: 6px;
+                font-size: 11px;
+            }
+            QLineEdit:focus, QComboBox:focus, QSpinBox:focus {
+                border-color: #ec4899;
+            }
+        """)
+        layout = QVBoxLayout(self)
+        layout.setSpacing(10)
+
+        title = QLabel("🧵 ENREGISTRER UNE BOBINE RÉELLE")
+        title.setStyleSheet("color: #ec4899; font-size: 13px; font-weight: 800;")
+        layout.addWidget(title)
+
+        layout.addWidget(QLabel("Marque (ex: Prusament, Sunlu, Polymaker, eSun) :"))
+        self.brand_edit = QLineEdit()
+        self.brand_edit.setPlaceholderText("ex: Prusament")
+        layout.addWidget(self.brand_edit)
+
+        layout.addWidget(QLabel("Matière :"))
+        self.mat_combo = QComboBox()
+        self.mat_combo.addItems(["PLA", "PLA+", "PETG", "TPU", "ABS", "ASA", "PC", "Nylon / PA"])
+        layout.addWidget(self.mat_combo)
+
+        layout.addWidget(QLabel("Nom de la couleur (ex: Galaxy Black, Rouge Rubis) :"))
+        self.color_name_edit = QLineEdit()
+        self.color_name_edit.setPlaceholderText("ex: Galaxy Black")
+        layout.addWidget(self.color_name_edit)
+
+        layout.addWidget(QLabel("Code Couleur Hex (#RRGGBB) :"))
+        self.color_hex_edit = QLineEdit()
+        self.color_hex_edit.setText("#ec4899")
+        layout.addWidget(self.color_hex_edit)
+
+        layout.addWidget(QLabel("Poids total / restant (grammes) :"))
+        self.weight_spin = QSpinBox()
+        self.weight_spin.setRange(50, 5000)
+        self.weight_spin.setValue(1000)
+        self.weight_spin.setSingleStep(50)
+        layout.addWidget(self.weight_spin)
+
+        btn_box = QHBoxLayout()
+        btn_cancel = QPushButton("Annuler")
+        btn_cancel.setStyleSheet("background: rgba(51, 65, 85, 0.7); color: #cbd5e1; border-radius: 6px; padding: 6px 12px;")
+        btn_cancel.clicked.connect(self.reject)
+        btn_box.addWidget(btn_cancel)
+
+        btn_save = QPushButton("Enregistrer")
+        btn_save.setStyleSheet("background: #be185d; color: white; font-weight: bold; border-radius: 6px; padding: 6px 16px;")
+        btn_save.clicked.connect(self.accept)
+        btn_box.addWidget(btn_save)
+
+        layout.addLayout(btn_box)
+
+    def get_spool_data(self) -> dict:
+        brand = self.brand_edit.text().strip() or "Standard"
+        material = self.mat_combo.currentText()
+        color_name = self.color_name_edit.text().strip() or "Standard"
+        color_hex = self.color_hex_edit.text().strip()
+        if not color_hex.startswith("#") or len(color_hex) not in (4, 7):
+            color_hex = "#ec4899"
+        weight = self.weight_spin.value()
+        return {
+            "brand": brand,
+            "material": material,
+            "color_name": color_name,
+            "color_hex": color_hex,
+            "total_weight_g": weight
+        }
 
 
 class QGDashboard(QWidget):
@@ -1154,12 +1245,27 @@ class QGDashboard(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(8)
 
-        # En-tête avec bouton PrusaSlicer
+        # En-tête avec boutons d'actions réelles
         h_layout = QHBoxLayout()
         title = QLabel("🖨️ ATELIER D'IMPRESSION 3D & FABRICATION")
         title.setStyleSheet("color: #ec4899; font-size: 15px; font-weight: 800;")
         h_layout.addWidget(title)
         h_layout.addStretch()
+
+        btn_folder = QPushButton("📂 DOSSIER 3D")
+        btn_folder.setFixedHeight(30)
+        btn_folder.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_folder.setStyleSheet("""
+            QPushButton {
+                background: rgba(30, 41, 59, 0.8);
+                color: #f1f5f9; font-weight: bold; font-size: 11px;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px; padding: 4px 12px;
+            }
+            QPushButton:hover { background: rgba(51, 65, 85, 0.9); }
+        """)
+        btn_folder.clicked.connect(self.on_open_3d_folder_click)
+        h_layout.addWidget(btn_folder)
 
         btn_prusa = QPushButton("⚡ LANCER PRUSASLICER")
         btn_prusa.setFixedHeight(30)
@@ -1172,11 +1278,11 @@ class QGDashboard(QWidget):
             }
             QPushButton:hover { background: #db2777; }
         """)
-        btn_prusa.clicked.connect(self.on_launch_prusa_click)
+        btn_prusa.clicked.connect(lambda: self.on_launch_prusa_click())
         h_layout.addWidget(btn_prusa)
         layout.addLayout(h_layout)
 
-        # Grille télémétrie imprimante
+        # Grille télémétrie imprimante (100% réelle)
         tele_frame = QFrame()
         tele_frame.setStyleSheet("""
             QFrame {
@@ -1186,32 +1292,16 @@ class QGDashboard(QWidget):
                 padding: 6px;
             }
         """)
-        tf_layout = QHBoxLayout(tele_frame)
-        tf_layout.setContentsMargins(8, 6, 8, 6)
-
-        t_data = [
-            ("🔥 Buse Extrudeur", "215°C / 215°C", "#ec4899"),
-            ("🛏️ Plateau Chauffant", "60°C / 60°C", "#f59e0b"),
-            ("🌀 Ventilateur", "100 %", "#38bdf8"),
-            ("📊 Statut", "Prête", "#10b981"),
-        ]
-        for name, val, col in t_data:
-            c = QVBoxLayout()
-            l1 = QLabel(name)
-            l1.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: bold; border: none;")
-            l2 = QLabel(val)
-            l2.setStyleSheet(f"color: {col}; font-size: 13px; font-weight: 800; border: none;")
-            c.addWidget(l1)
-            c.addWidget(l2)
-            tf_layout.addLayout(c)
-
+        self.tf_layout = QHBoxLayout(tele_frame)
+        self.tf_layout.setContentsMargins(8, 6, 8, 6)
         layout.addWidget(tele_frame)
+        self.update_3d_telemetry_widget()
 
-        # Corps central en 2 colonnes : File d'attente (gauche) + Bobines & Conseils (droite)
+        # Corps central en 2 colonnes : Modèles 3D réels (gauche) + Bobines réelles (droite)
         mid_layout = QHBoxLayout()
         mid_layout.setSpacing(10)
 
-        # Colonne Gauche : File d'attente
+        # Colonne Gauche : Modèles 3D réels
         queue_frame = QFrame()
         queue_frame.setStyleSheet("""
             QFrame {
@@ -1220,36 +1310,33 @@ class QGDashboard(QWidget):
                 border-radius: 10px;
             }
         """)
-        q_layout = QVBoxLayout(queue_frame)
-        q_layout.setContentsMargins(8, 8, 8, 8)
-        q_layout.addWidget(QLabel("📦 FILE D'IMPRESSION & PIÈCES 3D :"))
+        q_v = QVBoxLayout(queue_frame)
+        q_v.setContentsMargins(8, 8, 8, 8)
 
-        jobs = print3d_manager.print3d_manager.get_print_queue()
-        for j in jobs[:3]:
-            jf = QFrame()
-            jf.setStyleSheet("background: rgba(30, 41, 59, 0.6); border-radius: 6px; padding: 4px;")
-            jl = QHBoxLayout(jf)
-            jl.setContentsMargins(6, 4, 6, 4)
+        q_header = QHBoxLayout()
+        q_title = QLabel("📦 MODÈLES 3D (Documents/Impression3D) :")
+        q_title.setStyleSheet("color: #f1f5f9; font-weight: bold; font-size: 11px;")
+        q_header.addWidget(q_title)
+        q_header.addStretch()
 
-            info = QVBoxLayout()
-            n = QLabel(f"<b>{j['title']}</b>")
-            n.setStyleSheet("color: #f1f5f9; font-size: 11px;")
-            m = QLabel(f"{j['format']} • {j['material']} • {j['estimated_time']} • {j['estimated_grams']}g")
-            m.setStyleSheet("color: #94a3b8; font-size: 9px;")
-            info.addWidget(n)
-            info.addWidget(m)
-            jl.addLayout(info, stretch=1)
+        btn_import_file = QPushButton("+ IMPORTER")
+        btn_import_file.setFixedHeight(22)
+        btn_import_file.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_import_file.setStyleSheet("background: #0284c7; color: white; font-size: 10px; font-weight: bold; border-radius: 4px; padding: 0 8px; border: none;")
+        btn_import_file.clicked.connect(self.on_import_3d_file_click)
+        q_header.addWidget(btn_import_file)
+        q_v.addLayout(q_header)
 
-            btn_s = QPushButton("PrusaSlicer")
-            btn_s.setFixedHeight(24)
-            btn_s.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn_s.setStyleSheet("background: #be185d; color: white; font-size: 9px; font-weight: bold; border-radius: 4px; border: none; padding: 0 6px;")
-            btn_s.clicked.connect(self.on_launch_prusa_click)
-            jl.addWidget(btn_s)
+        scroll_files = QScrollArea()
+        scroll_files.setWidgetResizable(True)
+        scroll_files.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        self.files_container = QWidget()
+        self.files_layout = QVBoxLayout(self.files_container)
+        self.files_layout.setContentsMargins(0, 4, 0, 4)
+        self.files_layout.setSpacing(6)
+        scroll_files.setWidget(self.files_container)
+        q_v.addWidget(scroll_files, stretch=1)
 
-            q_layout.addWidget(jf)
-
-        q_layout.addStretch()
         mid_layout.addWidget(queue_frame, stretch=1)
 
         # Colonne Droite : Bobines de Filament
@@ -1261,57 +1348,216 @@ class QGDashboard(QWidget):
                 border-radius: 10px;
             }
         """)
-        s_layout = QVBoxLayout(spool_frame)
-        s_layout.setContentsMargins(8, 8, 8, 8)
-        s_layout.addWidget(QLabel("🧵 GESTIONNAIRE DE BOBINES (SPOOLMAN) :"))
+        s_v = QVBoxLayout(spool_frame)
+        s_v.setContentsMargins(8, 8, 8, 8)
 
-        spools = print3d_manager.print3d_manager.get_spools()
-        for s in spools[:3]:
-            sf = QFrame()
-            sf.setStyleSheet("background: rgba(30, 41, 59, 0.6); border-radius: 6px; padding: 4px;")
-            sl = QVBoxLayout(sf)
-            sl.setContentsMargins(6, 4, 6, 4)
-            sl.setSpacing(2)
+        s_header = QHBoxLayout()
+        s_title = QLabel("🧵 BOBINES DE FILAMENT (SPOOLMAN) :")
+        s_title.setStyleSheet("color: #f1f5f9; font-weight: bold; font-size: 11px;")
+        s_header.addWidget(s_title)
+        s_header.addStretch()
 
-            t_lbl = QLabel(f"● {s['brand']} {s['material']} - {s['color_name']}")
-            t_lbl.setStyleSheet(f"color: {s['color_hex']}; font-weight: bold; font-size: 10px;")
-            sl.addWidget(t_lbl)
+        btn_add_spool = QPushButton("+ NOUVELLE")
+        btn_add_spool.setFixedHeight(22)
+        btn_add_spool.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_add_spool.setStyleSheet("background: #be185d; color: white; font-size: 10px; font-weight: bold; border-radius: 4px; padding: 0 8px; border: none;")
+        btn_add_spool.clicked.connect(self.on_add_spool_click)
+        s_header.addWidget(btn_add_spool)
+        s_v.addLayout(s_header)
 
-            pb = QProgressBar()
-            pb.setRange(0, s["total_weight_g"])
-            pb.setValue(s["remaining_weight_g"])
-            pb.setFixedHeight(10)
-            pb.setStyleSheet(f"""
-                QProgressBar {{ background: #0f172a; border-radius: 5px; text-align: right; }}
-                QProgressBar::chunk {{ background: {s['color_hex']}; border-radius: 5px; }}
-            """)
-            sl.addWidget(pb)
+        scroll_spools = QScrollArea()
+        scroll_spools.setWidgetResizable(True)
+        scroll_spools.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        self.spools_container = QWidget()
+        self.spools_layout = QVBoxLayout(self.spools_container)
+        self.spools_layout.setContentsMargins(0, 4, 0, 4)
+        self.spools_layout.setSpacing(6)
+        scroll_spools.setWidget(self.spools_container)
+        s_v.addWidget(scroll_spools, stretch=1)
 
-            rem = QLabel(f"{s['remaining_weight_g']}g restants sur {s['total_weight_g']}g")
-            rem.setStyleSheet("color: #94a3b8; font-size: 9px;")
-            sl.addWidget(rem)
-
-            s_layout.addWidget(sf)
-
-        s_layout.addStretch()
         mid_layout.addWidget(spool_frame, stretch=1)
         layout.addLayout(mid_layout)
 
         # Recommandation IA Slicer Maker
         advice_lbl = QLabel(
-            "💡 <b>Conseil Maker 3D pour Maverick :</b> Privilégiez toujours un remplissage Gyroid (20%) "
+            "💡 <b>Conseil Maker 3D pour Maverick :</b> Privilégiez un remplissage Gyroid (20%) "
             "pour vos boîtiers afin de garantir une résistance mécanique isotrope sans déformation thermique."
         )
         advice_lbl.setWordWrap(True)
         advice_lbl.setStyleSheet("color: #fbcfe8; font-size: 11px; background: rgba(236, 72, 153, 0.1); padding: 8px; border-radius: 8px; border: 1px solid rgba(236, 72, 153, 0.3);")
         layout.addWidget(advice_lbl)
 
+        # Chargement initial
+        self.refresh_3d_files_list()
+        self.refresh_spools_list()
+
         return p
 
-    def on_launch_prusa_click(self):
-        ok = print3d_manager.print3d_manager.launch_prusaslicer()
+    def update_3d_telemetry_widget(self):
+        while self.tf_layout.count():
+            item = self.tf_layout.takeAt(0)
+            if item.layout():
+                while item.layout().count():
+                    sub = item.layout().takeAt(0)
+                    if sub.widget():
+                        sub.widget().deleteLater()
+            elif item.widget():
+                item.widget().deleteLater()
+
+        tele = print3d_manager.print3d_manager.get_telemetry()
+        stat = tele.get("status", "Non connectée")
+        stat_col = "#10b981" if stat == "Prête" else ("#f59e0b" if "Impression" in stat else "#94a3b8")
+        nozzle = f"{tele.get('nozzle_temp', 0)}°C / {tele.get('nozzle_target', 0)}°C" if tele.get('nozzle_target', 0) > 0 else f"{tele.get('nozzle_temp', 0)}°C"
+        bed = f"{tele.get('bed_temp', 0)}°C / {tele.get('bed_target', 0)}°C" if tele.get('bed_target', 0) > 0 else f"{tele.get('bed_temp', 0)}°C"
+
+        t_data = [
+            ("🔥 Buse Extrudeur", nozzle, "#ec4899"),
+            ("🛏️ Plateau Chauffant", bed, "#f59e0b"),
+            ("🌀 Ventilateur", f"{tele.get('fan_speed', 0)} %", "#38bdf8"),
+            ("📊 Statut Télémétrie", stat, stat_col),
+        ]
+        for name, val, col in t_data:
+            c = QVBoxLayout()
+            l1 = QLabel(name)
+            l1.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: bold; border: none;")
+            l2 = QLabel(val)
+            l2.setStyleSheet(f"color: {col}; font-size: 13px; font-weight: 800; border: none;")
+            c.addWidget(l1)
+            c.addWidget(l2)
+            self.tf_layout.addLayout(c)
+
+    def refresh_3d_files_list(self):
+        while self.files_layout.count():
+            item = self.files_layout.takeAt(0)
+            w = item.widget()
+            if w:
+                w.deleteLater()
+
+        files = print3d_manager.print3d_manager.scan_models_dir()
+        if not files:
+            empty_lbl = QLabel("Aucun fichier 3D dans Documents/Impression3D.\nCliquez sur '+ IMPORTER' pour ajouter un STL ou 3MF.")
+            empty_lbl.setWordWrap(True)
+            empty_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; padding: 20px; text-align: center;")
+            self.files_layout.addWidget(empty_lbl)
+        else:
+            for f in files:
+                jf = QFrame()
+                jf.setStyleSheet("background: rgba(30, 41, 59, 0.6); border-radius: 6px; padding: 4px;")
+                jl = QHBoxLayout(jf)
+                jl.setContentsMargins(6, 4, 6, 4)
+
+                info = QVBoxLayout()
+                n = QLabel(f"<b>{f['name']}</b>")
+                n.setStyleSheet("color: #f1f5f9; font-size: 11px;")
+                m = QLabel(f"{f['format']} • {f['size_mb']} Mo • {f['modified']}")
+                m.setStyleSheet("color: #94a3b8; font-size: 9px;")
+                info.addWidget(n)
+                info.addWidget(m)
+                jl.addLayout(info, stretch=1)
+
+                btn_s = QPushButton("⚡ Trancher")
+                btn_s.setFixedHeight(24)
+                btn_s.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                btn_s.setStyleSheet("background: #be185d; color: white; font-size: 9px; font-weight: bold; border-radius: 4px; border: none; padding: 0 8px;")
+                btn_s.clicked.connect(lambda checked, p=f['path']: self.on_launch_prusa_click(p))
+                jl.addWidget(btn_s)
+
+                self.files_layout.addWidget(jf)
+
+        self.files_layout.addStretch()
+
+    def refresh_spools_list(self):
+        while self.spools_layout.count():
+            item = self.spools_layout.takeAt(0)
+            w = item.widget()
+            if w:
+                w.deleteLater()
+
+        spools = print3d_manager.print3d_manager.get_spools()
+        if not spools:
+            empty_lbl = QLabel("Aucune bobine enregistrée.\nCliquez sur '+ NOUVELLE' pour inventorier vos filaments.")
+            empty_lbl.setWordWrap(True)
+            empty_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; padding: 20px; text-align: center;")
+            self.spools_layout.addWidget(empty_lbl)
+        else:
+            for s in spools:
+                sf = QFrame()
+                sf.setStyleSheet("background: rgba(30, 41, 59, 0.6); border-radius: 6px; padding: 6px;")
+                sl = QVBoxLayout(sf)
+                sl.setContentsMargins(6, 4, 6, 4)
+                sl.setSpacing(4)
+
+                top_l = QHBoxLayout()
+                t_lbl = QLabel(f"● {s['brand']} {s['material']} - {s['color_name']}")
+                t_lbl.setStyleSheet(f"color: {s.get('color_hex', '#ec4899')}; font-weight: bold; font-size: 10px;")
+                top_l.addWidget(t_lbl, stretch=1)
+
+                btn_del = QPushButton("✕")
+                btn_del.setFixedSize(18, 18)
+                btn_del.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                btn_del.setStyleSheet("background: transparent; color: #ef4444; font-weight: bold; border: none;")
+                btn_del.clicked.connect(lambda checked, sid=s['id']: self.on_delete_spool_click(sid))
+                top_l.addWidget(btn_del)
+                sl.addLayout(top_l)
+
+                pb = QProgressBar()
+                pb.setRange(0, max(1, s["total_weight_g"]))
+                pb.setValue(s["remaining_weight_g"])
+                pb.setFixedHeight(8)
+                pb.setStyleSheet(f"""
+                    QProgressBar {{ background: #0f172a; border-radius: 4px; text-align: right; }}
+                    QProgressBar::chunk {{ background: {s.get('color_hex', '#ec4899')}; border-radius: 4px; }}
+                """)
+                sl.addWidget(pb)
+
+                rem = QLabel(f"{s['remaining_weight_g']}g / {s['total_weight_g']}g  (Buse: {s.get('temp_nozzle', 210)}°C)")
+                rem.setStyleSheet("color: #94a3b8; font-size: 9px;")
+                sl.addWidget(rem)
+
+                self.spools_layout.addWidget(sf)
+
+        self.spools_layout.addStretch()
+
+    def on_open_3d_folder_click(self):
+        print3d_manager.print3d_manager.open_models_folder()
+
+    def on_import_3d_file_click(self):
+        fpath, _ = QFileDialog.getOpenFileName(
+            self,
+            "Importer un modèle 3D",
+            "",
+            "Fichiers 3D (*.stl *.3mf *.obj *.step *.gcode);;Tous les fichiers (*.*)"
+        )
+        if fpath:
+            imported = print3d_manager.print3d_manager.import_model_file(fpath)
+            if imported:
+                self.refresh_3d_files_list()
+                if self.parent_mascot:
+                    self.parent_mascot.display_message(f"Modèle 3D importé : {imported['name']}")
+
+    def on_add_spool_click(self):
+        dlg = AddSpoolDialog(self)
+        if dlg.exec() == QDialog.DialogCode.Accepted:
+            data = dlg.get_spool_data()
+            print3d_manager.print3d_manager.add_spool(
+                material=data["material"],
+                brand=data["brand"],
+                color_name=data["color_name"],
+                color_hex=data["color_hex"],
+                total_weight_g=data["total_weight_g"]
+            )
+            self.refresh_spools_list()
+            if self.parent_mascot:
+                self.parent_mascot.display_message(f"Bobine {data['brand']} {data['material']} enregistrée avec succès !")
+
+    def on_delete_spool_click(self, spool_id: str):
+        if print3d_manager.print3d_manager.delete_spool(spool_id):
+            self.refresh_spools_list()
+
+    def on_launch_prusa_click(self, file_path: str = ""):
+        ok = print3d_manager.print3d_manager.launch_prusaslicer(file_path if file_path else None)
         if not ok and self.parent_mascot:
-            self.parent_mascot.display_message("PrusaSlicer n'a pas pu être lancé automatiquement.")
+            self.parent_mascot.display_message("PrusaSlicer introuvable ou n'a pas pu être lancé automatiquement.")
 
     # =========================================================================
     # 5. PANNEAU COMPAGNON VIRTUEL DE NORA
@@ -1863,7 +2109,7 @@ class QGDashboard(QWidget):
             self.parent_mascot.display_message("🛡️ Scan de sécurité en cours : processus, registres et réseau analysés...")
 
     # =========================================================================
-    # 9. PANNEAU CENTRE DOMOTIQUE
+    # 9. PANNEAU CENTRE DOMOTIQUE (PHILIPS HUE RÉEL)
     # =========================================================================
     def create_smarthome_panel(self) -> QWidget:
         p = QWidget()
@@ -1871,53 +2117,265 @@ class QGDashboard(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(10)
 
-        title = QLabel("🏠 CENTRE DOMOTIQUE & LUMIÈRES CONNECTÉES")
+        # En-tête
+        h_layout = QHBoxLayout()
+        title = QLabel("🏠 CENTRE DOMOTIQUE & PHILIPS HUE")
         title.setStyleSheet("color: #fbbf24; font-size: 15px; font-weight: 800;")
-        layout.addWidget(title)
+        h_layout.addWidget(title)
+        h_layout.addStretch()
 
-        desc = QLabel("Activez d'un clic les scènes d'ambiance synchronisées avec vos ampoules Philips Hue & Yeelight :")
-        desc.setStyleSheet("color: #94a3b8; font-size: 11px;")
-        layout.addWidget(desc)
+        btn_refresh = QPushButton("🔄 ACTUALISER")
+        btn_refresh.setFixedHeight(28)
+        btn_refresh.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_refresh.setStyleSheet("""
+            QPushButton {
+                background: rgba(30, 41, 59, 0.8);
+                color: #fbbf24; font-weight: bold; font-size: 11px;
+                border: 1px solid rgba(251, 191, 36, 0.4);
+                border-radius: 6px; padding: 4px 12px;
+            }
+            QPushButton:hover { background: rgba(251, 191, 36, 0.2); }
+        """)
+        btn_refresh.clicked.connect(self.refresh_smarthome_panel)
+        h_layout.addWidget(btn_refresh)
+        layout.addLayout(h_layout)
 
-        scenes_grid = QGridLayout()
-        scenes_grid.setSpacing(10)
+        # Statut du pont Philips Hue
+        bridge_ip = agent_home.smart_home.config.get("hue_bridge_ip", "192.168.1.29")
+        paired = agent_home.smart_home.is_hue_paired()
+        
+        bridge_frame = QFrame()
+        bridge_frame.setStyleSheet("""
+            QFrame {
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid rgba(251, 191, 36, 0.3);
+                border-radius: 10px;
+                padding: 6px;
+            }
+        """)
+        bf_layout = QHBoxLayout(bridge_frame)
+        bf_layout.setContentsMargins(10, 6, 10, 6)
 
-        scenes = [
-            ("🌸 Ambiance Zero Two", "scene_zero_two"),
-            ("🌙 Veilleuse Nocturne", "scene_night"),
-            ("🎮 Éclairage Gaming Néon", "scene_gaming"),
-            ("💼 Concentration Travail", "scene_work")
-        ]
+        b_icon = QLabel("💡")
+        b_icon.setStyleSheet("font-size: 20px; border: none;")
+        bf_layout.addWidget(b_icon)
 
-        for i, (label, scene_id) in enumerate(scenes):
-            btn = QPushButton(label)
-            btn.setFixedHeight(45)
-            btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn.setStyleSheet("""
-                QPushButton {
-                    background: rgba(30, 41, 59, 0.7);
-                    color: #fef08a;
-                    border: 1px solid rgba(251, 191, 36, 0.4);
-                    border-radius: 10px;
-                    font-size: 12px;
-                    font-weight: bold;
-                }
-                QPushButton:hover {
-                    background: rgba(251, 191, 36, 0.25);
-                    border-color: #fbbf24;
-                }
-            """)
-            btn.clicked.connect(lambda checked, s=scene_id: self.on_scene_click(s))
-            scenes_grid.addWidget(btn, i // 2, i % 2)
+        b_info = QVBoxLayout()
+        b_title = QLabel(f"<b>Pont Philips Hue :</b> {bridge_ip}")
+        b_title.setStyleSheet("color: #f1f5f9; font-size: 12px; border: none;")
+        
+        status_text = "Connecté et Appairé (Contrôle Physique Actif)" if paired else "Non appairé (Appuyez sur le bouton rond du pont)"
+        status_col = "#10b981" if paired else "#f59e0b"
+        b_sub = QLabel(status_text)
+        b_sub.setStyleSheet(f"color: {status_col}; font-size: 10px; font-weight: bold; border: none;")
+        b_info.addWidget(b_title)
+        b_info.addWidget(b_sub)
+        bf_layout.addLayout(b_info, stretch=1)
 
-        layout.addLayout(scenes_grid)
-        layout.addStretch()
+        layout.addWidget(bridge_frame)
+
+        # Boutons d'actions globales rapides
+        global_box = QHBoxLayout()
+        global_box.setSpacing(8)
+
+        btn_night = QPushButton("🌙 Tout Éteindre (Nuit)")
+        btn_night.setFixedHeight(34)
+        btn_night.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_night.setStyleSheet("""
+            QPushButton {
+                background: rgba(30, 41, 59, 0.85); color: #cbd5e1;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 8px; font-size: 11px; font-weight: bold;
+            }
+            QPushButton:hover { background: rgba(51, 65, 85, 0.9); }
+        """)
+        btn_night.clicked.connect(self.on_hue_all_off)
+        global_box.addWidget(btn_night)
+
+        btn_day = QPushButton("☀️ Tout Allumer")
+        btn_day.setFixedHeight(34)
+        btn_day.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_day.setStyleSheet("""
+            QPushButton {
+                background: rgba(30, 41, 59, 0.85); color: #fef08a;
+                border: 1px solid rgba(251, 191, 36, 0.3);
+                border-radius: 8px; font-size: 11px; font-weight: bold;
+            }
+            QPushButton:hover { background: rgba(251, 191, 36, 0.2); }
+        """)
+        btn_day.clicked.connect(self.on_hue_all_on)
+        global_box.addWidget(btn_day)
+
+        btn_pink = QPushButton("🌸 Ambiance Zero Two")
+        btn_pink.setFixedHeight(34)
+        btn_pink.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_pink.setStyleSheet("""
+            QPushButton {
+                background: rgba(236, 72, 153, 0.2); color: #fbcfe8;
+                border: 1px solid rgba(236, 72, 153, 0.4);
+                border-radius: 8px; font-size: 11px; font-weight: bold;
+            }
+            QPushButton:hover { background: rgba(236, 72, 153, 0.35); }
+        """)
+        btn_pink.clicked.connect(self.on_hue_zero_two_scene)
+        global_box.addWidget(btn_pink)
+
+        layout.addLayout(global_box)
+
+        # Liste des ampoules réelles (Scroll Area)
+        scroll_lights = QScrollArea()
+        scroll_lights.setWidgetResizable(True)
+        scroll_lights.setStyleSheet("QScrollArea { border: none; background: transparent; }")
+        self.lights_container = QWidget()
+        self.lights_layout = QVBoxLayout(self.lights_container)
+        self.lights_layout.setContentsMargins(0, 4, 0, 4)
+        self.lights_layout.setSpacing(8)
+        scroll_lights.setWidget(self.lights_container)
+        layout.addWidget(scroll_lights, stretch=1)
+
+        # Rapport textuel en direct
+        self.home_report_lbl = QLabel()
+        self.home_report_lbl.setStyleSheet("color: #94a3b8; font-size: 10px; background: rgba(15, 23, 42, 0.5); border-radius: 6px; padding: 6px;")
+        layout.addWidget(self.home_report_lbl)
+
+        # Charger la liste initiale
+        self.refresh_smarthome_panel()
 
         return p
 
-    def on_scene_click(self, scene_id: str):
+    def refresh_smarthome_panel(self):
+        while self.lights_layout.count():
+            item = self.lights_layout.takeAt(0)
+            w = item.widget()
+            if w:
+                w.deleteLater()
+
+        lights = agent_home.smart_home.get_hue_lights(force_refresh=True)
+        if not lights:
+            empty_lbl = QLabel("Aucune ampoule détectée sur le pont Hue ou pont non joignable.")
+            empty_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; padding: 15px;")
+            self.lights_layout.addWidget(empty_lbl)
+        else:
+            for l_id, l_info in lights.items():
+                state = l_info.get("state", {})
+                is_on = state.get("on", False)
+                is_reachable = state.get("reachable", True)
+                bri_val = state.get("bri", 254)
+                bri_pct = int(round((bri_val / 254.0) * 100))
+
+                card = QFrame()
+                card.setStyleSheet("""
+                    QFrame {
+                        background: rgba(30, 41, 59, 0.7);
+                        border: 1px solid rgba(255, 255, 255, 0.1);
+                        border-radius: 10px;
+                        padding: 8px;
+                    }
+                """)
+                card_l = QVBoxLayout(card)
+                card_l.setSpacing(6)
+
+                top_row = QHBoxLayout()
+                lamp_icon = "💡" if is_on else "⚫"
+                lamp_title = QLabel(f"{lamp_icon} <b>{l_info.get('name', 'Ampoule')}</b> (ID: {l_id})")
+                lamp_title.setStyleSheet("color: #f1f5f9; font-size: 12px;")
+                top_row.addWidget(lamp_title, stretch=1)
+
+                reach_text = "Joignable" if is_reachable else "Interrupteur coupé"
+                reach_col = "#10b981" if is_reachable else "#f59e0b"
+                reach_lbl = QLabel(reach_text)
+                reach_lbl.setStyleSheet(f"color: {reach_col}; font-size: 10px; font-weight: bold;")
+                top_row.addWidget(reach_lbl)
+
+                toggle_btn = QPushButton("ÉTEINDRE" if is_on else "ALLUMER")
+                toggle_btn.setFixedSize(85, 26)
+                toggle_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                if is_on:
+                    toggle_btn.setStyleSheet("background: #be185d; color: white; font-weight: bold; font-size: 10px; border-radius: 5px; border: none;")
+                else:
+                    toggle_btn.setStyleSheet("background: #0284c7; color: white; font-weight: bold; font-size: 10px; border-radius: 5px; border: none;")
+                toggle_btn.clicked.connect(lambda checked, lid=l_id, cur=is_on: self.on_toggle_hue_light(lid, not cur))
+                top_row.addWidget(toggle_btn)
+                card_l.addLayout(top_row)
+
+                bot_row = QHBoxLayout()
+                bri_lbl = QLabel(f"Luminosité : {bri_pct}%")
+                bri_lbl.setStyleSheet("color: #cbd5e1; font-size: 10px;")
+                bot_row.addWidget(bri_lbl)
+
+                slider = QSlider(Qt.Orientation.Horizontal)
+                slider.setRange(1, 100)
+                slider.setValue(bri_pct)
+                slider.setFixedHeight(18)
+                slider.setStyleSheet("""
+                    QSlider::groove:horizontal { height: 4px; background: #1e293b; border-radius: 2px; }
+                    QSlider::sub-page:horizontal { background: #fbbf24; border-radius: 2px; }
+                    QSlider::handle:horizontal { background: #fef08a; width: 12px; margin-top: -4px; margin-bottom: -4px; border-radius: 6px; }
+                """)
+                slider.sliderReleased.connect(lambda lid=l_id, s=slider: self.on_hue_slider_changed(lid, s.value()))
+                bot_row.addWidget(slider, stretch=1)
+
+                if "xy" in state or "hue" in state:
+                    btn_c_rose = QPushButton("🌸 Rose")
+                    btn_c_rose.setFixedHeight(22)
+                    btn_c_rose.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    btn_c_rose.setStyleSheet("background: rgba(236, 72, 153, 0.3); color: #fbcfe8; font-size: 9px; font-weight: bold; border-radius: 4px; border: 1px solid rgba(236, 72, 153, 0.5);")
+                    btn_c_rose.clicked.connect(lambda checked, lid=l_id: self.on_hue_color_click(lid, "rose"))
+                    bot_row.addWidget(btn_c_rose)
+
+                    btn_c_warm = QPushButton("🔥 Chaud")
+                    btn_c_warm.setFixedHeight(22)
+                    btn_c_warm.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    btn_c_warm.setStyleSheet("background: rgba(245, 158, 11, 0.3); color: #fde68a; font-size: 9px; font-weight: bold; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.5);")
+                    btn_c_warm.clicked.connect(lambda checked, lid=l_id: self.on_hue_color_click(lid, "blanc chaud"))
+                    bot_row.addWidget(btn_c_warm)
+
+                    btn_c_cyan = QPushButton("⚡ Cyan")
+                    btn_c_cyan.setFixedHeight(22)
+                    btn_c_cyan.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+                    btn_c_cyan.setStyleSheet("background: rgba(56, 189, 248, 0.3); color: #bae6fd; font-size: 9px; font-weight: bold; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.5);")
+                    btn_c_cyan.clicked.connect(lambda checked, lid=l_id: self.on_hue_color_click(lid, "cyan"))
+                    bot_row.addWidget(btn_c_cyan)
+
+                card_l.addLayout(bot_row)
+                self.lights_layout.addWidget(card)
+
+        self.lights_layout.addStretch()
+        self.home_report_lbl.setText(agent_home.smart_home.get_status_report())
+
+    def on_toggle_hue_light(self, light_id: str, new_state: bool):
+        ok, msg = agent_home.smart_home.set_light(light_id, on=new_state)
+        self.refresh_smarthome_panel()
         if self.parent_mascot:
-            self.parent_mascot.display_message(f"💡 Ambiance lumineuse activée : {scene_id} !")
+            self.parent_mascot.display_message(msg)
+
+    def on_hue_slider_changed(self, light_id: str, value: int):
+        ok, msg = agent_home.smart_home.set_light(light_id, brightness=value)
+        self.refresh_smarthome_panel()
+
+    def on_hue_color_click(self, light_id: str, color_name: str):
+        ok, msg = agent_home.smart_home.set_light(light_id, color_name=color_name)
+        self.refresh_smarthome_panel()
+        if self.parent_mascot:
+            self.parent_mascot.display_message(msg)
+
+    def on_hue_all_off(self):
+        ok, msg = agent_home.smart_home.set_light("all", on=False)
+        self.refresh_smarthome_panel()
+        if self.parent_mascot:
+            self.parent_mascot.display_message(msg)
+
+    def on_hue_all_on(self):
+        ok, msg = agent_home.smart_home.set_light("all", on=True)
+        self.refresh_smarthome_panel()
+        if self.parent_mascot:
+            self.parent_mascot.display_message(msg)
+
+    def on_hue_zero_two_scene(self):
+        ok, msg = agent_home.smart_home.activate_zero_two_ambiance()
+        self.refresh_smarthome_panel()
+        if self.parent_mascot:
+            self.parent_mascot.display_message(msg)
 
     # =========================================================================
     # 10. PANNEAU MÉMOIRE & CERVEAU IA

@@ -25,57 +25,16 @@ PROJECTS_FILE = BASE_DIR / "maverick_projects.json"
 DEFAULT_PROJECTS = [
     {
         "id": "proj_nora_core",
-        "title": "Nora Copilote IA & Mascotte Zero Two",
+        "title": "Nora Copilote IA (Agent IA)",
         "category": "Code / IA",
         "status": "En cours",
         "priority": "Haute",
         "folder_path": str(BASE_DIR),
         "github_repo": "https://github.com/Hironnyx/nora-ia",
-        "deadline": "2026-10-15",
-        "tasks": [
-            {"id": 1, "text": "Moteur cinématique de marche plein corps sans coupure", "done": True},
-            {"id": 2, "text": "Animal de compagnie autonome de Nora", "done": True},
-            {"id": 3, "text": "Agora multi-agents avec pages individuelles", "done": True},
-            {"id": 4, "text": "Intégration de l'atelier d'impression 3D PrusaSlicer", "done": False},
-            {"id": 5, "text": "Compilation finale de Nora.exe pour Maverick", "done": False}
-        ],
-        "notes": "Agent autonome complet avec délibération récursive de masse, synthèse vocale RVC Zero Two et contrôle du PC.",
-        "ai_review": "Projet prioritaire majeur. Finaliser l'atelier d'impression 3D et le gestionnaire de filament pour une suite d'outils parfaite."
-    },
-    {
-        "id": "proj_3d_cases",
-        "title": "Atelier Impression 3D & Boîtiers Électroniques",
-        "category": "Impression 3D",
-        "status": "En cours",
-        "priority": "Haute",
-        "folder_path": str(Path.home() / "Documents" / "Impression3D"),
-        "github_repo": "",
-        "deadline": "2026-10-30",
-        "tasks": [
-            {"id": 1, "text": "Configurer les profils de tranchage PrusaSlicer pour PLA et PETG", "done": True},
-            {"id": 2, "text": "Modéliser un support de bureau avec lueur LED", "done": False},
-            {"id": 3, "text": "Calibrer les rétractions pour éliminer le stringing", "done": False},
-            {"id": 4, "text": "Imprimer un prototype d'essai à 0.20mm", "done": False}
-        ],
-        "notes": "Pièces mécaniques et boîtiers imprimés avec PrusaSlicer. Bobines PLA et PETG prêtes.",
-        "ai_review": "Conseil de Nora : privilégiez un remplissage gyroid à 20% pour une résistance mécanique uniforme dans les 3 axes."
-    },
-    {
-        "id": "proj_smart_workspace",
-        "title": "Ambiance Lumineuse & Domotique Bureau",
-        "category": "Domotique",
-        "status": "En cours",
-        "priority": "Moyenne",
-        "folder_path": "",
-        "github_repo": "",
-        "deadline": "2026-11-10",
-        "tasks": [
-            {"id": 1, "text": "Synchroniser les lumières Philips Hue avec le statut de Nora", "done": True},
-            {"id": 2, "text": "Programmer la scène d'ambiance Nuit et la scène Zero Two", "done": True},
-            {"id": 3, "text": "Activer la bascule automatique en Mode Gaming Ultra", "done": False}
-        ],
-        "notes": "Espace de travail ergonomique et immersif avec retour visuel d'état.",
-        "ai_review": "L'automatisation des scènes d'ambiance selon l'heure renforce le confort visuel de Maverick lors des sessions tardives."
+        "deadline": "",
+        "tasks": [],
+        "notes": "Projet actif de copilote IA avec mascotte animée, délibération récursive de masse et supervision système.",
+        "ai_review": ""
     }
 ]
 
@@ -232,7 +191,7 @@ class ProjectManager:
                     f"en vous adressant à lui avec vouvoiement et respect."
                 )
                 resp = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.6-flash",
                     contents=prompt,
                     config=types.GenerateContentConfig(temperature=0.4)
                 )

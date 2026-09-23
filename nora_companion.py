@@ -14,11 +14,17 @@ import time
 import random
 from pathlib import Path
 from typing import Dict, Any, Optional
-
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys.executable).parent.resolve()
 else:
     BASE_DIR = Path(__file__).resolve().parent
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv(BASE_DIR / ".env")
+    load_dotenv()
+except ImportError:
+    pass
 
 PET_STATE_FILE = BASE_DIR / "nora_pet_state.json"
 COMPANION_ASSETS_DIR = BASE_DIR / "mascot_assets" / "companion"
@@ -172,7 +178,7 @@ class NoraCompanionManager:
                     "\"dialogue\": \"Ce que tu dis avec émotion et respect à Maverick pour lui présenter ton animal (adresse-toi à Maverick avec vouvoiement)\"}"
                 )
                 resp = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-3.6-flash",
                     contents=prompt,
                     config=types.GenerateContentConfig(temperature=0.7)
                 )
@@ -355,6 +361,3 @@ if __name__ == "__main__":
     print(f"Nom : {pet['name']} ({pet['species']})")
     print(f"Annonce de Nora : {pet['nora_announcement']}")
     print(f"Statistiques : {pet['stats']}")
-    pet_manager.feed()
-    pet_manager.play()
-    print("Soins enregistrés avec succès !")

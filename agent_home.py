@@ -320,7 +320,7 @@ class SmartHomeCommander:
         lights = self.get_hue_lights(force_refresh=True)
         for l_id, l_info in lights.items():
             l_name = l_info.get("name", "").lower()
-            if target_clean in l_name or l_name in target_clean:
+            if target_clean == str(l_id) or target_clean in l_name or l_name in target_clean:
                 url = f"http://{ip}/api/{user}/lights/{l_id}/state"
                 try:
                     r = requests.put(url, json=payload, timeout=4.0)
