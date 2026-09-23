@@ -35,7 +35,8 @@ def prepare_build():
     try:
         import psutil
         for proc in psutil.process_iter(['name']):
-            if proc.info['name'] and 'nora' in proc.info['name'].lower():
+            p_name = (proc.info['name'] or '').lower()
+            if 'nora' in p_name or 'cloudflared' in p_name:
                 try:
                     proc.kill()
                 except Exception:
