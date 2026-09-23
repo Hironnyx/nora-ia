@@ -67,7 +67,7 @@ from PyQt6.QtWidgets import (
     QVBoxLayout, QHBoxLayout, QMenu, QSystemTrayIcon
 )
 from PyQt6.QtCore import Qt, QPoint, QTimer, pyqtSignal, QObject
-from PyQt6.QtGui import QPixmap, QCursor, QFont, QIcon
+from PyQt6.QtGui import QPixmap, QCursor, QFont, QIcon, QTransform
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys.executable).parent.resolve()
