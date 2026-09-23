@@ -30,6 +30,7 @@ android/.kotlin/
 creations_videos/*.mp4
 creations_videos/*.avi
 cloudflared.exe
+ffmpeg.exe
 remote_url.txt
 
 

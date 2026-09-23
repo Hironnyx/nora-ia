@@ -126,23 +126,59 @@ def _speech_worker_loop():
                 except Exception:
                     final_audio = audio_file
 
+                # Si le fichier est un MP3, le convertir en WAV via ffmpeg pour une lecture Win32 instantanée et 100% fiable
+                wav_file = final_audio.with_suffix(".wav")
+                if final_audio.suffix.lower() == ".mp3":
+                    ffmpeg_exe = BASE_DIR / "ffmpeg.exe"
+                    if not ffmpeg_exe.exists():
+                        ffmpeg_exe = Path(sys.executable).parent / "ffmpeg.exe"
+                    if not ffmpeg_exe.exists():
+                        try:
+                            import imageio_ffmpeg
+                            ffmpeg_exe = Path(imageio_ffmpeg.get_ffmpeg_exe())
+                        except Exception:
+                            pass
+                    if ffmpeg_exe.exists():
+                        import subprocess
+                        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+                        subprocess.run(
+                            [str(ffmpeg_exe), "-y", "-i", str(final_audio), "-acodec", "pcm_s16le", "-ar", "44100", str(wav_file)],
+                            capture_output=True, creationflags=flags
+                        )
+                        if wav_file.exists() and wav_file.stat().st_size > 1000:
+                            final_audio = wav_file
+
                 if on_start:
                     try:
                         on_start()
                     except Exception:
                         pass
 
-                if not pygame.mixer.get_init():
+                # Lecture audio ultra-fiable sans blocage
+                played_via_winsound = False
+                if sys.platform == "win32" and final_audio.suffix.lower() == ".wav" and final_audio.exists():
                     try:
-                        pygame.mixer.init()
-                    except Exception:
-                        pass
+                        import winsound
+                        winsound.PlaySound(str(final_audio), winsound.SND_FILENAME)
+                        played_via_winsound = True
+                    except Exception as we:
+                        print(f"Avertissement winsound : {we}")
+                        played_via_winsound = False
 
-                pygame.mixer.music.load(str(final_audio))
-                pygame.mixer.music.play()
+                if not played_via_winsound:
+                    if not pygame.mixer.get_init():
+                        try:
+                            pygame.mixer.init()
+                        except Exception:
+                            pass
 
-                while pygame.mixer.music.get_busy():
-                    time.sleep(0.04)
+                    pygame.mixer.music.load(str(final_audio))
+                    pygame.mixer.music.play()
+
+                    t_start = time.time()
+                    # Timeout de sécurité strict de 15s max pour ne jamais figer la boucle
+                    while pygame.mixer.music.get_busy() and (time.time() - t_start < 15.0):
+                        time.sleep(0.04)
 
             except Exception as e:
                 print(f"Erreur de lecture vocale : {e}")

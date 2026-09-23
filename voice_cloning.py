@@ -83,7 +83,7 @@ def _get_or_init_converter():
             converter.apply_conf(
                 tag="zero_two",
                 file_model=str(MODEL_PATH),
-                pitch_algo="rmvpe+",
+                pitch_algo="rmvpe",
                 pitch_lvl=0,  # 0 = conserve la hauteur naturelle féminine de Vivienne
                 file_index=idx_str,
                 index_influence=0.75,

@@ -175,6 +175,13 @@ class NoraMascot(QWidget):
         self.init_qg()
         self.init_autonomous_life()
 
+        # Préchauffage du clonage vocal Zero Two RVC en arrière-plan
+        try:
+            import voice_cloning
+            voice_cloning.warmup_in_background()
+        except Exception:
+            pass
+
         # Salutation personnalisée au démarrage avec synchronisation labiale
         QTimer.singleShot(800, self.welcome_greeting)
         # Ouverture automatique de l'espace de contrôle QG au démarrage (100% indépendant)
@@ -185,49 +192,65 @@ class NoraMascot(QWidget):
         if hasattr(self, 'qg'):
             self.qg.show_independent()
 
+    def _load_single_sprite(self, o: str, s: str):
+        """Charge, redimensionne et met en cache un sprite unique avec son miroir gauche/droite."""
+        # 1. Vérifier dans le sous-dossier de la tenue (mascot_assets/<outfit>/<s>.png)
+        p = ASSETS_DIR / o / f"{s}.png"
+        if not p.exists():
+            p = ASSETS_DIR / f"nora_{o}_{s}.png"
+        if not p.exists():
+            p = ASSETS_DIR / f"nora_{s}.png"
+        if not p.exists() and s.startswith("walk_"):
+            p = ASSETS_DIR / o / "idle_standing.png"
+        if not p.exists():
+            p = ASSETS_DIR / "nora_idle.png"
+
+        if p.exists():
+            pix = QPixmap(str(p))
+            if not pix.isNull():
+                pix_norm = pix.scaled(
+                    250, 450, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                )
+                self._pixmap_cache[(o, s, 1)] = pix_norm
+                mirrored = pix_norm.transformed(QTransform().scale(-1, 1), Qt.TransformationMode.SmoothTransformation)
+                self._pixmap_cache[(o, s, -1)] = mirrored
+                self._pixmap_cache[(o, s)] = pix_norm
+                return pix_norm
+        return None
+
     def preload_all_sprites(self):
-        """Précharge et redimensionne tous les sprites plein corps en RAM avec miroir gauche/droite pour un affichage 0 ms."""
-        outfits = ["franxx", "school", "hoodie", "cyberpunk", "commander"]
-        states = [
-            "idle", "idle_standing", "idle_arms_crossed", "idle_wave", "idle_thinking",
-            "idle_sitting", "idle_work_hologram", "idle_gaming", "alert_shield",
-            "blink", "talk_open", "talk_closed", "listen", "work"
-        ]
-        # Ajout des frames de marche et de course articulées
-        for i in range(1, 9):
-            states.append(f"walk_{i}")
-        for i in range(1, 5):
-            states.append(f"run_{i}")
+        """Démarrage instantané (<50ms) : précharge uniquement les sprites vitaux de la tenue active."""
+        active = getattr(self, 'current_outfit', 'franxx')
+        essential_states = ["idle_standing", "idle", "talk_open", "talk_closed", "blink"]
+        for s in essential_states:
+            self._load_single_sprite(active, s)
 
-        for o in outfits:
-            for s in states:
-                # 1. Vérifier dans le sous-dossier de la tenue (mascot_assets/<outfit>/<s>.png)
-                p = ASSETS_DIR / o / f"{s}.png"
-                if not p.exists():
-                    p = ASSETS_DIR / f"nora_{o}_{s}.png"
-                if not p.exists():
-                    p = ASSETS_DIR / f"nora_{s}.png"
-                if not p.exists() and s.startswith("walk_"):
-                    p = ASSETS_DIR / o / "idle_standing.png"
-                if not p.exists():
-                    p = ASSETS_DIR / "nora_idle.png"
+        # Lancement du chargement asynchrone des autres frames en arrière-plan sans figer l'interface
+        QTimer.singleShot(150, self.async_preload_remaining_sprites)
 
-                if p.exists():
-                    pix = QPixmap(str(p))
-                    if not pix.isNull():
-                        pix_norm = pix.scaled(
-                            250, 450, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-                        )
-                        # Normal (droite)
-                        self._pixmap_cache[(o, s, 1)] = pix_norm
-                        # Miroir (gauche)
-                        mirrored = pix_norm.transformed(QTransform().scale(-1, 1), Qt.TransformationMode.SmoothTransformation)
-                        self._pixmap_cache[(o, s, -1)] = mirrored
-                        # Compatibilité
-                        self._pixmap_cache[(o, s)] = pix_norm
+    def async_preload_remaining_sprites(self):
+        """Précharge le reste des frames et tenues en arrière-plan pour un affichage 0 ms en jeu."""
+        def _worker():
+            outfits = ["franxx", "school", "hoodie", "cyberpunk", "commander"]
+            states = [
+                "idle_standing", "idle_arms_crossed", "idle_wave", "idle_thinking",
+                "idle_sitting", "idle_work_hologram", "idle_gaming", "alert_shield",
+                "blink", "talk_open", "talk_closed", "listen", "work"
+            ]
+            for i in range(1, 9):
+                states.append(f"walk_{i}")
+            for i in range(1, 5):
+                states.append(f"run_{i}")
+
+            for o in outfits:
+                for s in states:
+                    if (o, s, 1) not in self._pixmap_cache:
+                        self._load_single_sprite(o, s)
+
+        threading.Thread(target=_worker, daemon=True).start()
 
     def get_cached_pixmap(self, outfit: str, state: str, direction: int = 1):
-        """Récupère instantanément le sprite mis en cache mémoire selon l'orientation du corps."""
+        """Récupère instantanément le sprite mis en cache, ou le charge à la volée en 1 ms."""
         dir_key = -1 if direction == -1 else 1
         pix = self._pixmap_cache.get((outfit, state, dir_key))
         if pix:
@@ -235,6 +258,12 @@ class NoraMascot(QWidget):
         pix = self._pixmap_cache.get((outfit, state))
         if pix:
             return pix
+
+        # Chargement dynamique à la volée si pas encore en cache
+        loaded = self._load_single_sprite(outfit, state)
+        if loaded:
+            return self._pixmap_cache.get((outfit, state, dir_key), loaded)
+
         # Fallbacks intelligents
         return (
             self._pixmap_cache.get((outfit, "idle_standing", dir_key)) or
@@ -1295,16 +1324,20 @@ class NoraMascot(QWidget):
             QApplication.quit()
 
 def run_app():
-    # Démarrer le serveur API mobile en arrière-plan pour le smartphone
-    try:
-        import nora_server
-        nora_server.start_server_background(8000)
-    except Exception as e:
-        print(f"Avertissement serveur mobile: {e}")
-
     app = QApplication(sys.argv)
     mascot = NoraMascot()
     mascot.show()
+
+    # Démarrage ultra-rapide non bloquant du serveur mobile en arrière-plan
+    def _start_bg_server():
+        try:
+            import nora_server
+            nora_server.start_server_background(8000)
+        except Exception as e:
+            print(f"Avertissement serveur mobile: {e}")
+
+    threading.Thread(target=_start_bg_server, daemon=True).start()
+
     sys.exit(app.exec())
 
 if __name__ == "__main__":

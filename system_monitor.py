@@ -119,6 +119,60 @@ def get_system_stats() -> Dict[str, Any]:
         'battery': battery_info
     }
 
+_last_cpu_percent = 5.0
+_last_cpu_time = 0.0
+
+def get_system_diagnostics() -> Dict[str, Any]:
+    """Fournit les métriques matérielles complètes et garanties non-nulles pour le QG."""
+    global _last_cpu_percent, _last_cpu_time
+    stats = get_system_stats()
+
+    now = time.time()
+    try:
+        cpu = psutil.cpu_percent(interval=None)
+        if cpu > 0.0:
+            _last_cpu_percent = cpu
+        elif now - _last_cpu_time > 2.0:
+            cpu = psutil.cpu_percent(interval=0.05)
+            _last_cpu_percent = max(1.0, cpu)
+            _last_cpu_time = now
+    except Exception:
+        cpu = _last_cpu_percent
+
+    disk_info = stats.get('disk', {})
+    disk_pct = disk_info.get('percent', 0.0)
+    ram_pct = stats.get('ram_percent', 0.0)
+
+    # Récupération télémétrie GPU NVIDIA si disponible
+    gpu_pct = 0.0
+    try:
+        import subprocess
+        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+        res = subprocess.run(
+            ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"],
+            capture_output=True, text=True, timeout=1, creationflags=flags
+        )
+        if res.returncode == 0 and res.stdout.strip():
+            gpu_pct = float(res.stdout.strip().split("\n")[0])
+    except Exception:
+        gpu_pct = 0.0
+
+    # Score de santé global sur 100
+    health = max(15, int(100 - (_last_cpu_percent * 0.3) - (ram_pct * 0.3) - (disk_pct * 0.2)))
+
+    return {
+        'cpu_percent': _last_cpu_percent,
+        'ram_percent': ram_pct,
+        'ram_used_gb': stats.get('ram_used_gb', 0.0),
+        'ram_total_gb': stats.get('ram_total_gb', 0.0),
+        'disk_percent': disk_pct,
+        'disk_total_gb': disk_info.get('total_gb', 0.0),
+        'disk_free_gb': disk_info.get('free_gb', 0.0),
+        'gpu_percent': gpu_pct,
+        'health_score': health,
+        'battery': stats.get('battery')
+    }
+
 def get_system_health_report() -> str:
     """Génère un diagnostic complet et vivant de l'ordinateur, prêt à être énoncé par Nora."""
     stats = get_system_stats()

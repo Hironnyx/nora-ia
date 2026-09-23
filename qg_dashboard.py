@@ -745,12 +745,14 @@ class QGDashboard(QWidget):
         self.cpu_bar, self.cpu_val = self._create_telemetry_gauge("PROCESSEUR (CPU)")
         self.ram_bar, self.ram_val = self._create_telemetry_gauge("MÉMOIRE VIVE (RAM)")
         self.disk_bar, self.disk_val = self._create_telemetry_gauge("DISQUE SYSTÈME (C:)")
+        self.gpu_bar, self.gpu_val = self._create_telemetry_gauge("CARTE GRAPHIQUE (GPU)")
         self.sec_bar, self.sec_val = self._create_telemetry_gauge("INDICE DE SANTÉ PC")
 
         grid.addLayout(self.cpu_bar, 0, 0)
         grid.addLayout(self.ram_bar, 0, 1)
         grid.addLayout(self.disk_bar, 1, 0)
-        grid.addLayout(self.sec_bar, 1, 1)
+        grid.addLayout(self.gpu_bar, 1, 1)
+        grid.addLayout(self.sec_bar, 2, 0, 1, 2)
 
         layout.addLayout(grid)
 
@@ -883,19 +885,23 @@ class QGDashboard(QWidget):
     def update_telemetry(self):
         try:
             diag = system_monitor.get_system_diagnostics()
-            cpu = int(diag.get("cpu_percent", 0))
+            cpu = int(diag.get("cpu_percent", 5))
             ram = int(diag.get("ram_percent", 0))
             disk = int(diag.get("disk_percent", 0))
+            gpu = int(diag.get("gpu_percent", 0))
+            health = int(diag.get("health_score", 75))
 
             self.cpu_val[0].setValue(cpu)
             self.cpu_val[1].setText(f"{cpu} %")
             self.ram_val[0].setValue(ram)
-            self.ram_val[1].setText(f"{ram} %")
+            self.ram_val[1].setText(f"{ram} % ({diag.get('ram_used_gb', 0)} / {diag.get('ram_total_gb', 0)} Go)")
             self.disk_val[0].setValue(disk)
-            self.disk_val[1].setText(f"{disk} %")
+            self.disk_val[1].setText(f"{disk} % ({diag.get('disk_free_gb', 0)} Go libres)")
 
-            # Score global de santé
-            health = max(10, 100 - int((cpu * 0.4) + (ram * 0.4)))
+            if hasattr(self, 'gpu_val'):
+                self.gpu_val[0].setValue(gpu)
+                self.gpu_val[1].setText(f"{gpu} %")
+
             self.sec_val[0].setValue(health)
             self.sec_val[1].setText(f"{health} / 100")
         except Exception:
