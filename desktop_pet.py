@@ -89,6 +89,7 @@ import nora_initiatives
 import gaming_mode
 import tools_vision
 import nora_autonomous_life
+import nora_companion
 from wake_word_listener import WakeWordDetector
 
 
@@ -340,6 +341,16 @@ class NoraMascot(QWidget):
         self.set_sprite_state("idle_standing")
         main_layout.addWidget(self.avatar_label)
 
+        # 3. Mini-compagnon animal de Nora (Klaxo) présent à ses côtés
+        self.pet_label = QLabel(self)
+        self.pet_label.setFixedSize(54, 54)
+        self.pet_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.pet_label.setStyleSheet("background: transparent; border: none;")
+        pet_sp = ASSETS_DIR / "companion" / "pet_idle.png"
+        if pet_sp.exists():
+            self.pet_label.setPixmap(QPixmap(str(pet_sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+        self.pet_label.mousePressEvent = self.on_companion_clicked
+
         self.setLayout(main_layout)
 
         # Ancrage fixe au sol (10px au-dessus de la barre des tâches)
@@ -348,6 +359,7 @@ class NoraMascot(QWidget):
         self.adjustSize()
         pos_x = max(60, screen.right() - 290)
         self.move(pos_x, self.ground_y - self.height())
+        self.update_pet_position()
 
     # =================================================================
     # INTÉGRATION WINDOWS SYSTEM TRAY & NOTIFICATIONS
@@ -544,6 +556,7 @@ class NoraMascot(QWidget):
         pix = self.get_cached_pixmap(self.current_outfit, state, getattr(self, 'facing_direction', 1))
         if pix:
             self.avatar_label.setPixmap(pix)
+        self.update_pet_position()
 
     def play_pose(self, pose_name: str, duration_sec: float = 6.0, dialog: str = None):
         """Joue une pose spécifique avec réactivité et retour automatique à la posture de base."""
@@ -558,9 +571,43 @@ class NoraMascot(QWidget):
         self._pose_return_timer.timeout.connect(lambda: self.set_sprite_state("idle_standing"))
         self._pose_return_timer.start(int(duration_sec * 1000))
 
+    def update_pet_position(self):
+        """Place le mini-compagnon aux pieds de Nora selon sa direction."""
+        if hasattr(self, 'pet_label'):
+            if getattr(self, 'facing_direction', 1) == 1:
+                self.pet_label.move(8, max(0, self.height() - 58))
+            else:
+                self.pet_label.move(max(0, self.width() - 62), max(0, self.height() - 58))
+
+    def on_companion_clicked(self, event):
+        pet = nora_companion.pet_manager.get_pet_info()
+        name = pet.get("name", "Klaxo")
+        species = pet.get("species", "Dragonnet")
+        lvl = pet.get("stats", {}).get("level", 1)
+        dialogs = [
+            f"Voici {name}, mon petit {species} (Niv. {lvl}) ! Il adore veiller sur notre bureau avec nous.",
+            f"{name} s'amuse beaucoup à vos côtés, Maverick !",
+            f"J'en prends grand soin chaque jour, Maverick. Il émet un doux ronronnement dès que vous le saluez !"
+        ]
+        self.display_message(random.choice(dialogs))
+        sp = ASSETS_DIR / "companion" / "pet_happy.png"
+        if sp.exists():
+            self.pet_label.setPixmap(QPixmap(str(sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+            QTimer.singleShot(4000, self.reset_companion_sprite)
+
+    def reset_companion_sprite(self):
+        if hasattr(self, 'pet_label'):
+            sp = ASSETS_DIR / "companion" / "pet_idle.png"
+            if sp.exists():
+                self.pet_label.setPixmap(QPixmap(str(sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+
     def welcome_greeting(self):
         msg = memory_manager.get_welcome_message()
-        self.display_message(msg)
+        pet = nora_companion.pet_manager.get_pet_info()
+        pname = pet.get("name", "Klaxo")
+        pspecies = pet.get("species", "Dragonnet Écarlate")
+        full_bubble = f"{msg}\nMon petit {pspecies} {pname} et moi veillons sur vos projets !"
+        self.display_message(full_bubble)
         self.speak_nora(msg)
 
     # =================================================================
@@ -641,6 +688,7 @@ class NoraMascot(QWidget):
         new_x = int(current_x + step)
         target_y = getattr(self, 'ground_y', self.y() + self.height()) - self.height()
         self.move(new_x, int(target_y))
+        self.update_pet_position()
 
         # Cadence naturelle des pas : changement de frame toutes les 75 ms
         now = time.time()
@@ -675,6 +723,14 @@ class NoraMascot(QWidget):
                 self.display_message(action["bubble"])
             if action.get("speech"):
                 self.speak_nora(action["bubble"])
+        elif action_type == "PET_CARE":
+            if action.get("bubble"):
+                self.display_message(action["bubble"])
+            if hasattr(self, 'pet_label'):
+                sp = ASSETS_DIR / "companion" / "pet_happy.png"
+                if sp.exists():
+                    self.pet_label.setPixmap(QPixmap(str(sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                    QTimer.singleShot(4000, self.reset_companion_sprite)
         elif action_type == "SLEEP":
             self.display_message(action["bubble"])
             self.set_sprite_state("blink")

@@ -122,7 +122,20 @@ class NoraLifeEngine:
                 "speech": True
             }
 
-        # 5. Pensée spontanée, lecture ou curiosité (toutes les 3 à 7 minutes)
+        # 5. Soins autonomes et attention portée à son animal de compagnie (toutes les 10-15 minutes)
+        try:
+            import nora_companion
+            care_event = nora_companion.pet_manager.tick_lifecycle()
+            if care_event and random.random() < 0.7:
+                return {
+                    "type": "PET_CARE",
+                    "bubble": f"{care_event}",
+                    "speech": False
+                }
+        except Exception:
+            pass
+
+        # 6. Pensée spontanée, lecture ou curiosité (toutes les 3 à 7 minutes)
         if now - self.last_thought_time > random.randint(self.min_thought_interval, self.max_thought_interval):
             self.last_thought_time = now
             thought = self.generate_spontaneous_thought(period)
@@ -176,6 +189,8 @@ class NoraLifeEngine:
             {"text": "Votre système fonctionne parfaitement, aucun ralentissement détecté.", "speech": False},
             {"text": "C'est un plaisir de veiller sur votre espace de travail aujourd'hui, Maverick.", "speech": False},
             {"text": "Je reste à votre entière disposition si vous avez la moindre tâche à me confier.", "speech": False},
+            {"text": "Regardez mon petit compagnon qui veille à mes côtés... Il adore vous observer travailler sur vos projets !", "speech": False},
+            {"text": "Je suis ravie d'avoir mon compagnon sur le bureau. Il apporte une présence chaleureuse à notre espace de travail.", "speech": False},
         ]
 
         # 2. Sujets du carnet d'apprentissage

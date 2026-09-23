@@ -1,0 +1,24 @@
+{
+  "name": "Klaxo",
+  "species": "Dragonnet Écarlate",
+  "personality": "Fier, affectueux, joueur et loyal protecteur.",
+  "adopted_date": "23/09/2026 à 22:20",
+  "nora_announcement": "Maverick, j'ai longuement réfléchi et mon cœur a choisi : j'ai adopté un petit Dragonnet Écarlate que j'ai nommé Klaxo ! Il veillera à mes côtés pendant que je vous assiste.",
+  "stats": {
+    "hunger": 90,
+    "happiness": 100,
+    "energy": 70,
+    "affection": 100,
+    "level": 1,
+    "xp": 50
+  },
+  "status": "Joue joyeusement",
+  "last_fed": 1790194859.6908941,
+  "last_played": 1790194859.6913939,
+  "last_nap": 1790194859.6903937,
+  "journal": [
+    "🎉 22:20 : Nora a choisi d'adopter Klaxo le Dragonnet Écarlate !",
+    "[22:20] Nora a nourri Klaxo avec une délicieuse friandise. Il se régale !",
+    "[22:20] Nora a joué avec Klaxo. Ses yeux brillent de joie !"
+  ]
+}

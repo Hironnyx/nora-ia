@@ -1,0 +1,100 @@
+{
+  "printer_telemetry": {
+    "status": "Prête",
+    "nozzle_temp": 215,
+    "nozzle_target": 215,
+    "bed_temp": 60,
+    "bed_target": 60,
+    "fan_speed": 100,
+    "progress_percent": 0,
+    "current_layer": 0,
+    "total_layers": 420,
+    "print_duration": "00:00:00",
+    "time_remaining": "02h 15m",
+    "active_file": "Support_Bureau_ZeroTwo.3mf"
+  },
+  "filament_spools": [
+    {
+      "id": "spool_1",
+      "material": "PLA+",
+      "brand": "Sunlu",
+      "color_name": "Rouge Écarlate Zero Two",
+      "color_hex": "#ff2a85",
+      "total_weight_g": 1000,
+      "remaining_weight_g": 780,
+      "temp_nozzle": 210,
+      "temp_bed": 60
+    },
+    {
+      "id": "spool_2",
+      "material": "PETG",
+      "brand": "Prusament",
+      "color_name": "Noir Galactique",
+      "color_hex": "#0f172a",
+      "total_weight_g": 1000,
+      "remaining_weight_g": 620,
+      "temp_nozzle": 240,
+      "temp_bed": 85
+    },
+    {
+      "id": "spool_3",
+      "material": "PLA",
+      "brand": "eSun",
+      "color_name": "Cyan Néon Cyberpunk",
+      "color_hex": "#00f0ff",
+      "total_weight_g": 1000,
+      "remaining_weight_g": 910,
+      "temp_nozzle": 205,
+      "temp_bed": 55
+    },
+    {
+      "id": "spool_4",
+      "material": "TPU 95A",
+      "brand": "Polymaker",
+      "color_name": "Blanc Flexible",
+      "color_hex": "#f8fafc",
+      "total_weight_g": 500,
+      "remaining_weight_g": 410,
+      "temp_nozzle": 225,
+      "temp_bed": 50
+    }
+  ],
+  "print_queue": [
+    {
+      "id": "print_1",
+      "title": "Support_Bureau_ZeroTwo.3mf",
+      "format": "3MF",
+      "material": "PLA+",
+      "estimated_time": "2h 30m",
+      "estimated_grams": 65,
+      "layer_height": "0.20mm",
+      "infill": "20% Gyroid",
+      "status": "En attente",
+      "path": ""
+    },
+    {
+      "id": "print_2",
+      "title": "Boitier_Capteur_Environnement.stl",
+      "format": "STL",
+      "material": "PETG",
+      "estimated_time": "1h 45m",
+      "estimated_grams": 42,
+      "layer_height": "0.20mm",
+      "infill": "25% Grid",
+      "status": "En attente",
+      "path": ""
+    },
+    {
+      "id": "print_3",
+      "title": "Organiseur_Cables_Magnétique.stl",
+      "format": "STL",
+      "material": "PLA",
+      "estimated_time": "45m",
+      "estimated_grams": 18,
+      "layer_height": "0.20mm",
+      "infill": "15% Gyroid",
+      "status": "Terminé",
+      "path": ""
+    }
+  ]
+}

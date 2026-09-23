@@ -107,6 +107,9 @@ def run_pyinstaller():
         "--hidden-import=memory_manager",
         "--hidden-import=mission_engine",
         "--hidden-import=nora_autonomous_life",
+        "--hidden-import=nora_companion",
+        "--hidden-import=project_manager",
+        "--hidden-import=print3d_manager",
         "--hidden-import=nora_brain",
         "--hidden-import=nora_initiatives",
         "--hidden-import=nora_recursive_swarm",
@@ -190,6 +193,21 @@ def post_build():
     if carnet_src.exists():
         shutil.copyfile(str(carnet_src), str(OUTPUT_DIR / "carnet_apprentissage_nora.md"))
         print("✔ Carnet d'apprentissage synchronisé.")
+
+    pet_src = PROJECT_DIR / "nora_pet_state.json"
+    if pet_src.exists():
+        shutil.copyfile(str(pet_src), str(OUTPUT_DIR / "nora_pet_state.json"))
+        print("✔ État compagnon nora_pet_state.json synchronisé.")
+
+    proj_src = PROJECT_DIR / "maverick_projects.json"
+    if proj_src.exists():
+        shutil.copyfile(str(proj_src), str(OUTPUT_DIR / "maverick_projects.json"))
+        print("✔ Projets maverick_projects.json synchronisés.")
+
+    print_src = PROJECT_DIR / "maverick_3dprint_state.json"
+    if print_src.exists():
+        shutil.copyfile(str(print_src), str(OUTPUT_DIR / "maverick_3dprint_state.json"))
+        print("✔ Atelier 3D maverick_3dprint_state.json synchronisé.")
 
     # 3. Synchroniser les dossiers d'assets au cas où
     mascot_dest = OUTPUT_DIR / "mascot_assets"
