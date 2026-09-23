@@ -111,6 +111,7 @@ class NoraBridge(QObject):
     gaming_mode_changed = pyqtSignal(bool)
     screen_vision_requested = pyqtSignal(str)
     swarm_event = pyqtSignal(str, int, str, int)
+    mission_requested = pyqtSignal(str)
 
 class NoraMascot(QWidget):
     def __init__(self):
@@ -148,6 +149,7 @@ class NoraMascot(QWidget):
         self.bridge.swarm_event.connect(self.on_swarm_event_received)
         self.bridge.gaming_mode_changed.connect(self.on_gaming_mode_changed)
         self.bridge.screen_vision_requested.connect(self.trigger_screen_vision)
+        self.bridge.mission_requested.connect(self.execute_mission)
 
         self.drag_position = QPoint()
         self.is_dragging = False
@@ -239,25 +241,34 @@ class NoraMascot(QWidget):
         QTimer.singleShot(150, self.async_preload_remaining_sprites)
 
     def async_preload_remaining_sprites(self):
-        """Précharge le reste des frames et tenues en arrière-plan pour un affichage 0 ms en jeu."""
-        def _worker():
-            outfits = ["franxx", "school", "hoodie", "cyberpunk", "commander"]
-            states = [
-                "idle_standing", "idle_arms_crossed", "idle_wave", "idle_thinking",
-                "idle_sitting", "idle_work_hologram", "idle_gaming", "alert_shield",
-                "blink", "talk_open", "talk_closed", "listen", "work"
-            ]
-            for i in range(1, 9):
-                states.append(f"walk_{i}")
-            for i in range(1, 5):
-                states.append(f"run_{i}")
+        """Précharge le reste des frames et tenues progressivement sur le thread principal pour éviter tout crash GDI/Qt."""
+        outfits = ["franxx", "school", "hoodie", "cyberpunk", "commander"]
+        states = [
+            "idle_standing", "idle_arms_crossed", "idle_wave", "idle_thinking",
+            "idle_sitting", "idle_work_hologram", "idle_gaming", "alert_shield",
+            "blink", "talk_open", "talk_closed", "listen", "work"
+        ]
+        for i in range(1, 9):
+            states.append(f"walk_{i}")
+        for i in range(1, 5):
+            states.append(f"run_{i}")
 
-            for o in outfits:
-                for s in states:
-                    if (o, s, 1) not in self._pixmap_cache:
+        queue = [(o, s) for o in outfits for s in states if (o, s, 1) not in self._pixmap_cache]
+
+        def _process_batch():
+            for _ in range(5):
+                if not queue:
+                    return
+                o, s = queue.pop(0)
+                if (o, s, 1) not in self._pixmap_cache:
+                    try:
                         self._load_single_sprite(o, s)
+                    except Exception:
+                        pass
+            if queue:
+                QTimer.singleShot(25, _process_batch)
 
-        threading.Thread(target=_worker, daemon=True).start()
+        _process_batch()
 
     def get_cached_pixmap(self, outfit: str, state: str, direction: int = 1):
         """Récupère instantanément le sprite mis en cache, ou le charge à la volée en 1 ms."""
@@ -1095,28 +1106,32 @@ class NoraMascot(QWidget):
             return
 
         def analyze_thread():
-            intent, chat_reply = nora_brain.analyze_intent_and_respond(user_text)
-            if intent == "OPEN_QG":
-                self.bridge.open_qg.emit()
-                self.bridge.chat_response.emit(chat_reply)
-            elif intent.startswith("OUTFIT:"):
-                outfit_key = intent.split(":")[1]
-                self.bridge.outfit_changed.emit(outfit_key)
-                self.bridge.chat_response.emit(chat_reply)
-            elif intent == "GAMING_ON":
-                self.bridge.gaming_mode_changed.emit(True)
-                self.bridge.chat_response.emit(chat_reply)
-            elif intent == "GAMING_OFF":
-                self.bridge.gaming_mode_changed.emit(False)
-                self.bridge.chat_response.emit(chat_reply)
-            elif intent == "BOOST_RAM":
-                self.bridge.chat_response.emit(chat_reply)
-            elif intent == "SCREEN_VISION":
-                self.bridge.screen_vision_requested.emit(chat_reply)
-            elif intent == "CHAT":
-                self.bridge.chat_response.emit(chat_reply)
-            else:
-                self.execute_mission(user_text)
+            try:
+                intent, chat_reply = nora_brain.analyze_intent_and_respond(user_text)
+                if intent == "OPEN_QG":
+                    self.bridge.open_qg.emit()
+                    self.bridge.chat_response.emit(chat_reply)
+                elif intent.startswith("OUTFIT:"):
+                    outfit_key = intent.split(":")[1]
+                    self.bridge.outfit_changed.emit(outfit_key)
+                    self.bridge.chat_response.emit(chat_reply)
+                elif intent == "GAMING_ON":
+                    self.bridge.gaming_mode_changed.emit(True)
+                    self.bridge.chat_response.emit(chat_reply)
+                elif intent == "GAMING_OFF":
+                    self.bridge.gaming_mode_changed.emit(False)
+                    self.bridge.chat_response.emit(chat_reply)
+                elif intent == "BOOST_RAM":
+                    self.bridge.chat_response.emit(chat_reply)
+                elif intent == "SCREEN_VISION":
+                    self.bridge.screen_vision_requested.emit(chat_reply)
+                elif intent == "CHAT":
+                    self.bridge.chat_response.emit(chat_reply)
+                else:
+                    self.bridge.mission_requested.emit(user_text)
+            except Exception as e:
+                logger.error(f"Erreur analyze_thread: {e}")
+                self.bridge.chat_response.emit(f"Désolée Maverick, une erreur est survenue lors de l'analyse : {e}")
 
         threading.Thread(target=analyze_thread, daemon=True).start()
 
@@ -1150,8 +1165,11 @@ class NoraMascot(QWidget):
         threading.Thread(target=mission_worker, daemon=True).start()
 
     def on_swarm_event_received(self, agent: str, round_num: int, text: str, consensus: int):
-        if hasattr(self, 'qg') and self.qg:
-            self.qg.update_swarm_event(agent, round_num, text, consensus)
+        try:
+            if hasattr(self, 'qg') and self.qg:
+                self.qg.update_swarm_event(agent, round_num, text, consensus)
+        except Exception as e:
+            logger.error(f"Erreur on_swarm_event_received: {e}")
 
     def on_mission_finished(self, report: str):
         self.is_mission_running = False

@@ -158,12 +158,21 @@ class QGDashboard(QWidget):
     ram_boost_requested = pyqtSignal()
     screen_vision_requested = pyqtSignal()
     voice_cloning_toggled = pyqtSignal(bool)
+    agent_consult_response = pyqtSignal(str, str)
+    swarm_event_signal = pyqtSignal(str, int, str, int)
+    swarm_debate_done_signal = pyqtSignal(list, int)
+    project_advice_signal = pyqtSignal(str)
 
     def __init__(self, parent_mascot=None):
         super().__init__()
         self.parent_mascot = parent_mascot
         self.current_outfit = memory_manager.get_current_outfit()
         self.drag_position = QPoint()
+
+        self.agent_consult_response.connect(self._on_agent_consult_response)
+        self.swarm_event_signal.connect(self.update_swarm_event)
+        self.swarm_debate_done_signal.connect(self._on_swarm_debate_done)
+        self.project_advice_signal.connect(self._on_project_advice_received)
 
         self.init_ui()
 
@@ -918,13 +927,23 @@ class QGDashboard(QWidget):
         self.prof_chat_input.clear()
         agent = getattr(self, 'current_selected_agent', 'Nora Prime')
         self.prof_stances_text.append(f"\n<b>Maverick (1-à-1 avec {agent}) :</b> {question}")
+        self.prof_stances_text.append(f"<i>⏳ {agent} analyse vos informations et réfléchit...</i>")
 
         def _worker():
-            ans = nora_recursive_swarm.consult_single_agent(agent, question)
-            self.prof_stances_text.append(f"<b>{agent} :</b> {ans}")
+            try:
+                ans = nora_recursive_swarm.consult_single_agent(agent, question)
+            except Exception as e:
+                ans = f"Désolée Maverick, une anomalie s'est produite lors de l'analyse : {e}"
+            self.agent_consult_response.emit(agent, ans)
 
         import threading
         threading.Thread(target=_worker, daemon=True).start()
+
+    def _on_agent_consult_response(self, agent: str, ans: str):
+        try:
+            self.prof_stances_text.append(f"<b>{agent} :</b> {ans}")
+        except Exception as e:
+            print(f"Erreur affichage réponse agent : {e}")
 
     def on_start_debate_click(self):
         topic = self.debate_input.text().strip()
@@ -934,35 +953,55 @@ class QGDashboard(QWidget):
         self.swarm_console.append(f"<hr><b>⚡ Débat engagé par Maverick :</b> '{topic}'")
 
         def _evt_cb(e):
-            self.update_swarm_event(e["agent"], e["round"], e["text"], e["consensus"])
+            self.swarm_event_signal.emit(
+                str(e.get("agent", "")),
+                int(e.get("round", 1)),
+                str(e.get("text", "")),
+                int(e.get("consensus", 100))
+            )
 
         def _worker():
-            session = nora_recursive_swarm.RecursiveSwarmSession(topic, callback_event=_evt_cb)
-            res = session.run_recursive_debate()
-            plan = res.get("final_plan", [])
-            self.swarm_console.append(f"<br><span style='color:#10b981; font-weight:bold;'>✔ Consensus final ({res['consensus_score']}%) :</span>")
-            for step in plan:
-                self.swarm_console.append(f"  • {step.get('details', str(step))}")
+            try:
+                session = nora_recursive_swarm.RecursiveSwarmSession(topic, callback_event=_evt_cb)
+                res = session.run_recursive_debate()
+                plan = res.get("final_plan", [])
+                score = res.get("consensus_score", 99)
+                self.swarm_debate_done_signal.emit(plan, score)
+            except Exception as e:
+                self.swarm_debate_done_signal.emit([{"details": f"Erreur lors du débat : {e}"}], 0)
 
         import threading
         threading.Thread(target=_worker, daemon=True).start()
 
-    def update_swarm_event(self, agent: str, round_num: int, text: str, consensus: int = 100):
-        self.consensus_bar.setValue(consensus)
-        color = "#38bdf8"
-        if "Critique" in agent:
-            color = "#a855f7"
-        elif "Gardien" in agent:
-            color = "#10b981"
-        elif "Exécuteur" in agent:
-            color = "#f59e0b"
-        elif "Maker" in agent:
-            color = "#ec4899"
-        elif "Prime" in agent:
-            color = "#ff2a85"
+    def _on_swarm_debate_done(self, plan: list, score: int):
+        try:
+            self.swarm_console.append(f"<br><span style='color:#10b981; font-weight:bold;'>✔ Consensus final ({score}%) :</span>")
+            for step in plan:
+                self.swarm_console.append(f"  • {step.get('details', str(step))}")
+        except Exception as e:
+            print(f"Erreur affichage fin de débat : {e}")
 
-        msg = f"<span style='color:{color}; font-weight:bold;'>[{agent} - Tour {round_num}]</span> {text}"
-        self.swarm_console.append(msg)
+    def update_swarm_event(self, agent: str, round_num: int, text: str, consensus: int = 100):
+        try:
+            if hasattr(self, 'consensus_bar') and self.consensus_bar:
+                self.consensus_bar.setValue(int(consensus or 0))
+            color = "#38bdf8"
+            if "Critique" in agent:
+                color = "#a855f7"
+            elif "Gardien" in agent:
+                color = "#10b981"
+            elif "Exécuteur" in agent:
+                color = "#f59e0b"
+            elif "Maker" in agent:
+                color = "#ec4899"
+            elif "Prime" in agent:
+                color = "#ff2a85"
+
+            msg = f"<span style='color:{color}; font-weight:bold;'>[{agent} - Tour {round_num}]</span> {text}"
+            if hasattr(self, 'swarm_console') and self.swarm_console:
+                self.swarm_console.append(msg)
+        except Exception as e:
+            print(f"Erreur mise à jour événement swarm : {e}")
 
     # =========================================================================
     # 3. PANNEAU GESTIONNAIRE DE PROJETS DE MAVERICK
@@ -1210,12 +1249,21 @@ class QGDashboard(QWidget):
     def on_ask_proj_advice(self):
         pid = getattr(self, 'current_project_id', None)
         if pid:
-            self.proj_advice_lbl.setText("Nora et l'Architecte analysent votre projet...")
+            self.proj_advice_lbl.setText("⏳ Nora et l'Architecte analysent votre projet en profondeur...")
             def _worker():
-                adv = project_manager.project_manager.ask_nora_advice(pid)
-                self.proj_advice_lbl.setText(adv)
+                try:
+                    adv = project_manager.project_manager.ask_nora_advice(pid)
+                except Exception as e:
+                    adv = f"Désolée Maverick, impossible d'obtenir l'analyse : {e}"
+                self.project_advice_signal.emit(adv)
             import threading
             threading.Thread(target=_worker, daemon=True).start()
+
+    def _on_project_advice_received(self, adv: str):
+        try:
+            self.proj_advice_lbl.setText(adv)
+        except Exception as e:
+            print(f"Erreur affichage conseil projet : {e}")
 
     def on_delete_proj(self):
         pid = getattr(self, 'current_project_id', None)
