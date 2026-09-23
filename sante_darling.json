@@ -21,13 +21,13 @@
       "pauses_ecran": 0,
       "sommeil_heures": 7.5,
       "qualite_sommeil": "Bonne",
-      "pas_quotidiens": 8,
+      "pas_quotidiens": 13,
       "objectif_pas": 8000,
       "frequence_cardiaque_moyenne": 72,
       "niveau_energie": 8,
       "derniere_hydratation": null,
       "notes": [],
-      "batterie_telephone": 40
+      "batterie_telephone": 36
     }
   }
 }
