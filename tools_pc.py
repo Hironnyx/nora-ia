@@ -323,7 +323,8 @@ def run_powershell(command: str) -> str:
             capture_output=True,
             encoding="utf-8",
             errors="replace",
-            timeout=45
+            timeout=45,
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
         )
         stdout = proc.stdout.strip()
         stderr = proc.stderr.strip()

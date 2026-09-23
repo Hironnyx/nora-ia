@@ -123,7 +123,11 @@ def launch_application(app_name_query: str) -> Tuple[bool, str]:
 
     # Essai générique Windows (start <nom>)
     try:
-        subprocess.Popen(f"start {app_name_query}", shell=True)
+        subprocess.Popen(
+            f"start {app_name_query}",
+            shell=True,
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+        )
         return True, f"Tentative d'ouverture de '{app_name_query}' en cours."
     except Exception as e:
         return False, f"Impossible d'ouvrir '{app_name_query}' : {e}"
@@ -146,8 +150,13 @@ def lock_workstation() -> Tuple[bool, str]:
 def empty_recycle_bin() -> Tuple[bool, str]:
     """Vide la corbeille de Windows silencieusement."""
     try:
-        cmd = "powershell -NoProfile -Command \"Clear-RecycleBin -Force -ErrorAction SilentlyContinue\""
-        res = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        cmd = ["powershell", "-NoProfile", "-Command", "Clear-RecycleBin -Force -ErrorAction SilentlyContinue"]
+        res = subprocess.run(
+            cmd,
+            capture_output=True,
+            text=True,
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+        )
         return True, "La corbeille a été vidée avec succès."
     except Exception as e:
         return False, f"Erreur lors du vidage de la corbeille : {e}"

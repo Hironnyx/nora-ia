@@ -108,6 +108,7 @@ def run_pyinstaller():
         "--hidden-import=nora_autonomous_life",
         "--hidden-import=nora_brain",
         "--hidden-import=nora_initiatives",
+        "--hidden-import=nora_recursive_swarm",
         "--hidden-import=qg_dashboard",
         "--hidden-import=setup_shortcuts",
         "--hidden-import=sound_effects",

@@ -109,6 +109,7 @@ class NoraBridge(QObject):
     outfit_changed = pyqtSignal(str)
     gaming_mode_changed = pyqtSignal(bool)
     screen_vision_requested = pyqtSignal(str)
+    swarm_event = pyqtSignal(str, int, str, int)
 
 class NoraMascot(QWidget):
     def __init__(self):
@@ -143,6 +144,7 @@ class NoraMascot(QWidget):
         self.bridge.security_alert.connect(self.on_security_alert)
         self.bridge.open_qg.connect(self.toggle_qg)
         self.bridge.outfit_changed.connect(self.set_outfit)
+        self.bridge.swarm_event.connect(self.on_swarm_event_received)
         self.bridge.gaming_mode_changed.connect(self.on_gaming_mode_changed)
         self.bridge.screen_vision_requested.connect(self.trigger_screen_vision)
 
@@ -155,8 +157,9 @@ class NoraMascot(QWidget):
         self.hands_free_enabled = False
         self.system_alerts_enabled = True
 
-        # Moteur de Vie Autonome & Balade Libre (Roaming)
+        # Moteur de Vie Autonome & Corps Animé (Direction, Tangage, Respiration)
         self.life_engine = nora_autonomous_life.life_engine
+        self.facing_direction = 1  # 1 = face droite, -1 = face gauche
         self.is_walking = False
         self.walk_target_x = 0
         self.walk_speed = 2
@@ -174,9 +177,16 @@ class NoraMascot(QWidget):
 
         # Salutation personnalisée au démarrage avec synchronisation labiale
         QTimer.singleShot(800, self.welcome_greeting)
+        # Ouverture automatique de l'espace de contrôle QG au démarrage (100% indépendant)
+        QTimer.singleShot(1200, self.open_qg_initial)
+
+    def open_qg_initial(self):
+        """Ouvre le QG au lancement comme un espace de contrôle indépendant et fixe."""
+        if hasattr(self, 'qg'):
+            self.qg.show_independent()
 
     def preload_all_sprites(self):
-        """Précharge et redimensionne tous les sprites en RAM pour un affichage 0 ms instantané sans I/O disque."""
+        """Précharge et redimensionne tous les sprites en RAM avec miroir gauche/droite pour un affichage 0 ms."""
         outfits = ["franxx", "school", "hoodie"]
         states = ["idle", "blink", "talk_open", "talk_closed", "listen", "work"]
         for o in outfits:
@@ -189,19 +199,29 @@ class NoraMascot(QWidget):
                 if p.exists():
                     pix = QPixmap(str(p))
                     if not pix.isNull():
-                        self._pixmap_cache[(o, s)] = pix.scaled(
+                        pix_norm = pix.scaled(
                             220, 220, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
                         )
+                        # Normal (droite)
+                        self._pixmap_cache[(o, s, 1)] = pix_norm
+                        # Miroir (gauche)
+                        mirrored = pix_norm.transformed(QTransform().scale(-1, 1), Qt.TransformationMode.SmoothTransformation)
+                        self._pixmap_cache[(o, s, -1)] = mirrored
+                        # Compatibilité
+                        self._pixmap_cache[(o, s)] = pix_norm
 
-    def get_cached_pixmap(self, outfit: str, state: str):
-        """Récupère instantanément le sprite mis en cache mémoire sans lecture disque."""
+    def get_cached_pixmap(self, outfit: str, state: str, direction: int = 1):
+        """Récupère instantanément le sprite mis en cache mémoire selon l'orientation du corps."""
+        dir_key = -1 if direction == -1 else 1
+        pix = self._pixmap_cache.get((outfit, state, dir_key))
+        if pix:
+            return pix
         pix = self._pixmap_cache.get((outfit, state))
         if pix:
             return pix
-        # Fallbacks sécurisés
         return (
-            self._pixmap_cache.get((outfit, "idle")) or
-            self._pixmap_cache.get(("franxx", state)) or
+            self._pixmap_cache.get((outfit, "idle", dir_key)) or
+            self._pixmap_cache.get(("franxx", state, dir_key)) or
             self._pixmap_cache.get(("franxx", "idle"))
         )
 
@@ -332,10 +352,19 @@ class NoraMascot(QWidget):
         self.lip_timer.timeout.connect(self.lip_sync_step)
 
     def float_animation_step(self):
-        """Mouvement de lévitation douce sinusoïdale à 30 FPS."""
+        """Mouvement corporel vivant : respiration sinusoïdale organique et micro-mouvements."""
+        if getattr(self, 'is_walking', False):
+            return  # La marche gère son propre cycle corporel dynamique
         if self.current_state in ["idle", "talk_open", "talk_closed", "listen", "work"]:
             elapsed = time.time() - self.float_start_time
-            offset = int(math.sin(elapsed * 2.24) * 3.5)
+            sin_breathe = math.sin(elapsed * 2.1)
+            offset = int(sin_breathe * 3.5)
+            # Respiration corporelle : étirement doux (squash & stretch de 2.5%)
+            breathe_h = int(220 * (1.0 + 0.025 * sin_breathe))
+            base_pix = self.get_cached_pixmap(self.current_outfit, self.current_state, getattr(self, 'facing_direction', 1))
+            if base_pix:
+                scaled_pix = base_pix.scaled(220, breathe_h, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
+                self.avatar_label.setPixmap(scaled_pix)
             self.avatar_label.setContentsMargins(0, 4 + offset, 0, 4 - offset)
 
     def schedule_next_blink(self):
@@ -448,9 +477,9 @@ class NoraMascot(QWidget):
             self.qg.update_gaming_ui()
 
     def set_sprite_state(self, state: str):
-        """Met à jour le sprite affiché instantanément depuis le cache RAM."""
+        """Met à jour le sprite affiché instantanément depuis le cache RAM avec orientation."""
         self.current_state = state
-        pix = self.get_cached_pixmap(self.current_outfit, state)
+        pix = self.get_cached_pixmap(self.current_outfit, state, getattr(self, 'facing_direction', 1))
         if pix:
             self.avatar_label.setPixmap(pix)
 
@@ -502,7 +531,7 @@ class NoraMascot(QWidget):
             self.display_message(announcement)
 
     def walk_step(self):
-        """Effectue un pas fluide vers la destination de balade."""
+        """Effectue un pas fluide vers la destination de balade avec corps articulé animé."""
         if not getattr(self, 'is_walking', False) or getattr(self, 'is_dragging', False) or self.is_mission_running:
             return
 
@@ -516,15 +545,32 @@ class NoraMascot(QWidget):
             self.set_sprite_state("idle")
             return
 
-        # Direction et translation
+        # Mise à jour de l'orientation du corps selon la direction de marche
+        if dx > 1:
+            self.facing_direction = 1
+        elif dx < -1:
+            self.facing_direction = -1
+
+        # Translation
         step = self.walk_speed if dx > 0 else -self.walk_speed
         new_x = current_pos.x() + step
         self.move(new_x, current_pos.y())
 
-        # Oscillation organique de marche (pas à pas)
+        # Cycle de marche complet : cadence des pas, tangage et rebond dynamique
         self.walk_step_counter += 1
-        bobbing = 3 if (self.walk_step_counter // 8) % 2 == 0 else -1
-        self.avatar_label.setContentsMargins(0, 4 + bobbing, 0, 4 - bobbing)
+        cycle = self.walk_step_counter * 0.35
+        # Rebond vertical des pieds/jambes
+        stride_bob = int(abs(math.sin(cycle)) * 8) - 3
+        # Balancement angulaire du torse (±4.5 degrés)
+        stride_tilt = math.sin(cycle) * (4.5 if self.facing_direction == 1 else -4.5)
+
+        base_pix = self.get_cached_pixmap(self.current_outfit, "idle", self.facing_direction)
+        if base_pix:
+            transform = QTransform().rotate(stride_tilt)
+            t_pix = base_pix.transformed(transform, Qt.TransformationMode.SmoothTransformation)
+            self.avatar_label.setPixmap(t_pix)
+
+        self.avatar_label.setContentsMargins(0, 4 + stride_bob, 0, 4 - stride_bob)
 
     def check_autonomous_life(self):
         """Interroge le moteur de vie autonome pour déclencher balades, pensées ou pauses."""
@@ -631,7 +677,8 @@ class NoraMascot(QWidget):
         sound_effects.play_wake_chime()
 
     def toggle_qg(self):
-        self.qg.toggle_near(self.pos(), self.width())
+        if hasattr(self, 'qg'):
+            self.qg.toggle_independent()
 
     def on_initiative_accepted(self, init_id: str):
         self.set_sprite_state("work")
@@ -951,7 +998,11 @@ class NoraMascot(QWidget):
 
         def mission_worker():
             def step_callback(step_type, text):
-                self.bridge.update_bubble.emit(f"⚙️ {text}")
+                if step_type == "swarm":
+                    self.bridge.update_bubble.emit(text)
+                    self.bridge.swarm_event.emit("Essaim", 1, text, 96)
+                else:
+                    self.bridge.update_bubble.emit(f"⚙️ {text}")
 
             try:
                 from mission_engine import run_autonomous_mission
@@ -961,6 +1012,10 @@ class NoraMascot(QWidget):
                 self.bridge.mission_finished.emit(f"Erreur : {str(e)}")
 
         threading.Thread(target=mission_worker, daemon=True).start()
+
+    def on_swarm_event_received(self, agent: str, round_num: int, text: str, consensus: int):
+        if hasattr(self, 'qg') and self.qg:
+            self.qg.update_swarm_event(agent, round_num, text, consensus)
 
     def on_mission_finished(self, report: str):
         self.is_mission_running = False
@@ -1004,7 +1059,11 @@ class NoraMascot(QWidget):
             event.accept()
 
     def contextMenuEvent(self, event):
-        self.show_context_menu(event.globalPosition().toPoint())
+        try:
+            pos = event.globalPos() if hasattr(event, 'globalPos') else QCursor.pos()
+            self.show_context_menu(pos)
+        except Exception as e:
+            print(f"[ContextMenu Error] {e}")
 
     def show_context_menu(self, global_pos: QPoint):
         menu = QMenu(self)

@@ -72,7 +72,12 @@ if ("{hotkey}") {{
 $Shortcut.Save()
 """
     try:
-        res = subprocess.run(["powershell", "-NoProfile", "-Command", ps_script], capture_output=True, text=True)
+        res = subprocess.run(
+            ["powershell", "-NoProfile", "-Command", ps_script],
+            capture_output=True,
+            text=True,
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+        )
         return res.returncode == 0
     except Exception as e:
         print(f"Erreur création raccourci : {e}")

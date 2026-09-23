@@ -498,6 +498,41 @@ class QGDashboard(QWidget):
         actions_row.addWidget(btn_web)
         container_layout.addLayout(actions_row)
 
+        # 7.5 Section Essaim Neuronal & Débat Récursif de Masse
+        swarm_box = QFrame()
+        swarm_box.setStyleSheet("""
+            QFrame {
+                background-color: rgba(30, 41, 59, 0.7);
+                border: 1px solid #6366f1;
+                border-radius: 12px;
+                padding: 6px;
+            }
+        """)
+        swarm_layout = QVBoxLayout(swarm_box)
+        swarm_layout.setContentsMargins(8, 6, 8, 6)
+        swarm_layout.setSpacing(4)
+
+        swarm_header = QHBoxLayout()
+        swarm_title = QLabel("🤖 ESSAIM NEURONAL (DÉBAT RÉCURSIF DE MASSE)")
+        swarm_title.setStyleSheet("color: #a5b4fc; font-size: 11px; font-weight: 800; border: none;")
+        swarm_header.addWidget(swarm_title)
+
+        self.swarm_score_lbl = QLabel("Consensus : 98%")
+        self.swarm_score_lbl.setStyleSheet("color: #34d399; font-size: 10px; font-weight: bold; border: none;")
+        swarm_header.addWidget(self.swarm_score_lbl)
+        swarm_layout.addLayout(swarm_header)
+
+        self.swarm_agents_lbl = QLabel("👑 Nora Prime • 🏛️ Architecte • ⚡ Exécuteur • 🛡️ Gardien • 🧐 Critique")
+        self.swarm_agents_lbl.setStyleSheet("color: #94a3b8; font-size: 10px; border: none;")
+        swarm_layout.addWidget(self.swarm_agents_lbl)
+
+        self.swarm_ticker_lbl = QLabel("✨ Essaim autonome : Prêt pour missions et débats récursifs de masse.")
+        self.swarm_ticker_lbl.setWordWrap(True)
+        self.swarm_ticker_lbl.setStyleSheet("color: #f1f5f9; font-size: 10.5px; font-style: italic; border: none;")
+        swarm_layout.addWidget(self.swarm_ticker_lbl)
+
+        container_layout.addWidget(swarm_box)
+
         # 8. Barre de Saisie & Chat Direct Classique
         chat_box = QFrame()
         chat_box.setStyleSheet("""
@@ -831,49 +866,46 @@ class QGDashboard(QWidget):
             self.move(event.globalPosition().toPoint() - self.drag_pos)
             event.accept()
 
-    def toggle_near(self, point: QPoint, mascot_width: int = 240):
-        """Ouvre ou ferme le dashboard de façon esthétique."""
+    def update_swarm_event(self, agent: str, round_num: int, text: str, consensus: int = 0):
+        """Met à jour le moniteur de débat récursif de masse en direct."""
+        if hasattr(self, 'swarm_ticker_lbl'):
+            self.swarm_ticker_lbl.setText(f"[{agent} | Tour {round_num}] : {text[:90]}")
+        if hasattr(self, 'swarm_score_lbl') and consensus > 0:
+            self.swarm_score_lbl.setText(f"Consensus : {consensus}%")
+
+    def show_independent(self):
+        """Ouvre le QG comme un espace de contrôle 100% indépendant qui ne suit JAMAIS Nora."""
+        if not getattr(self, '_user_moved', False):
+            from PyQt6.QtWidgets import QApplication
+            screen = QApplication.primaryScreen().availableGeometry()
+            qg_w = self.width()
+            qg_h = self.height()
+            # Position fixe, esthétique et élégante à droite
+            dash_x = max(20, screen.right() - qg_w - 280)
+            dash_y = max(20, screen.bottom() - qg_h - 40)
+            self.move(dash_x, dash_y)
+
+        self.update_telemetry()
+        self.update_outfit_buttons(memory_manager.get_current_outfit())
+        self.update_gaming_ui()
+        self.update_vc_ui()
+        self.update_handsfree_button()
+        self.show()
+        self.raise_()
+        self.activateWindow()
+        if hasattr(self, 'input_field'):
+            self.input_field.setFocus()
+
+    def toggle_independent(self):
+        """Bascule l'ouverture/fermeture du QG sans jamais modifier sa position."""
         if self.isVisible():
             self.hide()
         else:
-            if not getattr(self, '_user_moved', False):
-                self.position_near(point, mascot_width)
-            self.update_telemetry()
-            self.update_outfit_buttons(memory_manager.get_current_outfit())
-            self.update_gaming_ui()
-            self.update_vc_ui()
-            self.update_handsfree_button()
-            self.show()
-            self.raise_()
-            self.activateWindow()
-            if hasattr(self, 'input_field'):
-                self.input_field.setFocus()
+            self.show_independent()
 
-    def position_near(self, point: QPoint, mascot_width: int = 310):
-        """Positionne le QG intelligemment sans AUCUN chevauchement sur tous les écrans."""
-        from PyQt6.QtWidgets import QApplication
-        screen = QApplication.screenAt(point) or QApplication.primaryScreen()
-        s_geom = screen.availableGeometry()
-
-        qg_w = self.width()
-        qg_h = self.height()
-
-        # 1. Tenter de placer à gauche de Nora
-        dash_x = point.x() - qg_w - 15
-
-        # 2. Si pas assez de place à gauche sur cet écran, placer à droite de Nora
-        if dash_x < s_geom.left():
-            dash_x = point.x() + mascot_width + 15
-
-        # 3. Si même à droite ça dépasse l'écran, s'aligner sur le bord droit
-        if dash_x + qg_w > s_geom.right():
-            dash_x = s_geom.right() - qg_w
-
-        # 4. Ajustement vertical sans sortir de l'écran
-        dash_y = point.y() - 80
-        dash_y = max(s_geom.top() + 10, min(s_geom.bottom() - qg_h - 10, dash_y))
-
-        self.move(dash_x, dash_y)
+    def toggle_near(self, point: QPoint = None, mascot_width: int = 240):
+        """Bascule l'ouverture/fermeture du QG en mode indépendant."""
+        self.toggle_independent()
 
 if __name__ == "__main__":
     from PyQt6.QtWidgets import QApplication

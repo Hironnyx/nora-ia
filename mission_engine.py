@@ -259,7 +259,21 @@ Rédige un COMPTE-RENDU DE MISSION clair, valorisant et structuré en français 
 # 🚀 MOTEUR DE MISSION GLOBAL
 # =====================================================================
 def run_autonomous_mission(goal: str, callback_step=None):
-    """Pilote une mission complète de bout en bout de manière autonome avec notifications optionnelles."""
+    """Pilote une mission complète de bout en bout avec débat récursif de masse de l'essaim neuronal."""
+    try:
+        import nora_recursive_swarm
+        def _on_swarm_event(evt):
+            if callback_step:
+                callback_step("swarm", f"🤖 [{evt['agent']}] (Tour {evt['round']}) : {evt['text'][:65]}...")
+
+        return nora_recursive_swarm.run_recursive_swarm(
+            goal,
+            callback_event=_on_swarm_event,
+            callback_step=lambda msg: callback_step("exec", msg) if callback_step else None
+        )
+    except Exception as err:
+        print(f"[Swarm Fallback] Exécution séquentielle : {err}")
+
     client = get_client()
 
     print(f"\n{Fore.MAGENTA}========================================================================")

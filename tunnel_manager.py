@@ -57,12 +57,13 @@ def publish_endpoint(tunnel_url: str):
     with open(REMOTE_URL_FILE, "w", encoding="utf-8") as f:
         f.write(tunnel_url)
 
-    # Push Git silencieux en arrière-plan
+    # Push Git silencieux en arrière-plan sans aucune fenêtre console
     def _git_push():
+        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
         try:
-            subprocess.run(["git", "add", "remote_endpoint.json"], cwd=str(BASE_DIR), capture_output=True)
-            subprocess.run(["git", "commit", "-m", "chore: auto-update remote 4g/5g tunnel endpoint [skip ci]"], cwd=str(BASE_DIR), capture_output=True)
-            subprocess.run(["git", "push", "origin", "main"], cwd=str(BASE_DIR), capture_output=True)
+            subprocess.run(["git", "add", "remote_endpoint.json"], cwd=str(BASE_DIR), capture_output=True, creationflags=flags)
+            subprocess.run(["git", "commit", "-m", "chore: auto-update remote 4g/5g tunnel endpoint [skip ci]"], cwd=str(BASE_DIR), capture_output=True, creationflags=flags)
+            subprocess.run(["git", "push", "origin", "main"], cwd=str(BASE_DIR), capture_output=True, creationflags=flags)
             print("[OK] Point d'acces 4G/5G synchronise sur le Cloud pour l'application mobile !")
         except Exception as e:
             print(f"[WARN] Erreur publication GitHub : {e}")
@@ -72,6 +73,7 @@ def publish_endpoint(tunnel_url: str):
 def start_remote_tunnel(background: bool = False):
     """Lance le tunnel Cloudflare et extrait l'URL HTTPS publique sécurisée."""
     global _current_tunnel_proc, _current_tunnel_url
+
     if not ensure_cloudflared():
         print("Veuillez verifier votre connexion Internet.")
         return None
@@ -85,7 +87,8 @@ def start_remote_tunnel(background: bool = False):
         stderr=subprocess.STDOUT,
         text=True,
         encoding="utf-8",
-        errors="replace"
+        errors="replace",
+        creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
     )
     _current_tunnel_proc = proc
 

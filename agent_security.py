@@ -37,7 +37,8 @@ def get_defender_status() -> Dict[str, Any]:
             ["powershell", "-NoProfile", "-Command", ps_cmd],
             capture_output=True,
             text=True,
-            timeout=8
+            timeout=8,
+            creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
         )
         if res.returncode == 0 and res.stdout.strip():
             data = json.loads(res.stdout.strip())
@@ -80,7 +81,8 @@ def get_startup_programs() -> Dict[str, str]:
                 ["powershell", "-NoProfile", "-Command", ps_cmd],
                 capture_output=True,
                 text=True,
-                timeout=6
+                timeout=6,
+                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
             )
             if res.returncode == 0 and res.stdout.strip():
                 data = json.loads(res.stdout.strip())
