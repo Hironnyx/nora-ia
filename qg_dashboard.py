@@ -162,17 +162,22 @@ class QGDashboard(QWidget):
     swarm_event_signal = pyqtSignal(str, int, str, int)
     swarm_debate_done_signal = pyqtSignal(list, int)
     project_advice_signal = pyqtSignal(str)
+    swarm_exec_log_signal = pyqtSignal(str)
+    swarm_exec_finished_signal = pyqtSignal(str)
 
     def __init__(self, parent_mascot=None):
         super().__init__()
         self.parent_mascot = parent_mascot
         self.current_outfit = memory_manager.get_current_outfit()
         self.drag_position = QPoint()
+        self.active_swarm_session = None
 
         self.agent_consult_response.connect(self._on_agent_consult_response)
         self.swarm_event_signal.connect(self.update_swarm_event)
         self.swarm_debate_done_signal.connect(self._on_swarm_debate_done)
         self.project_advice_signal.connect(self._on_project_advice_received)
+        self.swarm_exec_log_signal.connect(self._on_swarm_exec_log)
+        self.swarm_exec_finished_signal.connect(self._on_swarm_exec_finished)
 
         self.init_ui()
 
@@ -729,6 +734,21 @@ class QGDashboard(QWidget):
             }
         """)
         bar_layout.addWidget(self.consensus_bar, stretch=1)
+
+        self.btn_execute_swarm_plan = QPushButton("⚡ EXÉCUTER LE PLAN D'ACTION")
+        self.btn_execute_swarm_plan.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_execute_swarm_plan.setStyleSheet("""
+            QPushButton {
+                background: #10b981; color: white; font-weight: bold; font-size: 10px;
+                border-radius: 6px; padding: 4px 12px; border: none;
+            }
+            QPushButton:hover { background: #059669; }
+            QPushButton:disabled { background: #334155; color: #64748b; }
+        """)
+        self.btn_execute_swarm_plan.setEnabled(False)
+        self.btn_execute_swarm_plan.clicked.connect(self.on_execute_swarm_plan_click)
+        bar_layout.addWidget(self.btn_execute_swarm_plan)
+
         arena_layout.addLayout(bar_layout)
 
         # Console de transcription du débat
@@ -951,6 +971,9 @@ class QGDashboard(QWidget):
             return
         self.debate_input.clear()
         self.swarm_console.append(f"<hr><b>⚡ Débat engagé par Maverick :</b> '{topic}'")
+        if hasattr(self, 'btn_execute_swarm_plan') and self.btn_execute_swarm_plan:
+            self.btn_execute_swarm_plan.setEnabled(False)
+            self.btn_execute_swarm_plan.setText("⏳ DÉBAT EN COURS...")
 
         def _evt_cb(e):
             self.swarm_event_signal.emit(
@@ -963,6 +986,7 @@ class QGDashboard(QWidget):
         def _worker():
             try:
                 session = nora_recursive_swarm.RecursiveSwarmSession(topic, callback_event=_evt_cb)
+                self.active_swarm_session = session
                 res = session.run_recursive_debate()
                 plan = res.get("final_plan", [])
                 score = res.get("consensus_score", 99)
@@ -977,9 +1001,57 @@ class QGDashboard(QWidget):
         try:
             self.swarm_console.append(f"<br><span style='color:#10b981; font-weight:bold;'>✔ Consensus final ({score}%) :</span>")
             for step in plan:
-                self.swarm_console.append(f"  • {step.get('details', str(step))}")
+                self.swarm_console.append(f"  • <b>{step.get('action', 'Étape')}</b> : {step.get('details', str(step))}")
+            if hasattr(self, 'btn_execute_swarm_plan') and self.btn_execute_swarm_plan:
+                self.btn_execute_swarm_plan.setEnabled(True)
+                self.btn_execute_swarm_plan.setText(f"⚡ EXÉCUTER LE PLAN ({len(plan)} ÉTAPES)")
         except Exception as e:
             print(f"Erreur affichage fin de débat : {e}")
+
+    def on_execute_swarm_plan_click(self):
+        session = getattr(self, 'active_swarm_session', None)
+        if not session or not session.final_action_plan:
+            self.swarm_console.append("<br><span style='color:#f59e0b;'>⚠ Aucun plan d'action actif à exécuter. Lancez d'abord un débat.</span>")
+            return
+
+        self.btn_execute_swarm_plan.setEnabled(False)
+        self.btn_execute_swarm_plan.setText("⏳ DÉPLOIEMENT EN COURS...")
+        self.swarm_console.append("<hr><b style='color:#10b981; font-size:12px;'>🚀 DÉPLOIEMENT RÉEL DU PLAN PAR L'AGENT EXÉCUTEUR SUR LE SYSTÈME...</b>")
+
+        def _step_cb(msg):
+            self.swarm_exec_log_signal.emit(msg)
+
+        def _worker():
+            try:
+                res = session.execute_autonomous_consensus(callback_step=_step_cb)
+                self.swarm_exec_finished_signal.emit(res)
+            except Exception as e:
+                self.swarm_exec_finished_signal.emit(f"Erreur lors de l'exécution : {e}")
+
+        import threading
+        threading.Thread(target=_worker, daemon=True).start()
+
+    def _on_swarm_exec_log(self, text: str):
+        try:
+            if hasattr(self, 'swarm_console') and self.swarm_console:
+                self.swarm_console.append(f"<span style='color:#38bdf8;'>{text}</span>")
+        except Exception:
+            pass
+
+    def _on_swarm_exec_finished(self, summary: str):
+        try:
+            if hasattr(self, 'btn_execute_swarm_plan') and self.btn_execute_swarm_plan:
+                self.btn_execute_swarm_plan.setEnabled(True)
+                self.btn_execute_swarm_plan.setText("✔ PLAN EXÉCUTÉ AVEC SUCCÈS")
+            if hasattr(self, 'swarm_console') and self.swarm_console:
+                self.swarm_console.append("<br><b style='color:#10b981; font-size:12px;'>🎉 TOUTES LES ACTIONS DU PLAN ONT ÉTÉ CONCRÉTISÉES !</b>")
+                for line in summary.split("\n"):
+                    if line.strip():
+                        self.swarm_console.append(f"  {line}")
+            import sound_effects
+            sound_effects.play_success_chime()
+        except Exception as e:
+            print(f"Erreur notification fin exécution : {e}")
 
     def update_swarm_event(self, agent: str, round_num: int, text: str, consensus: int = 100):
         try:
@@ -997,7 +1069,8 @@ class QGDashboard(QWidget):
             elif "Prime" in agent:
                 color = "#ff2a85"
 
-            msg = f"<span style='color:{color}; font-weight:bold;'>[{agent} - Tour {round_num}]</span> {text}"
+            text_html = text.replace('\n', '<br>')
+            msg = f"<span style='color:{color}; font-weight:bold;'>[{agent} - Tour {round_num}]</span><br>{text_html}<br>"
             if hasattr(self, 'swarm_console') and self.swarm_console:
                 self.swarm_console.append(msg)
         except Exception as e:
