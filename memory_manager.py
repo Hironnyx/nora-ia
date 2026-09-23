@@ -7,6 +7,7 @@ import sys
 import json
 from pathlib import Path
 from datetime import datetime
+import math
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys.executable).parent.resolve()
@@ -156,15 +157,54 @@ def format_memory_for_prompt() -> str:
     
     return "\n".join(lines)
 
-def get_welcome_message() -> str:
-    """Génère un message d'accueil personnalisé basé sur les souvenirs de Nora."""
+def search_memory_semantic(query: str, top_k: int = 3) -> list:
+    """Recherche vectorielle sémantique par similarité cosinus TF-IDF locale (0 ms, sans dépendance lourde)."""
+    import re
+    from collections import Counter
     mem = load_memory()
+    faits = mem.get("user", {}).get("faits_appris", [])
+    missions = [m.get("objectif", "") + " " + m.get("resume", "") for m in mem.get("missions_historique", [])]
+    documents = faits + missions
+
+    if not documents or not query:
+        return documents[:top_k]
+
+    def tokenize(text):
+        return re.findall(r'\b\w+\b', text.lower())
+
+    q_tokens = tokenize(query)
+    q_vec = Counter(q_tokens)
+    q_len = math.sqrt(sum(v ** 2 for v in q_vec.values())) if q_vec else 1.0
+
+    scores = []
+    for doc in documents:
+        d_tokens = tokenize(doc)
+        d_vec = Counter(d_tokens)
+        d_len = math.sqrt(sum(v ** 2 for v in d_vec.values())) if d_vec else 1.0
+        
+        # Produit scalaire
+        dot = sum(q_vec[k] * d_vec.get(k, 0) for k in q_vec)
+        sim = dot / (q_len * d_len) if (q_len * d_len) > 0 else 0.0
+        scores.append((sim, doc))
+
+    scores.sort(key=lambda x: x[0], reverse=True)
+    return [doc for sim, doc in scores[:top_k] if sim > 0.05] or documents[:top_k]
+
+def add_learned_fact(fact: str):
+    """Enregistre un nouveau fait sémantique dans la mémoire persistante."""
+    mem = load_memory()
+    faits = mem.setdefault("user", {}).setdefault("faits_appris", [])
+    if fact not in faits:
+        faits.append(fact)
+        save_memory(mem)
+
+def get_welcome_message() -> str:
+    """Génère un message d'accueil personnalisé et respectueux pour Maverick."""
     name = get_user_name()
-    missions = mem.get("missions_historique", [])
+    mem = load_memory()
     count = mem.get("statistiques", {}).get("missions_reussies", 0)
 
-    if missions:
-        last_mission = missions[-1]
-        return f"Ravi de te revoir {name} ! Nos {count} mission(s) passée(s) se sont super bien passées. Que puis-je faire pour toi aujourd'hui ?"
+    if count > 0:
+        return f"Ravi de vous retrouver, {name} ! Toutes les sondes et agents sont opérationnels. Comment puis-je vous assister aujourd'hui ?"
     else:
-        return f"Bonjour {name} ! Je suis Nora, ta mascotte et copilote IA. Je me souviens de tout ! De quoi as-tu besoin ?"
+        return f"Bonjour {name} ! Je suis Nora, votre copilote et esprit d'équipe IA. De quoi avez-vous besoin aujourd'hui ?"

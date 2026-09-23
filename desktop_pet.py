@@ -186,21 +186,37 @@ class NoraMascot(QWidget):
             self.qg.show_independent()
 
     def preload_all_sprites(self):
-        """Précharge et redimensionne tous les sprites en RAM avec miroir gauche/droite pour un affichage 0 ms."""
-        outfits = ["franxx", "school", "hoodie"]
-        states = ["idle", "blink", "talk_open", "talk_closed", "listen", "work"]
+        """Précharge et redimensionne tous les sprites plein corps en RAM avec miroir gauche/droite pour un affichage 0 ms."""
+        outfits = ["franxx", "school", "hoodie", "cyberpunk", "commander"]
+        states = [
+            "idle", "idle_standing", "idle_arms_crossed", "idle_wave", "idle_thinking",
+            "idle_sitting", "idle_work_hologram", "idle_gaming", "alert_shield",
+            "blink", "talk_open", "talk_closed", "listen", "work"
+        ]
+        # Ajout des frames de marche et de course articulées
+        for i in range(1, 9):
+            states.append(f"walk_{i}")
+        for i in range(1, 5):
+            states.append(f"run_{i}")
+
         for o in outfits:
             for s in states:
-                p = ASSETS_DIR / f"nora_{o}_{s}.png"
+                # 1. Vérifier dans le sous-dossier de la tenue (mascot_assets/<outfit>/<s>.png)
+                p = ASSETS_DIR / o / f"{s}.png"
+                if not p.exists():
+                    p = ASSETS_DIR / f"nora_{o}_{s}.png"
                 if not p.exists():
                     p = ASSETS_DIR / f"nora_{s}.png"
+                if not p.exists() and s.startswith("walk_"):
+                    p = ASSETS_DIR / o / "idle_standing.png"
                 if not p.exists():
                     p = ASSETS_DIR / "nora_idle.png"
+
                 if p.exists():
                     pix = QPixmap(str(p))
                     if not pix.isNull():
                         pix_norm = pix.scaled(
-                            220, 220, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                            250, 450, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
                         )
                         # Normal (droite)
                         self._pixmap_cache[(o, s, 1)] = pix_norm
@@ -219,9 +235,12 @@ class NoraMascot(QWidget):
         pix = self._pixmap_cache.get((outfit, state))
         if pix:
             return pix
+        # Fallbacks intelligents
         return (
+            self._pixmap_cache.get((outfit, "idle_standing", dir_key)) or
             self._pixmap_cache.get((outfit, "idle", dir_key)) or
             self._pixmap_cache.get(("franxx", state, dir_key)) or
+            self._pixmap_cache.get(("franxx", "idle_standing", dir_key)) or
             self._pixmap_cache.get(("franxx", "idle"))
         )
 
@@ -232,7 +251,7 @@ class NoraMascot(QWidget):
             Qt.WindowType.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedWidth(240)
+        self.setFixedWidth(260)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(4, 4, 4, 4)
@@ -462,7 +481,7 @@ class NoraMascot(QWidget):
 
     def set_outfit(self, outfit: str):
         """Change la tenue de Zero Two en temps réel et met à jour les sprites."""
-        if outfit not in ["franxx", "school", "hoodie"]:
+        if outfit not in ["franxx", "school", "hoodie", "cyberpunk", "commander"]:
             outfit = "franxx"
         self.current_outfit = outfit
         memory_manager.set_current_outfit(outfit)
@@ -556,15 +575,21 @@ class NoraMascot(QWidget):
         new_x = current_pos.x() + step
         self.move(new_x, current_pos.y())
 
-        # Cycle de marche complet : cadence des pas, tangage et rebond dynamique
+        # Cycle de marche complet articulé (8 frames plein corps, jambes & bras)
         self.walk_step_counter += 1
         cycle = self.walk_step_counter * 0.35
         # Rebond vertical des pieds/jambes
-        stride_bob = int(abs(math.sin(cycle)) * 8) - 3
-        # Balancement angulaire du torse (±4.5 degrés)
-        stride_tilt = math.sin(cycle) * (4.5 if self.facing_direction == 1 else -4.5)
+        stride_bob = int(abs(math.sin(cycle)) * 6) - 2
+        # Balancement angulaire du torse (±3.5 degrés)
+        stride_tilt = math.sin(cycle) * (3.5 if self.facing_direction == 1 else -3.5)
 
-        base_pix = self.get_cached_pixmap(self.current_outfit, "idle", self.facing_direction)
+        # Sélection de la frame de marche articulée (walk_1 à walk_8)
+        walk_frame = ((self.walk_step_counter // 2) % 8) + 1
+        state_name = f"walk_{walk_frame}"
+        base_pix = self.get_cached_pixmap(self.current_outfit, state_name, self.facing_direction)
+        if not base_pix:
+            base_pix = self.get_cached_pixmap(self.current_outfit, "idle", self.facing_direction)
+
         if base_pix:
             transform = QTransform().rotate(stride_tilt)
             t_pix = base_pix.transformed(transform, Qt.TransformationMode.SmoothTransformation)
@@ -1113,6 +1138,8 @@ class NoraMascot(QWidget):
         act_franxx = outfit_menu.addAction("🚀 Pilote Franxx" + (" ✓" if curr_outfit == "franxx" else ""))
         act_school = outfit_menu.addAction("🎓 Écolière Sailor" + (" ✓" if curr_outfit == "school" else ""))
         act_hoodie = outfit_menu.addAction("🧸 Hoodie Doux" + (" ✓" if curr_outfit == "hoodie" else ""))
+        act_cyberpunk = outfit_menu.addAction("⚡ Cyberpunk Techwear" + (" ✓" if curr_outfit == "cyberpunk" else ""))
+        act_commander = outfit_menu.addAction("👑 Commandant Écarlate" + (" ✓" if curr_outfit == "commander" else ""))
 
         # Mode Gaming & RAM Boost
         menu.addSeparator()
@@ -1198,6 +1225,12 @@ class NoraMascot(QWidget):
         elif action == act_hoodie:
             self.set_outfit("hoodie")
             self.display_message("🧸 Hoodie tout doux enfilé, Maverick.")
+        elif action == act_cyberpunk:
+            self.set_outfit("cyberpunk")
+            self.display_message("⚡ Tenue Cyberpunk Techwear enfilée, Maverick !")
+        elif action == act_commander:
+            self.set_outfit("commander")
+            self.display_message("👑 Manteau d'Officier Commandant Écarlate enfilé, Maverick !")
         elif action == action_gaming:
             new_state, msg = gaming_mode.toggle_gaming_mode()
             if hasattr(self, 'qg') and self.qg:
