@@ -196,6 +196,10 @@ class NoraMascot(QWidget):
         """Charge, redimensionne et met en cache un sprite unique avec son miroir gauche/droite."""
         # 1. Vérifier dans le sous-dossier de la tenue (mascot_assets/<outfit>/<s>.png)
         p = ASSETS_DIR / o / f"{s}.png"
+        if not p.exists() and s == "idle":
+            p = ASSETS_DIR / o / "idle_standing.png"
+        if not p.exists() and s == "idle_standing":
+            p = ASSETS_DIR / o / "idle.png"
         if not p.exists():
             p = ASSETS_DIR / f"nora_{o}_{s}.png"
         if not p.exists():
@@ -209,12 +213,17 @@ class NoraMascot(QWidget):
             pix = QPixmap(str(p))
             if not pix.isNull():
                 pix_norm = pix.scaled(
-                    250, 450, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
+                    246, 440, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
                 )
                 self._pixmap_cache[(o, s, 1)] = pix_norm
                 mirrored = pix_norm.transformed(QTransform().scale(-1, 1), Qt.TransformationMode.SmoothTransformation)
                 self._pixmap_cache[(o, s, -1)] = mirrored
                 self._pixmap_cache[(o, s)] = pix_norm
+                if s in ["idle", "idle_standing"]:
+                    alias = "idle_standing" if s == "idle" else "idle"
+                    self._pixmap_cache[(o, alias, 1)] = pix_norm
+                    self._pixmap_cache[(o, alias, -1)] = mirrored
+                    self._pixmap_cache[(o, alias)] = pix_norm
                 return pix_norm
         return None
 
@@ -280,7 +289,7 @@ class NoraMascot(QWidget):
             Qt.WindowType.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedWidth(260)
+        self.setFixedWidth(270)
 
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(4, 4, 4, 4)
@@ -296,7 +305,7 @@ class NoraMascot(QWidget):
 
         self.bubble_label = QLabel("")
         self.bubble_label.setWordWrap(True)
-        self.bubble_label.setMaximumWidth(225)
+        self.bubble_label.setMaximumWidth(235)
         self.bubble_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.bubble_label.setStyleSheet("""
             background-color: rgba(15, 23, 42, 0.95);
@@ -323,20 +332,22 @@ class NoraMascot(QWidget):
         self.bubble_hide_timer.setSingleShot(True)
         self.bubble_hide_timer.timeout.connect(self.hide_speech_bubble)
 
-        # 2. Sprite animé de Nora (Zero Two)
+        # 2. Sprite animé plein corps de Nora (Zero Two)
         self.avatar_label = QLabel()
-        self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        self.avatar_label.setFixedSize(246, 440)
+        self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
         self.avatar_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.set_sprite_state("idle")
+        self.set_sprite_state("idle_standing")
         main_layout.addWidget(self.avatar_label)
 
         self.setLayout(main_layout)
 
-        # Position initiale : bord inférieur droit de l'écran principal
+        # Ancrage fixe au sol (10px au-dessus de la barre des tâches)
         screen = QApplication.primaryScreen().availableGeometry()
-        pos_x = max(100, screen.right() - 280)
-        pos_y = max(100, screen.bottom() - 320)
-        self.move(pos_x, pos_y)
+        self.ground_y = screen.bottom() - 10
+        self.adjustSize()
+        pos_x = max(60, screen.right() - 290)
+        self.move(pos_x, self.ground_y - self.height())
 
     # =================================================================
     # INTÉGRATION WINDOWS SYSTEM TRAY & NOTIFICATIONS
@@ -400,20 +411,14 @@ class NoraMascot(QWidget):
         self.lip_timer.timeout.connect(self.lip_sync_step)
 
     def float_animation_step(self):
-        """Mouvement corporel vivant : respiration sinusoïdale organique et micro-mouvements."""
+        """Mouvement corporel vivant : respiration sinusoïdale organique subtile (0% CPU)."""
         if getattr(self, 'is_walking', False):
-            return  # La marche gère son propre cycle corporel dynamique
-        if self.current_state in ["idle", "talk_open", "talk_closed", "listen", "work"]:
+            return  # La marche gère sa propre cinématique
+        if self.current_state in ["idle", "idle_standing", "talk_open", "talk_closed", "listen", "work"]:
             elapsed = time.time() - self.float_start_time
-            sin_breathe = math.sin(elapsed * 2.1)
-            offset = int(sin_breathe * 3.5)
-            # Respiration corporelle : étirement doux (squash & stretch de 2.5%)
-            breathe_h = int(220 * (1.0 + 0.025 * sin_breathe))
-            base_pix = self.get_cached_pixmap(self.current_outfit, self.current_state, getattr(self, 'facing_direction', 1))
-            if base_pix:
-                scaled_pix = base_pix.scaled(220, breathe_h, Qt.AspectRatioMode.IgnoreAspectRatio, Qt.TransformationMode.SmoothTransformation)
-                self.avatar_label.setPixmap(scaled_pix)
-            self.avatar_label.setContentsMargins(0, 4 + offset, 0, 4 - offset)
+            # Micro-respiration douce de 1.5 pixel maximum (aucun redimensionnement destructeur)
+            offset = int(math.sin(elapsed * 2.0) * 1.5)
+            self.avatar_label.setContentsMargins(0, 2 + offset, 0, 2 - offset)
 
     def schedule_next_blink(self):
         """Planifie le prochain clignement naturel des yeux entre 3 et 5.5 secondes."""
@@ -422,16 +427,16 @@ class NoraMascot(QWidget):
 
     def trigger_blink(self):
         """Cligne des yeux si elle est au repos et ne parle pas."""
-        if self.current_state == "idle" and not self.is_speaking_now:
+        if self.current_state in ["idle", "idle_standing"] and not self.is_speaking_now and not getattr(self, 'is_walking', False):
             self.set_sprite_state("blink")
-            QTimer.singleShot(150, self.finish_blink)
+            QTimer.singleShot(140, self.finish_blink)
         else:
             self.schedule_next_blink()
 
     def finish_blink(self):
         """Retour aux yeux ouverts après le clignement."""
         if self.current_state == "blink" and not self.is_speaking_now:
-            self.set_sprite_state("idle")
+            self.set_sprite_state("idle_standing")
         self.schedule_next_blink()
 
     def on_speech_started(self):
@@ -445,6 +450,9 @@ class NoraMascot(QWidget):
             self.bubble_hide_timer.stop()
         if hasattr(self, 'bubble_container'):
             self.bubble_container.show()
+            self.adjustSize()
+            if hasattr(self, 'ground_y'):
+                self.move(self.x(), self.ground_y - self.height())
 
     def lip_sync_step(self):
         """Alterne la bouche ouverte et entrouverte pendant l'articulation."""
@@ -460,7 +468,7 @@ class NoraMascot(QWidget):
         self.is_speaking_now = False
         self.lip_timer.stop()
         if not self.is_mission_running:
-            self.set_sprite_state("idle")
+            self.set_sprite_state("idle_standing")
         # Masquer automatiquement la bulle de dialogue 3.5s après la parole
         if hasattr(self, 'bubble_hide_timer'):
             self.bubble_hide_timer.start(3500)
@@ -469,6 +477,9 @@ class NoraMascot(QWidget):
         """Masque la bulle de dialogue manga pour laisser le personnage pur et épuré."""
         if hasattr(self, 'bubble_container') and self.bubble_container.isVisible():
             self.bubble_container.hide()
+            self.adjustSize()
+            if hasattr(self, 'ground_y'):
+                self.move(self.x(), self.ground_y - self.height())
 
     def display_message(self, text: str, duration_ms: int = 6500):
         """Affiche un message dans la bulle manga au-dessus de Nora et planifie sa disparition."""
@@ -479,6 +490,9 @@ class NoraMascot(QWidget):
         self.bubble_label.adjustSize()
         if hasattr(self, 'bubble_container'):
             self.bubble_container.show()
+            self.adjustSize()
+            if hasattr(self, 'ground_y'):
+                self.move(self.x(), self.ground_y - self.height())
         if hasattr(self, 'bubble_hide_timer'):
             self.bubble_hide_timer.stop()
             if duration_ms > 0:
@@ -531,6 +545,19 @@ class NoraMascot(QWidget):
         if pix:
             self.avatar_label.setPixmap(pix)
 
+    def play_pose(self, pose_name: str, duration_sec: float = 6.0, dialog: str = None):
+        """Joue une pose spécifique avec réactivité et retour automatique à la posture de base."""
+        self.is_walking = False
+        self.set_sprite_state(pose_name)
+        if dialog:
+            self.display_message(dialog, duration_ms=int(duration_sec * 1000))
+        if hasattr(self, '_pose_return_timer') and self._pose_return_timer:
+            self._pose_return_timer.stop()
+        self._pose_return_timer = QTimer(self)
+        self._pose_return_timer.setSingleShot(True)
+        self._pose_return_timer.timeout.connect(lambda: self.set_sprite_state("idle_standing"))
+        self._pose_return_timer.start(int(duration_sec * 1000))
+
     def welcome_greeting(self):
         msg = memory_manager.get_welcome_message()
         self.display_message(msg)
@@ -569,62 +596,61 @@ class NoraMascot(QWidget):
         self.start_walking_to(target_x, speed=3, announcement="Je commence ma petite balade sur votre écran, Maverick !")
 
     def start_walking_to(self, target_x: int, speed: int = 3, announcement: str = None):
-        """Lance une balade autonome vers une coordonnée horizontale."""
+        """Lance une balade autonome fluide vers une coordonnée horizontale."""
         if getattr(self, 'is_dragging', False) or self.is_mission_running:
             return
-        self.walk_target_x = target_x
-        self.walk_speed = max(1, speed)
+        screen = QApplication.primaryScreen().availableGeometry()
+        min_x = screen.left() + 20
+        max_x = max(min_x + 100, screen.right() - self.width() - 20)
+        self.walk_target_x = max(min_x, min(max_x, target_x))
+        self.walk_speed = max(2, min(speed, 6))
         self.is_walking = True
+        self.walk_step_counter = 0
+        self.walk_current_frame = 1
+        self.walk_last_frame_time = time.time()
         if announcement:
-            self.display_message(announcement)
+            self.display_message(announcement, duration_ms=4500)
 
     def walk_step(self):
         """Effectue un pas fluide vers la destination de balade avec corps articulé animé."""
         if not getattr(self, 'is_walking', False) or getattr(self, 'is_dragging', False) or self.is_mission_running:
             return
 
-        current_pos = self.pos()
-        dx = self.walk_target_x - current_pos.x()
+        current_x = self.x()
+        dx = self.walk_target_x - current_x
+        dist = abs(dx)
 
-        # Destination atteinte
-        if abs(dx) <= abs(self.walk_speed) + 2:
-            self.move(self.walk_target_x, current_pos.y())
+        # Destination atteinte avec précision
+        if dist <= 3:
+            target_y = getattr(self, 'ground_y', self.y() + self.height()) - self.height()
+            self.move(int(self.walk_target_x), int(target_y))
             self.is_walking = False
-            self.set_sprite_state("idle")
+            self.set_sprite_state("idle_standing")
             return
 
         # Mise à jour de l'orientation du corps selon la direction de marche
-        if dx > 1:
-            self.facing_direction = 1
-        elif dx < -1:
-            self.facing_direction = -1
+        self.facing_direction = 1 if dx > 0 else -1
 
-        # Translation
-        step = self.walk_speed if dx > 0 else -self.walk_speed
-        new_x = current_pos.x() + step
-        self.move(new_x, current_pos.y())
+        # Easing naturel : décélération douce à l'approche de la cible
+        if dist < 45:
+            step_size = max(1.2, float(self.walk_speed) * (dist / 45.0))
+        else:
+            step_size = float(self.walk_speed)
 
-        # Cycle de marche complet articulé (8 frames plein corps, jambes & bras)
-        self.walk_step_counter += 1
-        cycle = self.walk_step_counter * 0.35
-        # Rebond vertical des pieds/jambes
-        stride_bob = int(abs(math.sin(cycle)) * 6) - 2
-        # Balancement angulaire du torse (±3.5 degrés)
-        stride_tilt = math.sin(cycle) * (3.5 if self.facing_direction == 1 else -3.5)
+        step = step_size if dx > 0 else -step_size
+        new_x = int(current_x + step)
+        target_y = getattr(self, 'ground_y', self.y() + self.height()) - self.height()
+        self.move(new_x, int(target_y))
 
-        # Sélection de la frame de marche articulée (walk_1 à walk_8)
-        walk_frame = ((self.walk_step_counter // 2) % 8) + 1
-        state_name = f"walk_{walk_frame}"
-        base_pix = self.get_cached_pixmap(self.current_outfit, state_name, self.facing_direction)
-        if not base_pix:
-            base_pix = self.get_cached_pixmap(self.current_outfit, "idle", self.facing_direction)
-
-        if base_pix:
-            transform = QTransform().rotate(stride_tilt)
-            t_pix = base_pix.transformed(transform, Qt.TransformationMode.SmoothTransformation)
-            self.avatar_label.setPixmap(t_pix)
-
-        self.avatar_label.setContentsMargins(0, 4 + stride_bob, 0, 4 - stride_bob)
+        # Cadence naturelle des pas : changement de frame toutes les 75 ms
+        now = time.time()
+        if now - getattr(self, 'walk_last_frame_time', 0) >= 0.075:
+            self.walk_last_frame_time = now
+            self.walk_current_frame = (self.walk_current_frame % 8) + 1
+            state_name = f"walk_{self.walk_current_frame}"
+            pix = self.get_cached_pixmap(self.current_outfit, state_name, self.facing_direction)
+            if pix:
+                self.avatar_label.setPixmap(pix)
 
     def check_autonomous_life(self):
         """Interroge le moteur de vie autonome pour déclencher balades, pensées ou pauses."""
@@ -1102,6 +1128,7 @@ class NoraMascot(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = False
             self.walk_target_x = self.x()
+            self.ground_y = self.y() + self.height()
             if not getattr(self, 'drag_has_moved', False):
                 # Un clic direct sur Nora ouvre / ferme son QG de commande classique et esthétique
                 self.toggle_qg()

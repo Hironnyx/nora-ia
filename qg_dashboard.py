@@ -717,11 +717,25 @@ class QGDashboard(QWidget):
             btn.setStyleSheet(self._get_outfit_btn_style(code == current))
 
     def on_trigger_animation(self, anim: str):
-        if self.parent_mascot:
-            if anim == "walk":
-                self.parent_mascot.initial_autonomous_walk()
-            elif anim == "run":
-                self.parent_mascot.start_walking_to(self.parent_mascot.x() + 300, speed=6)
+        if not self.parent_mascot:
+            return
+        if anim == "walk":
+            self.parent_mascot.initial_autonomous_walk()
+        elif anim == "run":
+            step = 320 if getattr(self.parent_mascot, 'facing_direction', 1) == 1 else -320
+            self.parent_mascot.start_walking_to(self.parent_mascot.x() + step, speed=5, announcement="Accélération Dash !")
+        else:
+            pose_dialogs = {
+                "idle_wave": "Coucou Maverick ! Ravie d'être à vos côtés. 🌸",
+                "idle_thinking": "J'analyse les paramètres système et prépare la suite...",
+                "idle_sitting": "Je m'installe confortablement sur votre barre des tâches.",
+                "idle_work_hologram": "Déploiement des consoles holographiques de surveillance.",
+                "idle_gaming": "Mode Gaming prêt, concentration maximale Maverick !",
+                "alert_shield": "Bouclier de sécurité actif. Votre système est sous haute protection."
+            }
+            dialog = pose_dialogs.get(anim, None)
+            if hasattr(self.parent_mascot, 'play_pose'):
+                self.parent_mascot.play_pose(anim, duration_sec=6.0, dialog=dialog)
             else:
                 self.parent_mascot.set_sprite_state(anim)
 

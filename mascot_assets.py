@@ -183,17 +183,28 @@ def generate_all_zero_two_assets(force: bool = False):
 
 def set_active_outfit(outfit: str):
     """Copie les fichiers de la tenue choisie vers les noms nora_*.png actifs."""
-    if outfit not in ["franxx", "school", "hoodie"]:
+    if outfit not in ["franxx", "school", "hoodie", "cyberpunk", "commander"]:
         outfit = "franxx"
-    states = ["idle", "blink", "talk_open", "talk_closed", "listen", "work"]
+    states = ["idle", "idle_standing", "blink", "talk_open", "talk_closed", "listen", "work"]
     for st in states:
-        src = ASSETS_DIR / f"nora_{outfit}_{st}.png"
+        src = ASSETS_DIR / outfit / f"{st}.png"
+        if not src.exists():
+            src = ASSETS_DIR / f"nora_{outfit}_{st}.png"
         dst = ASSETS_DIR / f"nora_{st}.png"
         if src.exists():
             shutil.copyfile(str(src), str(dst))
 
+    # Assurer que nora_idle.png pointe vers idle_standing.png si présent
+    idle_src = ASSETS_DIR / outfit / "idle_standing.png"
+    if not idle_src.exists():
+        idle_src = ASSETS_DIR / outfit / "idle.png"
+    if idle_src.exists():
+        shutil.copyfile(str(idle_src), str(ASSETS_DIR / "nora_idle.png"))
+
     # Dupliquer talk_open en nora_talk.png
-    talk_open = ASSETS_DIR / "nora_talk_open.png"
+    talk_open = ASSETS_DIR / outfit / "talk_open.png"
+    if not talk_open.exists():
+        talk_open = ASSETS_DIR / "nora_talk_open.png"
     talk_dst = ASSETS_DIR / "nora_talk.png"
     if talk_open.exists():
         shutil.copyfile(str(talk_open), str(talk_dst))
