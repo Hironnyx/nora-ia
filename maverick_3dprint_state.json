@@ -15,5 +15,14 @@
     "endpoint": ""
   },
   "filament_spools": [],
-  "print_queue": []
+  "print_queue": [
+    {
+      "id": "job_1790287441",
+      "filename": "test.stl",
+      "gcode_path": "C:\\Users\\maverick\\Documents\\Impression3D\\GCode\\test_sliced_1790287441.gcode",
+      "size_kb": 908.1,
+      "added_date": "25/09/2026 00:04",
+      "status": "Prêt à imprimer"
+    }
+  ]
 }

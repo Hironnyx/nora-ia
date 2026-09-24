@@ -36,6 +36,7 @@ import nora_companion
 import system_monitor
 import agent_home
 import gaming_mode
+import nora_context_vision
 
 CANDIDATE_MODELS = [
     "gemini-3.5-flash",
@@ -159,7 +160,8 @@ class NoraConsciousnessEngine:
             "environment": {
                 "lights_active": any(l.get("on") for l in lights_state.values()) if isinstance(lights_state, dict) else False,
                 "gaming_mode": is_gaming
-            }
+            },
+            "active_context": nora_context_vision.context_vision.get_current_context()
         }
 
     def tick(self) -> Dict[str, Any]:
@@ -309,6 +311,7 @@ class NoraConsciousnessEngine:
             f"Dernier repas il y a {perception['pet']['minutes_since_fed']} min, dernier jeu il y a {perception['pet']['minutes_since_played']} min.\n"
             f"- Système PC : RAM utilisée={perception['system']['ram_percent']}% ({perception['system']['ram_used_gb']} Go / {perception['system']['ram_total_gb']} Go), "
             f"CPU={perception['system']['cpu_percent']}%\n"
+            f"- Activité de Maverick : {perception['active_context']['description']} (Application: {perception['active_context']['app']}, Fenêtre: '{perception['active_context']['title']}', Catégorie: {perception['active_context']['category']})\n"
             f"- Lumières : {'Allumées' if perception['environment']['lights_active'] else 'Éteintes'}\n\n"
             f"Que décides-tu de faire maintenant en toute autonomie ?"
         )

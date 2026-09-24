@@ -209,6 +209,13 @@ def post_build():
         shutil.copyfile(str(print_src), str(OUTPUT_DIR / "maverick_3dprint_state.json"))
         print("✔ Atelier 3D maverick_3dprint_state.json synchronisé.")
 
+    # Fichiers de mémoire vectorielle RAG (FAISS)
+    for rag_f in ["nora_rag.index", "nora_rag_meta.json", "nora_rag_cache.json"]:
+        rf_path = PROJECT_DIR / rag_f
+        if rf_path.exists():
+            shutil.copyfile(str(rf_path), str(OUTPUT_DIR / rag_f))
+            print(f"✔ Index RAG {rag_f} synchronisé.")
+
     # 3. Synchroniser les dossiers d'assets au cas où
     mascot_dest = OUTPUT_DIR / "mascot_assets"
     if not mascot_dest.exists():

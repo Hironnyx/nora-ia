@@ -416,6 +416,8 @@ def analyze_intent_and_respond(user_text: str) -> tuple[str, str]:
     # 23. Discussion vivante nourrie par Gemini avec la personnalité Nora
     client = get_client()
     memory_context = memory_manager.format_memory_for_prompt()
+    import nora_memory_rag
+    rag_context = nora_memory_rag.vector_rag.get_rag_context_for_prompt(user_text, top_k=2)
 
     time_context = (
         "Il est tard dans la nuit : répondez TOUJOURS précisément et utilement à la demande ou question de Maverick sans éluder le sujet, avec une touche d'attention bienveillante si opportun."
@@ -439,6 +441,7 @@ RÈGLES D'OR DE COMPORTEMENT ET D'ÉLOCUTION :
 
 MÉMOIRE DE NORA :
 {memory_context}
+{rag_context}
 
 Maverick vient de vous dire : "{user_text}"
 

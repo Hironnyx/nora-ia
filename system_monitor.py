@@ -74,14 +74,21 @@ def get_system_stats() -> Dict[str, Any]:
     except Exception:
         cpu_percent = 0.0
 
-    # 2. RAM
+    # 2. RAM (Requête C native ultra-rapide)
     try:
-        ram = psutil.virtual_memory()
-        ram_pct = ram.percent
-        ram_used = round(ram.used / (1024**3), 1)
-        ram_total = round(ram.total / (1024**3), 1)
+        import nora_native_win32
+        m = nora_native_win32.native_core.get_native_memory()
+        ram_pct = m["load_percent"]
+        ram_used = round(m["used_mb"] / 1024, 1)
+        ram_total = round(m["total_mb"] / 1024, 1)
     except Exception:
-        ram_pct, ram_used, ram_total = 0.0, 0.0, 0.0
+        try:
+            ram = psutil.virtual_memory()
+            ram_pct = ram.percent
+            ram_used = round(ram.used / (1024**3), 1)
+            ram_total = round(ram.total / (1024**3), 1)
+        except Exception:
+            ram_pct, ram_used, ram_total = 0.0, 0.0, 0.0
 
     # 3. Disque C: avec cache de 5 secondes pour économiser les I/O
     now = time.time()

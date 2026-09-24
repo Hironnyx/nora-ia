@@ -13,6 +13,7 @@ from colorama import Fore, Style, init
 import tools_pc
 import tools_web
 import agent_home
+import tools_autopilot
 
 if sys.platform == "win32":
     if sys.stdout is not None and hasattr(sys.stdout, "reconfigure"):
@@ -76,6 +77,10 @@ AVAILABLE_TOOLS = [
     agent_home.control_smart_home_cover,
     agent_home.control_smart_home_temperature,
     agent_home.get_smart_home_status,
+    tools_autopilot.slice_3d_model,
+    tools_autopilot.inspect_3d_model,
+    tools_autopilot.focus_or_launch_app,
+    tools_autopilot.minimize_all_windows,
 ]
 
 TOOL_MAP = {fn.__name__: fn for fn in AVAILABLE_TOOLS}

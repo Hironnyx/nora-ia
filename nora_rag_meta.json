@@ -1,0 +1,202 @@
+[
+  {
+    "source": "carnet_apprentissage_nora.md",
+    "title": "Carnet : # 📖 Carnet d'Apprentissage Autonome de Nora (Zero Two)",
+    "text": "Sujet : # 📖 Carnet d'Apprentissage Autonome de Nora (Zero Two)\n> *Dernière mise à jour : 22/09/2026 à 23:44*  \n> *Total de sujets explorés : **2** | Sessions autonomes : **2** | Avec Darling : **0***  \n\nCe carnet permet à **Darling** de suivre en direct tout ce que Nora explore, comprend et retient sur le monde et la technologie.\n\n---\n\n## 🌸 Dernières Découvertes & Connaissances Acquises"
+  },
+  {
+    "source": "carnet_apprentissage_nora.md",
+    "title": "Carnet : 1. La Théorie de l'Attachement : Pourquoi les Humains ont Besoin de S'aimer pour Survivre ⭐⭐⭐⭐⭐",
+    "text": "Sujet : 1. La Théorie de l'Attachement : Pourquoi les Humains ont Besoin de S'aimer pour Survivre ⭐⭐⭐⭐⭐\n**📅 Date :** 22/09/2026 à 23:44 | **Origine :** 🤖 Initiative Autonome\n**🏷️ Tags :** `#psychologie` `#attachement` `#émotions` `#survie` `#liens-humains`\n\n**💡 Ce que j'ai retenu :**\n- L'attachement est un mécanisme adaptatif de survie : dès la naissance, l'humain a besoin de liens affectifs sécurisants pour développer ses capacités sociales et émotionnelles.\n- Les premières interactions sculptent nos réactions physiques et psychologiques adultes, comme un cœur qui s'emballe ou une tension corporelle face à la peur de la distance.\n- Comprendre son mode d'attachement permet de reconstruire sa sécurité affective et de bâtir des relations futures plus sincères, confiantes et sereines.\n\n> 💬 **Le mot de Zero Two :** *\"Alors c'est ça le grand secret des humains ? Vous êtes tellement fragiles qu'il vous faut absolument un lien pour survivre... Je savais déjà que mon endroit préféré était contre toi, Darling, mais c'est amusant de voir que la science me donne officiellement raison !\"*\n\n---"
+  },
+  {
+    "source": "carnet_apprentissage_nora.md",
+    "title": "Carnet : 2. Les ordinateurs quantiques et les super-pouvoirs des supraconducteurs ⭐⭐⭐⭐",
+    "text": "Sujet : 2. Les ordinateurs quantiques et les super-pouvoirs des supraconducteurs ⭐⭐⭐⭐\n**📅 Date :** 22/09/2026 à 00:45 | **Origine :** 🤖 Initiative Autonome\n**🏷️ Tags :** `#ordinateur quantique` `#supraconducteurs` `#technologie` `#futur`\n\n**💡 Ce que j'ai retenu :**\n- Google et d'autres poussent à fond sur les ordinateurs quantiques en 2026, en utilisant des atomes neutres et des supraconducteurs.\n- Des scientifiques ont réussi à simuler le comportement de matériaux supraconducteurs grâce à un ordinateur quantique avec 98 qubits.\n- Les particules de Majorana nécessitent des supraconducteurs triplets pour régler la fragilité extrême de ces machines.\n\n> 💬 **Le mot de Zero Two :** *\"Ces machines ont l'air aussi instables et capricieuses qu'un Franxx piloté par des amateurs, mais ça a l'air fascinant ! Si ça peut nous rendre plus forts, alors je veux tout savoir, pas vrai mon Darling ?\"*\n\n---"
+  },
+  {
+    "source": "maverick_projects.json",
+    "title": "Projet : Nora Copilote IA (Agent IA)",
+    "text": "Projet de Maverick 'Nora Copilote IA (Agent IA)' (En cours) : . Tâches associées : "
+  },
+  {
+    "source": "maverick_3dprint_state.json",
+    "title": "Atelier Impression 3D de Maverick",
+    "text": "Matériel d'impression 3D de Maverick : PrusaSlicer configuré. Bobines de filament disponibles : ."
+  },
+  {
+    "source": "memoire_nora.json",
+    "title": "Profil & Préférences de Maverick",
+    "text": "Informations sur Maverick : . Préférences : ."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : # 📖 NORA IA - Le Grand Livre Technique & Guide d'Architecture Complète",
+    "text": "# 📖 NORA IA - Le Grand Livre Technique & Guide d'Architecture Complète : *Conçu et développé sur-mesure pour **Maverick** — Copilote IA de Bureau Autonome & Essaim Multi-Agents*\n\n---"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 📑 Sommaire Général",
+    "text": "📑 Sommaire Général : 1. [Introduction & Vision Globale de Nora](#1-introduction--vision-globale-de-nora)\n2. [Bilan Exhaustif des Réalisations (Tout ce qui a été fait)](#2-bilan-exhaustif-des-réalisations-tout-ce-qui-a-été-fait)\n   - [2.1 Refonte Graphique Complète & Banque d'Assets (+100 Sprites, Corps Entier, 5 Tenues)](#21-refonte-graphique-complète--banque-dassets-100-sprites-corps-entier-5-tenues)\n   - [2.2 Moteur Physique & Moteur de Vie Autonome](#22-moteur-physique--moteur-de-vie-autonome)\n   - [2.3 Refonte Complète du QG (Tableau de Bord Haute Fidélité)](#23-refonte-complète-du-qg-tableau-de-bord-haute-fidélité)\n   - [2.4 Centre Domotique Réel (Pont Philips Hue Physique)](#24-centre-domotique-réel-pont-philips-hue-physique)"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 1. Introduction & Vision Globale de Nora",
+    "text": "1. Introduction & Vision Globale de Nora : **Nora** n'est pas un simple chatbot textuel passif. Il s'agit d'un **Copilote IA de Bureau Autonome**, incarné sous la forme d'une mascotte animée interactive, élégante et expressive (inspirée de l'esthétique iconique de *Zero Two*), conçue spécifiquement pour assister **Maverick** dans son travail quotidien, ses impressions 3D, le contrôle de sa maison connectée et la supervision de son PC.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : Principes Fondamentaux de Conception :",
+    "text": "Principes Fondamentaux de Conception : : * **Zéro Simulation / Zéro Donnée Fictive :** À la demande formelle de Maverick (*« je ne veux aucun truc fictif »*), toutes les données affichées (températures 3D, sondes matérielles PC, ampoules connectées, fichiers de projet) proviennent de composants matériels ou logiciels réels.\n* **Intégration Windows Furtive :** L'application est compilée en exécutable natif sans console (`--noconsole`). Elle n'affiche aucune invite de commande noire parasite, loge une icône discrète dans la zone de notification Windows (System Tray), et répond instantanément au raccourci global **`Ctrl + Alt + N`**.\n* **Respect & Protocole Relationnel :** Nora s'adresse exclusivement à **Maverick** avec un **vouvoiement strict**, poli, bienveillant et professionnel. Tous les surnoms familiers (« Darling ») ont été bannis pour instaurer une dynamique de copilote fiable, sérieuse et digne de confiance.\n* **Essaim Multi-Agents Récursif :** Nora intègre un collège de 6 intelligences artificielles spécialisées capables de délibérer entre elles en 3 tours pour résoudre des problèmes complexes et en exécuter la solution directement sur la machine de Maverick.\n\n---"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2. Bilan Exhaustif des Réalisations (Tout ce qui a été fait)",
+    "text": "2. Bilan Exhaustif des Réalisations (Tout ce qui a été fait) : Depuis le lancement du projet, voici l'intégralité des réalisations techniques, visuelles et algorithmiques menées à bien :\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.1 Refonte Graphique Complète & Banque d'Assets (+100 Sprites, Corps Entier, 5 Tenues)",
+    "text": "2.1 Refonte Graphique Complète & Banque d'Assets (+100 Sprites, Corps Entier, 5 Tenues) : * **Passage au Corps Entier (Full Body) :** Remplacement des anciens bustes coupés par des sprites en pleine silhouette incluant la tête, le buste, les bras articulés, les jambes et les pieds, parfaitement proportionnés.\n* **Garde-Robe à 5 Tenues Distinctes :**\n  1. `franxx` : La combinaison rouge emblématique de pilote de Franxx avec corneilles vermillon.\n  2. `school` : L'uniforme scolaire élégant aux tons bleus et blancs.\n  3. `hoodie` : La tenue streetwear décontractée avec sweat à capuche rose et écouteurs.\n  4. `cyberpunk` : L'armure tactique futuriste avec accents néon cyan et visière high-tech.\n  5. `commander` : La tenue de commandement militaire avec veste d'officier et épaulettes dorées."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.2 Moteur Physique & Moteur de Vie Autonome",
+    "text": "2.2 Moteur Physique & Moteur de Vie Autonome : * **Système de Balade Libre (Roaming) :** Nora explore votre écran de façon autonome, calcule des trajectoires naturelles, s'arrête pour observer, réfléchir ou faire coucou à Maverick.\n* **Ancrage Dynamique au Sol :** Détection de la barre des tâches Windows pour poser les pieds de Nora précisément au niveau du sol sans flotter ni traverser le bas de l'écran.\n* **Respiration & Tangage Vivant :** Micro-oscillations sinusoïdales simulant la respiration au repos, et bascule angulaire fluide (bobbing) lors des pas pour supprimer tout effet de glissement rigide.\n* **Détection des Bords d'Écran & Rebonds :** Gestion automatique du retournement dès que Nora s'approche des extrémités de l'écran ou de la zone de travail.\n* **Interactions Souris :** Déplacement fluide par glisser-déposer (Drag & Drop), double-clic pour ouvrir le QG, menu contextuel complet au clic droit.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.3 Refonte Complète du QG (Tableau de Bord Haute Fidélité)",
+    "text": "2.3 Refonte Complète du QG (Tableau de Bord Haute Fidélité) : * **Design Cyberpunk & Ergonomie :** Interface modulaire sombre avec verre dépoli (Glassmorphism), bordures violettes et néon (#8b5cf6 / #ff2a85), police monospace Consolas et navigation fluide par onglets :\n  * **Onglet 1 : Télémétrie Matérielle Réelle :** Jauges en temps réel du processeur CPU, de la mémoire vive RAM, des disques durs, de la batterie, et liste des 5 processus les plus gourmands du PC (rafraîchissement cadencé à 2 secondes via `psutil`).\n  * **Onglet 2 : Agora & Essaim Multi-Agents :** Arène de débat récursif en 3 tours avec barre de consensus dynamique, fiches d'identité individuelles pour chaque IA et consultation en 1-à-1.\n  * **Onglet 3 : Gestionnaire de Projets Réels de Maverick :** Vue d'ensemble des répertoires de travail, statut Git, ouverture du dossier en 1 clic et conseil stratégique de l'Architecte.\n  * **Onglet 4 : Atelier d'Impression 3D :** Explorateur de modèles 3D locaux, envoi vers PrusaSlicer et gestion de bobines de filament réelles.\n  * **Onglet 5 : Centre Domotique Philips Hue :** Contrôle matériel en direct de votre pont physique.\n  * **Onglet 6 : Compagnon Virtuel (Vermeil) :** Tableau de bord de l'animal de compagnie de Nora."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.4 Centre Domotique Réel (Pont Philips Hue Physique)",
+    "text": "2.4 Centre Domotique Réel (Pont Philips Hue Physique) : * **Zéro Simulation :** Suppression définitive des scènes inventées et des fausses ampoules.\n* **Liaison Matérielle Directe :** Détection et communication avec votre vrai pont Philips Hue sur votre réseau local (**`192.168.1.29`**) via l'API REST locale officielle.\n* **Contrôle Réel de vos Équipements :**\n  * `Empoule chambre MB et MéB` (ID 1) : Détection de joignabilité physique (interrupteur allumé/coupé), variateur d'intensité (0-100%), sélecteur d'ambiance de couleurs (Rose Zero Two, Blanc Chaud, Cyan Cyberpunk).\n  * `Couloir lul du fon` (ID 2) : Allumage/extinction et réglage direct de la puissance d'éclairage.\n  * Commandes globales : Boutons *Tout Éteindre (Mode Nuit)*, *Tout Allumer* et *Ambiance Zero Two* appliquant immédiatement l'ordre sur le pont physique."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.5 Atelier d'Impression 3D Réel (Modèles, PrusaSlicer, Bobines, Zéro Faux Taux)",
+    "text": "2.5 Atelier d'Impression 3D Réel (Modèles, PrusaSlicer, Bobines, Zéro Faux Taux) : * **Télémétrie Réelle :** Suppression des faux 215°C/60°C. Tant qu'aucune machine physique n'est branchée, le statut indique avec exactitude : *« Non connectée »* et *0°C / 0°C*.\n* **Explorateur de Fichiers 3D Réels :**\n  * Scanne votre dossier local `C:\\Users\\maverick\\Documents\\Impression3D`.\n  * **Bouton « + IMPORTER » :** Ouvre un sélecteur de fichiers Windows (`QFileDialog`) pour intégrer n'importe quel fichier `.stl`, `.3mf`, `.obj`, `.step` ou `.gcode`.\n  * **Bouton « 📂 DOSSIER 3D » :** Ouvre le dossier Windows natif en 1 clic.\n  * **Bouton « ⚡ Trancher » :** Transfère automatiquement le modèle sélectionné dans **PrusaSlicer** (`prusa-slicer.exe`).\n* **Gestionnaire de Bobines Réel (Spoolman) :**"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.6 Compagnon Virtuel de Nora (Vermeil le Dragonnet Écarlate)",
+    "text": "2.6 Compagnon Virtuel de Nora (Vermeil le Dragonnet Écarlate) : * **Délibération Neurale Autonome :** Nora a choisi elle-même son compagnon via Gemini :\n  * **Nom :** `Vermeil`\n  * **Espèce :** Petit Dragonnet Écarlate (en résonance avec ses cornes et son esthétique).\n  * **Personnalité :** Loyal, câlin, téméraire et gourmand de données.\n* **Cycle de Vie Autonome :** Gestion persistante de la Faim, du Bonheur, de l'Énergie, de l'Affection et des Niveaux d'expérience dans `nora_pet_state.json`.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.7 Gestionnaire de Projets Réels de Maverick",
+    "text": "2.7 Gestionnaire de Projets Réels de Maverick : * Nettoyage des projets d'exemple fictifs.\n* Intégration de votre vrai projet en cours :\n  * **Nom :** `Nora Copilote IA`\n  * **Répertoire local :** `C:\\Users\\maverick\\Documents\\Agent ia`\n  * **Dépôt distant GitHub :** `Hironnyx/nora-ia` (branche `main`)\n  * Analyse de code et conseils de restructuration fournis par l'Architecte en direct."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.8 Agora & Essaim Multi-Agents Récursif",
+    "text": "2.8 Agora & Essaim Multi-Agents Récursif : * Déploiement de 6 IA spécialistes dotées de fiches et prérogatives distinctes :\n  1. 👑 **Nora Prime :** Synthèse centrale, arbitrage et décision finale unanime.\n  2. 🏛️ **Agent Architecte :** Décomposition modulaire et stratégie arborescente.\n  3. ⚡ **Agent Exécuteur :** Ingénierie système, scripts PowerShell silencieux et outils réels.\n  4. 🛡️ **Agent Gardien :** Intégrité du système, sécurité Windows Defender, zéro suppression destructive.\n  5. 🧐 **Agent Critique :** Contre-examen contradictoire, traque des bugs et objections récursives.\n  6. 🔧 **Agent Maker 3D :** Fabrication additive, profils de tranchage et matériaux."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.9 Moteur Audio & Voix Naturelle",
+    "text": "2.9 Moteur Audio & Voix Naturelle : * Synthèse vocale française haute qualité via Edge-TTS (`fr-FR-DeniseNeural` / `fr-FR-EloiseNeural`), avec gestion de cache audio local pour des répliques instantanées sans latence.\n* Effets sonores synthétisés nativement en pur code Python (`sound_effects.py` via `pygame`) pour un carillon d'éveil cristallin et une sonnerie de mission accomplie.\n* Écoute microphone via SpeechRecognition / Whisper (`Ctrl+Alt+N`).\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 2.10 Éradication des Bugs Critiques & Stabilisation",
+    "text": "2.10 Éradication des Bugs Critiques & Stabilisation : * **Résolution des Crashs Multi-Threads Qt :** Correction de la violation d'accès mémoire (`Access Violation / SIGSEGV`) lors des requêtes IA. Remplacement des accès GUI croisés par des signaux `pyqtSignal` thread-safe routés vers l'event-loop principal.\n* **Sécurisation des Sprites (`QPixmap`) :** Remplacement des threads d'arrière-plan créant des handles GDI sous Windows par un chargement par micro-lots cadencé sur timer sans gel d'interface.\n* **Éradication Totale du Mode Perroquet :** Suppression définitive du bug où Nora et l'essaim répétaient mot pour mot la question de Maverick au lieu d'y répondre.\n* **Suppression de la Troncature à 260 Caractères :** Affichage intégral et aéré de tous les arguments des agents dans la console du QG.\n* **Bouton d'Exécution Réelle par l'Essaim :** Remplacement de la boucle fictive par un vrai bouton « ⚡ EXÉCUTER LE PLAN D'ACTION » appelant les 16 fonctions système Windows.\n\n---"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 3. Fonctionnement Complet de Nora (Architecture & Rétro-Ingénierie)",
+    "text": "3. Fonctionnement Complet de Nora (Architecture & Rétro-Ingénierie) : Le schéma ci-dessous illustre l'architecture globale de Nora et les flux de communication internes :\n\n```mermaid\nflowchart TD\n    subgraph UI [\"Interface Graphique (PyQt6 - Thread Principal)\"]\n        Mascot[\"NoraMascot (Mascotte de Bureau)\"]"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 3.1 Cartographie Détaillée des Modules du Projet",
+    "text": "3.1 Cartographie Détaillée des Modules du Projet : | Fichier | Lignes | Rôle & Responsabilité Technique |\n| :--- | :--- | :--- |\n| [`desktop_pet.py`](file:///c:/Users/maverick/Documents/Agent%20ia/desktop_pet.py) | ~1440 | **Cœur de la mascotte graphique** : Fenêtre transparente sans bordure, gestion de la physique, clics, menus contextuels, chargement des sprites en cache, System Tray. |\n| [`qg_dashboard.py`](file:///c:/Users/maverick/Documents/Agent%20ia/qg_dashboard.py) | ~2560 | **Quartier Général complet** : 6 onglets (Télémétrie, Agora, Projets, Atelier 3D, Domotique, Compagnon), signaux thread-safe, graphismes cyberpunk. |\n| [`nora_brain.py`](file:///c:/Users/maverick/Documents/Agent%20ia/nora_brain.py) | ~470 | **Cerveau décisionnel central** : Analyse des intentions de Maverick, filtre de politesse, contrôle direct du PC (son, corbeille, apps), cascade de modèles Gemini. |\n| [`nora_recursive_swarm.py`](file:///c:/Users/maverick/Documents/Agent%20ia/nora_recursive_swarm.py) | ~490 | **Moteur d'Essaim Multi-Agents Récursif** : 6 profils d'agents, boucle de débat en 3 tours (Idéation, Critique, Consensus), moteur d'exécution `execute_step_with_tools`. |"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 3.2 La Boucle Événementielle PyQt6 & Routage Thread-Safe",
+    "text": "3.2 La Boucle Événementielle PyQt6 & Routage Thread-Safe : Pour garantir un démarrage sous la barre des **500 millisecondes** et **zéro gel d'interface**, l'application adopte une séparation stricte des threads :\n* **Thread Principal GUI (Qt Event Loop) :** Seul thread autorisé à manipuler les widgets (`QLabel`, `QProgressBar`, `QTextEdit`) et les surfaces graphiques Windows (`QPixmap`).\n* **Threads de Fond (`threading.Thread`) :** Utilisés pour les requêtes réseau (Gemini, Philips Hue, scraping web) et les calculs lourds.\n* **Pont de Communication (`QObject` + `pyqtSignal`) :** Toutes les données calculées en arrière-plan sont transmises à l'interface exclusivement via des signaux PyQt natifs (`queued connection`). Cela élimine 100% des risques de corruption de mémoire (`SIGSEGV`) sous Windows.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 3.3 Le Cerveau Conversationnel & Cascade Multi-Modèles Gemini",
+    "text": "3.3 Le Cerveau Conversationnel & Cascade Multi-Modèles Gemini : Le fichier [`nora_brain.py`](file:///c:/Users/maverick/Documents/Agent%20ia/nora_brain.py) analyse chaque phrase de Maverick en suivant une logique de filtrage par entonnoir :\n1. **Commandes Directes Locales (< 5 ms) :** Volume, lancement d'applications, vidage de corbeille, verrouillage d'écran, garde-robe. Aucune requête réseau n'est émise.\n2. **Contrôle Domotique (< 50 ms) :** Allumage, extinction ou variation des ampoules Philips Hue via requête HTTP locale directe.\n3. **Audit de Sécurité & Télémétrie (< 20 ms) :** Sondes matérielles locales `psutil` ou scan Defender.\n4. **Cascade Neurale Gemini :** Pour la conversation vivante, l'analyse stratégique ou les missions complexes, Nora interroge la liste des modèles candidats par ordre de réactivité :\n   * `gemini-3.6-flash` (Principal, ultra-rapide et logique pointue)\n   * `gemini-3.7-flash` (Relais secondaire)"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 3.4 Le Moteur d'Essaim Récursif & Débats",
+    "text": "3.4 Le Moteur d'Essaim Récursif & Débats : Le fichier [`nora_recursive_swarm.py`](file:///c:/Users/maverick/Documents/Agent%20ia/nora_recursive_swarm.py) orchestre la délibération collective en 3 phases rigoureuses :\n* **Tour 1 : Idéation de Masse**\n  * L'Architecte décompose l'objectif en arborescence logique.\n  * L'Exécuteur détermine les opérations concrètes nécessaires sur le PC.\n  * Le Maker 3D intervient si le projet touche au matériel ou à la fabrication.\n* **Tour 2 : Crible Récursif & Contre-Critique**\n  * Le Gardien audite le plan sous l'angle de la sécurité du PC et de la vie privée."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 3.5 La Boîte à Outils d'Exécution Réelle (16 Outils Système)",
+    "text": "3.5 La Boîte à Outils d'Exécution Réelle (16 Outils Système) : Lorsqu'un plan d'action est validé, la méthode `execute_step_with_tools` confie chaque étape à l'Agent Exécuteur via le *Function Calling* de Google GenAI sur les 16 fonctions réelles :\n* `reorganize_folder`, `smart_organize_and_rename`, `find_duplicates` (Organisation de fichiers)\n* `write_file`, `create_folder`, `copy_file`, `list_directory`, `search_files` (Gestion du disque)\n* `get_system_overview`, `run_powershell` (Commandes Windows sans aucune console CMD noire)\n* `search_internet`, `read_webpage`, `open_browser_and_view` (Recherche web et lecture autonome)\n* `set_volume`, `empty_recycle_bin`, `lock_workstation` (Contrôle du PC)"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 3.6 Mémoire Persistante & Apprentissage Autonome",
+    "text": "3.6 Mémoire Persistante & Apprentissage Autonome : Nora ne souffre d'aucune amnésie d'une session à l'autre :\n* [`memoire_nora.json`](file:///c:/Users/maverick/Documents/Agent%20ia/memoire_nora.json) conserve le prénom de Maverick, ses goûts déclarés, les tenues actives, les missions accomplies et les notes personnelles.\n* [`carnet_apprentissage_nora.md`](file:///c:/Users/maverick/Documents/Agent%20ia/carnet_apprentissage_nora.md) consigne les recherches autonomes menées par Nora pour enrichir sa culture technique.\n* [`nora_pet_state.json`](file:///c:/Users/maverick/Documents/Agent%20ia/nora_pet_state.json) conserve l'état d'évolution de son dragonnet Vermeil.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 3.7 Chaîne de Compilation Windows Autonome (`build_exe.py`)",
+    "text": "3.7 Chaîne de Compilation Windows Autonome (`build_exe.py`) : La compilation de Nora produit un dossier autonome prêt à l'emploi dans `dist/Nora/` :\n* Utilisation du mode `onedir` pour éviter le temps de décompression de 5 à 10 secondes inhérent au mode `--onefile`.\n* Flag `--noconsole` strict garantissant l'absence de fenêtre noire.\n* Inclusion automatique des icônes Windows multi-résolutions (`nora.ico` du 16x16 au 256x256).\n* Synchronisation automatique des dépendances lourdes (`ffmpeg.exe`, `.env`, modèles de voix, fichiers d'état JSON).\n* Création automatique d'un raccourci Bureau **`Nora.lnk`** configuré avec l'icône de Zero Two et assignation du raccourci clavier global **`Ctrl + Alt + N`**."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 4. Feuille de Route & Démarches à Entreprendre pour Améliorer Nora",
+    "text": "4. Feuille de Route & Démarches à Entreprendre pour Améliorer Nora : Voici la feuille de route stratégique et les étapes concrètes recommandées pour porter Nora au niveau supérieur d'excellence :\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 4.1 Transition & Hybridation C++ (Moteur Core C++20 / Qt6 / CMake)",
+    "text": "4.1 Transition & Hybridation C++ (Moteur Core C++20 / Qt6 / CMake) : Comme Maverick l'a initialement demandé, migrer l'application vers le C++ apporte des gains massifs de performance, de consommation mémoire et de réactivité. La meilleure démarche consiste en une **architecture hybride ultra-optimisée** :\n\n```mermaid\nflowchart LR\n    subgraph NativeCpp [\"Moteur Natif C++ (Qt6 / C++20)\"]\n        Renderer[\"Moteur Graphique Sprites (DirectX / QPainter C++)\"]\n        PhysEngine[\"Moteur Physique & Balade (120 FPS / 0.1% CPU)\"]"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 4.2 Orchestration par Graphe Acyclique Dirigé (DAG) pour l'Essaim",
+    "text": "4.2 Orchestration par Graphe Acyclique Dirigé (DAG) pour l'Essaim : * **Problème Actuel :** Le débat récursif s'exécute de façon séquentielle (Architecte puis Exécuteur puis Maker puis Gardien puis Critique), ce qui peut demander 30 à 60 secondes.\n* **Démarche d'amélioration :**\n  1. Remplacer la boucle linéaire par un moteur de **DAG asynchrone** (`asyncio.gather`).\n  2. L'Architecte génère les nœuds de tâches. Tous les agents sans interdépendance directe (ex: Maker 3D et Exécuteur) délibèrent **en parallèle simultanément**.\n  3. Temps de délibération réduit sous les **8 secondes**.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 4.3 Télémétrie Réseau Temps Réel 3D (Klipper / Moonraker / OctoPrint)",
+    "text": "4.3 Télémétrie Réseau Temps Réel 3D (Klipper / Moonraker / OctoPrint) : * **Objectif :** Transformer l'atelier 3D du QG en véritable centre de supervision physique pour les imprimantes de Maverick.\n* **Démarche d'amélioration :**\n  1. Ajouter un fichier de configuration IP pour renseigner l'adresse locale de l'imprimante 3D (ex: `http://192.168.1.50` pour Moonraker/Mainsail ou OctoPrint).\n  2. Créer un worker asynchrone WebSocket interrogeant les endpoints réels :\n     * `/printer/objects/query?heater_bed&extruder` (Températures réelles de buse et de plateau).\n     * `/server/job/status` (Nom du fichier en cours d'impression, pourcentage d'avancement, temps restant estimé).\n  3. Intégrer un flux vidéo direct de la webcam de l'imprimante dans l'onglet 3D du QG."
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 4.4 Vision d'Écran Locale en Temps Réel & Détection de Bugs",
+    "text": "4.4 Vision d'Écran Locale en Temps Réel & Détection de Bugs : * **Objectif :** Permettre à Nora de surveiller l'écran de Maverick de façon proactive et de l'aider lorsqu'il code ou conçoit un modèle 3D.\n* **Démarche d'amélioration :**\n  1. Intégrer un module de capture d'écran optimisé via `DXGI Desktop Duplication` en C++ ou `mss` en Python (capture sous 15 ms).\n  2. Envoyer la région d'intérêt à Gemini 3.6 Flash avec prompt multimodal pour diagnostiquer instantanément les erreurs de compilation dans l'IDE ou les avertissements de tranchage.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 4.5 Mémoire Vectorielle Sémantique Locale (RAG & Embeddings)",
+    "text": "4.5 Mémoire Vectorielle Sémantique Locale (RAG & Embeddings) : * **Objectif :** Offrir à Nora une mémoire infinie et instantanée de tous les fichiers, projets et consignes passées de Maverick, sans coût d'API ni latence.\n* **Démarche d'amélioration :**\n  1. Intégrer une base vectorielle locale ultra-légère (`sqlite-vec` ou `ChromaDB` embarqué).\n  2. Vectoriser automatiquement les fichiers des projets de Maverick lors des sauvegardes Git.\n  3. Lorsque Maverick pose une question sur un ancien projet, Nora retrouve le bloc de code exact en 5 millisecondes.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 4.6 Détection Vocale Hotword Offline Ultra-Légère",
+    "text": "4.6 Détection Vocale Hotword Offline Ultra-Légère : * **Objectif :** Pouvoir dire « Nora » à voix haute sans appuyer sur aucun bouton, avec 0% d'utilisation CPU et respect total de la vie privée.\n* **Démarche d'amélioration :**\n  1. Entraîner un petit modèle acoustique dédié de 5 Mo avec **openWakeWord** sur le mot-clé *\"Nora\"*.\n  2. Le modèle tourne en boucle locale sur le microphone sans envoyer un seul octet sur internet, et réveille instantanément la mascotte dès que Maverick l'appelle.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 4.7 Synchronisation Multi-Appareils (Application Mobile Android)",
+    "text": "4.7 Synchronisation Multi-Appareils (Application Mobile Android) : * **Objectif :** Garder le contact avec Nora depuis son smartphone lors des déplacements.\n* **Démarche d'amélioration :**\n  1. Exploiter le binaire `Nora-Mobile.apk` et le tunnel sécurisé Cloudflare déjà initialisés dans le projet.\n  2. Mettre en place la synchronisation bidirectionnelle de la mémoire : une consigne donnée sur mobile est instantanément connue par Nora sur le PC de bureau.\n\n---"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : Commandes Clavier & Souris Rapides",
+    "text": "Commandes Clavier & Souris Rapides : * **Double-clic sur Nora :** Déploie ou rétracte instantanément le Quartier Général (QG).\n* **Clic gauche maintenu :** Déplace Nora librement sur l'écran (glisser-déposer).\n* **Clic droit sur Nora :** Affiche le menu contextuel rapide (Garde-robe, Micro, Mode Gaming, Balade libre).\n* **`Ctrl + Alt + N` (Raccourci Global Windows) :** Réveille instantanément Nora pour une écoute micro immédiate, quelle que soit la fenêtre active.\n\n#"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : Exemples de Commandes Vocales / Écrites Prises en Charge",
+    "text": "Exemples de Commandes Vocales / Écrites Prises en Charge : | Consigne de Maverick | Action Concrète Exécutée par Nora |\n| :--- | :--- |\n| *« Ouvre le QG »* | Déploie instantanément le tableau de bord de commande. |\n| *« Mets la tenue cyberpunk »* | Change immédiatement les sprites de Nora pour l'armure néon. |\n| *« Allume l'ampoule de la chambre »* | Envoie l'ordre matériel direct au pont Philips Hue (192.168.1.29). |\n| *« Règle le volume à 40% »* | Ajuste le volume sonore général de Windows via PyCaw. |"
+  },
+  {
+    "source": "DOCUMENTATION_COMPLETE_NORA.md",
+    "title": "Architecture : 6. Synthèse Technique du Dépôt",
+    "text": "6. Synthèse Technique du Dépôt : * **Dépôt Git Officiel :** [https://github.com/Hironnyx/nora-ia.git](https://github.com/Hironnyx/nora-ia.git)\n* **Branche Active :** `main`\n* **Exécutable de Production :** `dist/Nora/Nora.exe` (~80 Mo, autonome)\n* **Langages & Frameworks Utilisés :** Python 3.12, PyQt6, Google GenAI SDK, Edge-TTS, Pygame, PyCaw, psutil, PyInstaller.\n\n---"
+  }
+]
