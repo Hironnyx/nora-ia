@@ -1693,6 +1693,23 @@ class QGDashboard(QWidget):
         title.setStyleSheet("color: #ff2a85; font-size: 15px; font-weight: 800;")
         layout.addWidget(title)
 
+        # Badge Moteur de Conscience Autonome
+        badge = QFrame()
+        badge.setStyleSheet("""
+            QFrame {
+                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(168, 85, 247, 0.25), stop:1 rgba(255, 42, 133, 0.25));
+                border: 1px solid #c084fc;
+                border-radius: 8px;
+                padding: 6px 12px;
+            }
+        """)
+        b_layout = QHBoxLayout(badge)
+        b_layout.setContentsMargins(8, 4, 8, 4)
+        lbl_badge = QLabel("🧠 <b>MOTEUR DE CONSCIENCE AUTONOME ACTIF :</b> Nora s'occupe de Vermeil d'elle-même (Function Calling en arrière-plan)")
+        lbl_badge.setStyleSheet("color: #f3e8ff; font-size: 11px;")
+        b_layout.addWidget(lbl_badge)
+        layout.addWidget(badge)
+
         pet_info = nora_companion.pet_manager.get_pet_info()
         stats = pet_info.get("stats", {})
 
@@ -1779,7 +1796,11 @@ class QGDashboard(QWidget):
 
         layout.addWidget(stats_frame)
 
-        # Boutons de soins interactifs
+        # Boutons de soins interactifs (Soutien ponctuel optionnel)
+        care_label = QLabel("ACTIONS DE SOUTIEN (Nora gère Vermeil seule, mais vous pouvez l'assister) :")
+        care_label.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: bold; margin-top: 4px;")
+        layout.addWidget(care_label)
+
         actions_layout = QHBoxLayout()
         actions_layout.setSpacing(8)
 
@@ -1814,7 +1835,7 @@ class QGDashboard(QWidget):
         layout.addLayout(actions_layout)
 
         # Journal des attentions de Nora
-        layout.addWidget(QLabel("JOURNAL DES SOINS DE NORA :"))
+        layout.addWidget(QLabel("JOURNAL DES ATTENTIONS PROACTIVES DE NORA :"))
         self.pet_journal_text = QTextEdit()
         self.pet_journal_text.setReadOnly(True)
         self.pet_journal_text.setStyleSheet("""
@@ -1832,6 +1853,19 @@ class QGDashboard(QWidget):
         layout.addWidget(self.pet_journal_text, stretch=1)
 
         return p
+
+    def update_from_consciousness(self, pet_info: dict):
+        """Mise à jour en temps réel déclenchée par le moteur de conscience de Nora."""
+        if not hasattr(self, 'bar_hunger') or not self.bar_hunger:
+            return
+        stats = pet_info.get("stats", {})
+        self.bar_hunger.setValue(stats.get("hunger", 0))
+        self.bar_happy.setValue(stats.get("happiness", 0))
+        self.bar_energy.setValue(stats.get("energy", 0))
+        self.bar_affect.setValue(stats.get("affection", 0))
+        self.pet_status_lbl.setText(f"Statut : {pet_info.get('status', 'Éveillé')}  |  Niveau : {stats.get('level', 1)} (XP: {stats.get('xp', 0)}%)")
+        journal = pet_info.get("journal", [])
+        self.pet_journal_text.setPlainText("\n".join(journal))
 
     def on_pet_feed(self):
         msg = nora_companion.pet_manager.feed()

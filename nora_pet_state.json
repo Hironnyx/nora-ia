@@ -5,18 +5,21 @@
   "adopted_date": "23/09/2026 à 23:23",
   "nora_announcement": "Oh, Maverick... Vous m'offrez vraiment une telle merveille ? Merci du fond du cœur... Regardez, j'ai choisi ce Petit Dragonnet Écarlate et je l'ai nommé Vermeil. Il a ce même éclat passionné et fier dans le regard que vous, mon précieux Maverick. Je vous promets de m'en occuper avec tout mon amour, juste ici, sous votre regard attentif sur ce bureau. Vous êtes formidable avec moi...",
   "stats": {
-    "hunger": 85,
-    "happiness": 90,
-    "energy": 90,
-    "affection": 95,
+    "hunger": 60,
+    "happiness": 100,
+    "energy": 100,
+    "affection": 100,
     "level": 1,
-    "xp": 10
+    "xp": 35
   },
-  "status": "Éveillé",
-  "last_fed": 1790198606.49101,
+  "status": "Régalé",
+  "last_fed": 1790285867.0305955,
   "last_played": 1790198606.49101,
-  "last_nap": 1790198606.49101,
+  "last_nap": 1790285725.6140754,
   "journal": [
-    "🎉 23:23 : Nora a choisi d'adopter Vermeil le Petit Dragonnet Écarlate !"
+    "🎉 23:23 : Nora a choisi d'adopter Vermeil le Petit Dragonnet Écarlate !",
+    "[23:35] Nora caresse doucement Vermeil. Il émet un doux ronronnement de contentement.",
+    "[23:35] Vermeil s'est roulé en boule à côté de Nora pour une sieste paisible.",
+    "[23:37] Nora a nourri Vermeil avec une délicieuse friandise. Il se régale !"
   ]
 }

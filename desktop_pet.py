@@ -90,6 +90,7 @@ import gaming_mode
 import tools_vision
 import nora_autonomous_life
 import nora_companion
+import nora_consciousness
 from wake_word_listener import WakeWordDetector
 
 
@@ -112,6 +113,8 @@ class NoraBridge(QObject):
     screen_vision_requested = pyqtSignal(str)
     swarm_event = pyqtSignal(str, int, str, int)
     mission_requested = pyqtSignal(str)
+    autonomous_action_triggered = pyqtSignal(str, str, str, bool)
+    pet_state_updated = pyqtSignal(dict)
 
 class NoraMascot(QWidget):
     def __init__(self):
@@ -150,6 +153,8 @@ class NoraMascot(QWidget):
         self.bridge.gaming_mode_changed.connect(self.on_gaming_mode_changed)
         self.bridge.screen_vision_requested.connect(self.trigger_screen_vision)
         self.bridge.mission_requested.connect(self.execute_mission)
+        self.bridge.autonomous_action_triggered.connect(self.on_autonomous_action)
+        self.bridge.pet_state_updated.connect(self.on_pet_state_updated)
 
         self.drag_position = QPoint()
         self.is_dragging = False
@@ -177,6 +182,7 @@ class NoraMascot(QWidget):
         self.init_global_hotkey()
         self.init_qg()
         self.init_autonomous_life()
+        self.init_consciousness_engine()
 
         # Préchauffage du clonage vocal Zero Two RVC en arrière-plan
         try:
@@ -772,6 +778,55 @@ class NoraMascot(QWidget):
         """Fait lire à haute voix ou afficher une note du carnet."""
         thought = self.life_engine.generate_spontaneous_thought("day")
         self.display_message(thought["text"])
+
+    # =================================================================
+    # MOTEUR DE CONSCIENCE EN ARRIÈRE-PLAN (GEMINI FUNCTION CALLING)
+    # =================================================================
+    def init_consciousness_engine(self):
+        """Initialise le moteur cognitif autonome proactif en arrière-plan."""
+        def _on_action(action_type: str, bubble_text: str, sprite_name: str, speak: bool):
+            self.bridge.autonomous_action_triggered.emit(action_type, bubble_text, sprite_name, speak)
+
+        def _on_pet_updated(pet_state: dict):
+            self.bridge.pet_state_updated.emit(pet_state)
+
+        def _on_thought(thought_text: str, speak: bool):
+            self.bridge.autonomous_action_triggered.emit("THOUGHT", thought_text, "pet_idle.png", speak)
+
+        self.consciousness = nora_consciousness.NoraConsciousnessEngine(
+            interval_seconds=60,
+            on_action_callback=_on_action,
+            on_pet_updated_callback=_on_pet_updated,
+            on_thought_callback=_on_thought
+        )
+        self.consciousness.start()
+
+    def on_autonomous_action(self, action_type: str, bubble_text: str, sprite_name: str, speak: bool):
+        """Déclenche la réaction visuelle, dialoguée et gestuelle de Nora sur le bureau."""
+        if bubble_text:
+            self.display_message(bubble_text, duration_ms=6500)
+            if speak:
+                self.speak_nora(bubble_text)
+
+        # Réaction posturale de Nora
+        if action_type in ["FEED", "PLAY", "PET"]:
+            self.play_pose("idle_wave", duration_sec=5.0)
+        elif action_type == "NAP":
+            self.play_pose("idle_sitting", duration_sec=6.0)
+        elif action_type == "RAM_BOOST":
+            self.play_pose("idle_work_hologram", duration_sec=5.0)
+
+        # Réaction du sprite de Vermeil (mini-compagnon à ses pieds)
+        if hasattr(self, 'pet_label') and sprite_name:
+            sp = ASSETS_DIR / "companion" / sprite_name
+            if sp.exists():
+                self.pet_label.setPixmap(QPixmap(str(sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
+                QTimer.singleShot(6000, self.reset_companion_sprite)
+
+    def on_pet_state_updated(self, pet_state: dict):
+        """Met à jour le panneau Compagnon du QG si ouvert."""
+        if hasattr(self, 'qg') and self.qg:
+            self.qg.update_from_consciousness(pet_state)
 
     # =================================================================
     # VISION D'ÉCRAN MULTIMODALE & LE QG DE NORA
@@ -1412,6 +1467,8 @@ class NoraMascot(QWidget):
             self.execute_mission("Scanne mon dossier Téléchargements et isole les doublons.")
         elif action == action_quit:
             self.hotkey_running = False
+            if hasattr(self, 'consciousness'):
+                self.consciousness.stop()
             if hasattr(self, 'tray_icon') and self.tray_icon:
                 self.tray_icon.hide()
             if hasattr(self, 'qg'):
