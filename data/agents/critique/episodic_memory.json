@@ -1,0 +1,18 @@
+[
+  {
+    "timestamp": "2026-09-25 01:08:12",
+    "goal": "Amélioration des agents",
+    "stance": "Refus des fausses validations sans preuves de modifications de fichiers.",
+    "tools_used": [],
+    "verified_success": true,
+    "learning": "Une étape sans appel d'outil système n'est qu'une proposition théorique."
+  },
+  {
+    "timestamp": "2026-09-25 01:08:04",
+    "goal": "Amélioration des agents",
+    "stance": "Refus des fausses validations sans preuves de modifications de fichiers.",
+    "tools_used": [],
+    "verified_success": true,
+    "learning": "Une étape sans appel d'outil système n'est qu'une proposition théorique."
+  }
+]

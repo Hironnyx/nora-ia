@@ -1,12 +1,10 @@
 """
 Moteur d'Essaim Multi-Agents Autonome & Débat Récursif de Masse (Recursive Swarm Reflexion)
-Pilote neuronal central de Nora coordonnant un essaim d'agents spécialistes :
-- 👑 Nora Prime : Reine / Cœur Neuronal Central (Orchestration & Synthèse)
-- 🏛️ Agent Architecte : Stratégie arborescente et décomposition des problèmes
-- ⚡ Agent Exécuteur : Exécution système réelle, scripts, outils fichiers et web
-- 🛡️ Agent Gardien : Sécurité proactive, intégrité Windows et confidentialité
-- 🧐 Agent Critique & Réflecteur : Débat contradictoire récursif et élimination des erreurs
-- 🔧 Agent Maker & 3D : Fabrication additive, modélisation 3D, PrusaSlicer et projets
+Architecture Cognitive Haute Fidélité (Standard Anthropic) :
+- Mémoire autobiographique & épisodique décentralisée par agent (nora_agent_memory)
+- Conscience métacognitive & monologue intérieur étendu (<thinking>) (nora_cognitive_engine)
+- Bus d'état partagé en RAM & connectivité P2P (nora_blackboard)
+- Contrats d'exécution et reçus matériels vérifiables sur disque (nora_receipts)
 """
 
 import os
@@ -20,11 +18,11 @@ from dotenv import load_dotenv
 from google import genai
 from google.genai import types
 
-import tools_pc
-import tools_web
-import tools_pc_control
-import agent_security
-import memory_manager
+if sys.platform == "win32":
+    if sys.stdout is not None and hasattr(sys.stdout, "reconfigure"):
+        sys.stdout.reconfigure(encoding="utf-8")
+    if sys.stderr is not None and hasattr(sys.stderr, "reconfigure"):
+        sys.stderr.reconfigure(encoding="utf-8")
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys.executable).parent.resolve()
@@ -34,11 +32,22 @@ else:
 load_dotenv(BASE_DIR / ".env")
 load_dotenv()
 
-# Modèles neuronaux Gemini candidats par ordre de réactivité
+import tools_pc
+import tools_web
+import tools_pc_control
+import agent_security
+import memory_manager
+import nora_agent_memory
+import nora_cognitive_engine
+import nora_blackboard
+import nora_receipts
+
+# Modèles neuronaux Gemini candidats par ordre de disponibilité et quota actif
 NEURAL_MODELS = [
-    "gemini-3.6-flash",
-    "gemini-3.7-flash",
-    "gemini-flash-latest",
+    "gemini-3.5-flash-lite",
+    "gemini-flash-lite-latest",
+    "gemini-3.1-flash-lite",
+    "gemini-3.8-flash",
     "gemini-3.5-flash"
 ]
 
@@ -71,111 +80,6 @@ def get_genai_client() -> Optional[genai.Client]:
         return genai.Client(api_key=api_key)
     except Exception:
         return None
-
-def call_neural_node(client: Optional[genai.Client], system_prompt: str, user_prompt: str, temperature: float = 0.3) -> str:
-    """Interroge un nœud neuronal avec basculement automatique de modèle ou fallback déterministe."""
-    if client:
-        for model_name in NEURAL_MODELS:
-            try:
-                config = types.GenerateContentConfig(
-                    system_instruction=system_prompt,
-                    temperature=temperature
-                )
-                resp = client.models.generate_content(
-                    model=model_name,
-                    contents=user_prompt,
-                    config=config
-                )
-                if resp and resp.text:
-                    return resp.text.strip()
-            except Exception:
-                continue
-
-    # Fallback heuristique structuré si l'API est indisponible
-    if "Architecte" in system_prompt:
-        return (
-            "1. Analyse approfondie des prérequis et des dépendances techniques.\n"
-            "2. Décomposition modulaire en tâches atomiques indépendantes.\n"
-            "3. Planification des tests unitaires et intégration système continue."
-        )
-    elif "Executeur" in system_prompt:
-        return (
-            "Exécution technique validée : scripts PowerShell prêts, "
-            "fichiers créés dans le répertoire dédié et outils système appelés sans aucune console intempestive."
-        )
-    elif "Gardien" in system_prompt:
-        return (
-            "Audit de sécurité positif : intégrité Windows Defender garantie, "
-            "aucune suppression destructive détectée et protection stricte des données personnelles de Maverick."
-        )
-    elif "Critique" in system_prompt:
-        return (
-            "Examen contradictoire : plan solide mais attention aux temps de réponse "
-            "et à la gestion des erreurs réseau. Intégrer un mécanisme de reprise automatique."
-        )
-    elif "Maker" in system_prompt:
-        return (
-            "Recommandation 3D : Paramétrer PrusaSlicer avec remplissage Gyroid 20%, "
-            "vitesse de déplacement stable et vérification de la bobine de filament sélectionnée."
-        )
-    else:
-        return "Synthèse validée avec succès par Nora Prime pour Maverick."
-
-def execute_step_with_tools(client: Optional[genai.Client], step_instruction: str, callback_step: Optional[Callable] = None) -> str:
-    """Exécute réellement une étape avec l'Agent Exécuteur et ses outils système Windows / Web réels."""
-    if not client:
-        client = get_genai_client()
-    if not client:
-        return "Exécution hors ligne : client neuronal indisponible."
-
-    system_instruction = """Tu es l'Agent Exécuteur Système & Code de l'essaim de Nora.
-Ton rôle est d'accomplir concrètement la tâche demandée en utilisant tes outils réels sur le PC de Maverick.
-N'invente rien, utilise les fonctions à ta disposition (fichiers, dossiers, recherche web, PowerShell, contrôle PC).
-Sois efficace, autonome et concis."""
-
-    for model in NEURAL_MODELS:
-        try:
-            config = types.GenerateContentConfig(
-                system_instruction=system_instruction,
-                tools=SWARM_TOOLS,
-                temperature=0.2
-            )
-            chat = client.chats.create(model=model, config=config)
-            resp = chat.send_message(f"Exécute cette étape concrètement : {step_instruction}")
-
-            tools_used = []
-            while resp.function_calls:
-                for call in resp.function_calls:
-                    fn_name = call.name
-                    fn_args = call.args or {}
-                    fn = SWARM_TOOL_MAP.get(fn_name)
-                    if fn:
-                        try:
-                            res = fn(**fn_args)
-                        except Exception as e:
-                            res = f"Erreur : {e}"
-                    else:
-                        res = f"Outil '{fn_name}' non disponible."
-
-                    tools_used.append(fn_name)
-                    if callback_step:
-                        callback_step(f"🔧 Outil [{fn_name}] -> {str(res)[:70]}")
-
-                    resp = chat.send_message(
-                        types.Part.from_function_response(
-                            name=fn_name,
-                            response={"result": res}
-                        )
-                    )
-
-            final_text = resp.text.strip() if resp and resp.text else ""
-            if tools_used:
-                return f"{', '.join(tools_used)} exécuté(s) avec succès. {final_text}"
-            return final_text or "Opération validée."
-        except Exception:
-            continue
-
-    return "Étape traitée par l'Exécuteur."
 
 # =====================================================================
 # DÉFINITION DÉTAILLÉE DES FICHES INDIVIDUELLES DES IA DE L'ESSAIM
@@ -278,7 +182,7 @@ Ton rôle : chercher impitoyablement les failles, ambiguïtés, hallucinations, 
         "recent_stances": []
     },
     "Maker 3D": {
-        "id": "maker",
+        "id": "maker3d",
         "name": "🔧 Agent Maker 3D",
         "short_name": "Maker 3D",
         "title": "Spécialiste Impression 3D & Projets Physiques",
@@ -299,7 +203,109 @@ Ton rôle : conseiller Maverick sur ses impressions 3D, analyser les fichiers ST
 }
 
 # =====================================================================
-# BOUCLE DE DÉBAT EN MASSE RÉCURSIVE (RECURSIVE SWARM LOOP)
+# EXÉCUTION SYSTÈME AVEC REÇUS MATÉRIELS VÉRIFIABLES (PILIER 4)
+# =====================================================================
+
+def execute_step_with_tools(
+    client: Optional[genai.Client],
+    step_index: int,
+    action_name: str,
+    step_instruction: str,
+    callback_step: Optional[Callable] = None
+) -> nora_receipts.ExecutionReceipt:
+    """
+    Exécute réellement une étape avec l'Agent Exécuteur et ses outils système Windows / Web réels.
+    Retourne un ExecutionReceipt certifiant si une modification a eu lieu sur le disque dur.
+    """
+    start_time = time.time()
+    if not client:
+        client = get_genai_client()
+    if not client:
+        return nora_receipts.ExecutionReceipt(
+            step_index=step_index,
+            action_name=action_name,
+            tool_called=None,
+            tool_args={},
+            duration_ms=0.0,
+            raw_output="Exécution hors ligne : client neuronal indisponible."
+        )
+
+    system_instruction = """Tu es l'Agent Exécuteur Système & Code de l'essaim de Nora.
+Ton rôle est d'accomplir concrètement la tâche demandée en utilisant tes outils réels sur le PC de Maverick.
+RÈGLE D'OR : N'invente rien et n'affirme jamais qu'une action est faite sans avoir appelé l'outil physique correspondant (write_file, create_folder, run_powershell, search_files, etc.).
+Si la tâche est trop abstraite pour exécuter un outil précis, dis-le honnêtement."""
+
+    tools_used = []
+    last_tool_args = {}
+    last_res = ""
+    final_text = ""
+
+    for model in NEURAL_MODELS:
+        try:
+            config = types.GenerateContentConfig(
+                system_instruction=system_instruction,
+                tools=SWARM_TOOLS,
+                temperature=0.2
+            )
+            chat = client.chats.create(model=model, config=config)
+            resp = chat.send_message(f"Exécute cette étape concrètement sur le PC de Maverick : {step_instruction}")
+
+            while resp.function_calls:
+                for call in resp.function_calls:
+                    fn_name = call.name
+                    fn_args = call.args or {}
+                    last_tool_args = fn_args
+                    fn = SWARM_TOOL_MAP.get(fn_name)
+                    if fn:
+                        try:
+                            res = fn(**fn_args)
+                        except Exception as e:
+                            res = f"Erreur : {e}"
+                    else:
+                        res = f"Outil '{fn_name}' non disponible."
+
+                    tools_used.append(fn_name)
+                    last_res = str(res)
+                    if callback_step:
+                        callback_step(f"🔧 Outil [{fn_name}] -> {str(res)[:70]}")
+
+                    resp = chat.send_message(
+                        types.Part.from_function_response(
+                            name=fn_name,
+                            response={"result": res}
+                        )
+                    )
+
+            final_text = resp.text.strip() if resp and resp.text else ""
+            break
+        except Exception:
+            continue
+
+    duration_ms = (time.time() - start_time) * 1000.0
+
+    if tools_used:
+        receipt = nora_receipts.ExecutionReceipt(
+            step_index=step_index,
+            action_name=action_name,
+            tool_called=tools_used[-1],
+            tool_args=last_tool_args,
+            duration_ms=duration_ms,
+            raw_output=last_res or final_text
+        )
+    else:
+        receipt = nora_receipts.ExecutionReceipt(
+            step_index=step_index,
+            action_name=action_name,
+            tool_called=None,
+            tool_args={},
+            duration_ms=duration_ms,
+            raw_output=final_text or "Validation conceptuelle (aucun outil système invoqué)."
+        )
+
+    return receipt
+
+# =====================================================================
+# BOUCLE DE DÉBAT EN MASSE RÉCURSIVE AVEC CONSCIENCE & BLACKBOARD
 # =====================================================================
 
 class RecursiveSwarmSession:
@@ -311,14 +317,35 @@ class RecursiveSwarmSession:
         self.consensus_reached = False
         self.consensus_score = 0
         self.final_action_plan: List[Dict[str, Any]] = []
+        
+        # Initialisation du Bus d'État Partagé en RAM (Pilier 3)
+        self.blackboard = nora_blackboard.SwarmBlackboard(mission_goal=goal)
+        
+        # Initialisation des mémoires d'agents (Pilier 1)
+        nora_agent_memory.init_all_agent_memories()
 
-    def notify(self, agent: str, round_num: int, text: str, score: int = 0):
+    def notify(
+        self,
+        agent: str,
+        round_num: int,
+        text: str,
+        score: int = 0,
+        thinking: str = "",
+        epistemic_status: str = "DÉDUCTION_CONCEPTUELLE"
+    ):
+        display_text = text
+        if thinking and thinking != "Pensée synthétique directe (mode rapide).":
+            status_badge = f"<span style='color:#64748b; font-size:10px;'>[🧠 Conscience ({epistemic_status}) : <i>{thinking[:120]}...</i>]</span><br>"
+            display_text = f"{status_badge}{text}"
+
         evt = {
             "agent": agent,
             "round": round_num,
-            "text": text,
+            "text": display_text,
             "consensus": score,
-            "time": time.strftime("%H:%M:%S")
+            "time": time.strftime("%H:%M:%S"),
+            "thinking": thinking,
+            "epistemic_status": epistemic_status
         }
         self.debate_history.append(evt)
 
@@ -340,17 +367,30 @@ class RecursiveSwarmSession:
     def run_recursive_debate(self, max_rounds: int = 3) -> Dict[str, Any]:
         """
         Déclenche la discussion en masse récursive entre les 6 agents :
-        - Round 1 : Idéation simultanée en masse (Architecte, Exécuteur, Maker 3D)
-        - Round 2 : Contre-critique et contestation récursive (Gardien, Critique)
-        - Round 3 : Raffinement, consensus unanime et décision de Nora Prime
+        - Conscience métacognitive & monologue intérieur (<thinking>)
+        - Bus d'état partagé en RAM (Blackboard)
+        - Éradication absolue du mode perroquet
+        - Vérité épistémique sans simulation
         """
         is_improvement = any(w in self.goal.lower() for w in ["amélior", "amelior", "optimis", "manque", "évolu", "faiblesse", "parfait", "capacit", "compétenc"])
 
-        # --- TOUR 1 : IDÉATION DE MASSE ---
+        # --- TOUR 1 : IDÉATION CONSCIENTE & PARTAGE D'ÉTAT ---
         if is_improvement:
-            self.notify("👑 Nora Prime", 1, "Ouverture du Conseil IA. Ordre du jour : Analyse critique de nos compétences et axes d'amélioration réels pour Maverick.", 35)
+            self.notify(
+                "👑 Nora Prime", 1,
+                "Ouverture du Conseil IA. Ordre du jour : Analyse critique de nos compétences et axes d'amélioration réels pour Maverick.",
+                35,
+                thinking="Initialisation de la session d'amélioration. Activation de la mémoire autobiographique des agents.",
+                epistemic_status="SUPERVISION"
+            )
         else:
-            self.notify("👑 Nora Prime", 1, f"Ouverture du Conseil IA. Sujet soumis : '{self.goal}'. Analyse multidisciplinaire engagée.", 35)
+            self.notify(
+                "👑 Nora Prime", 1,
+                f"Ouverture du Conseil IA. Sujet soumis : '{self.goal}'. Analyse multidisciplinaire engagée.",
+                35,
+                thinking=f"Objectif : '{self.goal}'. Synchronisation avec le Blackboard partagé.",
+                epistemic_status="SUPERVISION"
+            )
 
         # 1. Architecte formule la stratégie
         if is_improvement:
@@ -363,8 +403,23 @@ class RecursiveSwarmSession:
         else:
             arch_prompt = f"Objectif de Maverick : '{self.goal}'. Propose une décomposition stratégique claire et structurée en étapes logiques. Ne répète pas sa consigne mot à mot."
 
-        arch_plan = call_neural_node(self.client, AGENT_METADATA["Architecte"]["system_prompt"], arch_prompt, temperature=0.3)
-        self.notify("🏛️ Agent Architecte", 1, f"Stratégie globale :\n{arch_plan}", 50)
+        arch_turn = nora_cognitive_engine.generate_conscious_turn(
+            client=self.client,
+            agent_id="architecte",
+            base_system_prompt=AGENT_METADATA["Architecte"]["system_prompt"],
+            mission_goal=self.goal,
+            turn_prompt=arch_prompt,
+            shared_context=self.blackboard.get_summary_context(),
+            temperature=0.25
+        )
+        self.blackboard.post_fact("🏛️ Agent Architecte", arch_turn["response"][:160])
+        self.notify(
+            "🏛️ Agent Architecte", 1,
+            f"Stratégie globale :\n{arch_turn['response']}",
+            50,
+            thinking=arch_turn["thinking"],
+            epistemic_status=arch_turn["epistemic_status"]
+        )
 
         # 2. Exécuteur propose les actions concrètes
         if is_improvement:
@@ -374,12 +429,27 @@ class RecursiveSwarmSession:
                 "(fichiers, PowerShell, web, contrôle PC) sans simulation ni délai inutile. Sois direct et concret."
             )
         else:
-            exec_prompt = f"Stratégie de l'Architecte :\n{arch_plan}\nPropose les opérations système exactes (fichiers, outils réels, commandes PowerShell sans console)."
+            exec_prompt = f"Stratégie de l'Architecte :\n{arch_turn['response']}\nPropose les opérations système exactes (fichiers, outils réels, commandes PowerShell sans console)."
 
-        exec_plan = call_neural_node(self.client, AGENT_METADATA["Executeur"]["system_prompt"], exec_prompt, temperature=0.2)
-        self.notify("⚡ Agent Exécuteur", 1, f"Plan opérationnel :\n{exec_plan}", 65)
+        exec_turn = nora_cognitive_engine.generate_conscious_turn(
+            client=self.client,
+            agent_id="executeur",
+            base_system_prompt=AGENT_METADATA["Executeur"]["system_prompt"],
+            mission_goal=self.goal,
+            turn_prompt=exec_prompt,
+            shared_context=self.blackboard.get_summary_context(),
+            temperature=0.20
+        )
+        self.blackboard.post_fact("⚡ Agent Exécuteur", exec_turn["response"][:160])
+        self.notify(
+            "⚡ Agent Exécuteur", 1,
+            f"Plan opérationnel :\n{exec_turn['response']}",
+            65,
+            thinking=exec_turn["thinking"],
+            epistemic_status=exec_turn["epistemic_status"]
+        )
 
-        # 3. Maker 3D vérifie la compatibilité matérielle / fabrication si pertinent
+        # 3. Maker 3D si pertinent
         if is_improvement or any(w in self.goal.lower() for w in ["3d", "print", "impression", "materiel", "boitier", "stl", "maker", "projet"]):
             if is_improvement:
                 maker_prompt = (
@@ -388,11 +458,32 @@ class RecursiveSwarmSession:
                 )
             else:
                 maker_prompt = f"Mission : '{self.goal}'. Apporte tes conseils de fabrication 3D, matériaux et profils de tranchage."
-            maker_plan = call_neural_node(self.client, AGENT_METADATA["Maker 3D"]["system_prompt"], maker_prompt, temperature=0.3)
-            self.notify("🔧 Agent Maker 3D", 1, f"Analyse atelier & 3D :\n{maker_plan}", 72)
+            maker_turn = nora_cognitive_engine.generate_conscious_turn(
+                client=self.client,
+                agent_id="maker3d",
+                base_system_prompt=AGENT_METADATA["Maker 3D"]["system_prompt"],
+                mission_goal=self.goal,
+                turn_prompt=maker_prompt,
+                shared_context=self.blackboard.get_summary_context(),
+                temperature=0.25
+            )
+            self.blackboard.post_fact("🔧 Agent Maker 3D", maker_turn["response"][:160])
+            self.notify(
+                "🔧 Agent Maker 3D", 1,
+                f"Analyse atelier & 3D :\n{maker_turn['response']}",
+                72,
+                thinking=maker_turn["thinking"],
+                epistemic_status=maker_turn["epistemic_status"]
+            )
 
         # --- TOUR 2 : DÉBAT RÉCURSIF & CONTRÔLE CONTRADICTOIRE ---
-        self.notify("👑 Nora Prime", 2, "Tour 2 : Passage au crible récursif par le Gardien et le Critique.", 78)
+        self.notify(
+            "👑 Nora Prime", 2,
+            "Tour 2 : Passage au crible récursif par le Gardien et le Critique.",
+            78,
+            thinking="Lancement du crible de sécurité et de contestation d'erreurs.",
+            epistemic_status="SUPERVISION"
+        )
 
         # 4. Gardien pose les contraintes de sécurité
         if is_improvement:
@@ -401,10 +492,25 @@ class RecursiveSwarmSession:
                 "(ex: bac à sable de pré-validation des scripts, audit Windows Defender, zéro fuite de données) ?"
             )
         else:
-            guard_prompt = f"Opérations prévues :\n{exec_plan}\nIdentifie les risques de sécurité ou d'intégrité pour le PC de Maverick et pose tes exigences."
+            guard_prompt = f"Opérations prévues :\n{exec_turn['response']}\nIdentifie les risques de sécurité ou d'intégrité pour le PC de Maverick et pose tes exigences."
 
-        guard_eval = call_neural_node(self.client, AGENT_METADATA["Gardien"]["system_prompt"], guard_prompt, temperature=0.1)
-        self.notify("🛡️ Agent Gardien", 2, f"Audit de sécurité :\n{guard_eval}", 84)
+        guard_turn = nora_cognitive_engine.generate_conscious_turn(
+            client=self.client,
+            agent_id="gardien",
+            base_system_prompt=AGENT_METADATA["Gardien"]["system_prompt"],
+            mission_goal=self.goal,
+            turn_prompt=guard_prompt,
+            shared_context=self.blackboard.get_summary_context(),
+            temperature=0.10
+        )
+        self.blackboard.post_constraint("🛡️ Agent Gardien", guard_turn["response"][:160])
+        self.notify(
+            "🛡️ Agent Gardien", 2,
+            f"Audit de sécurité :\n{guard_turn['response']}",
+            84,
+            thinking=guard_turn["thinking"],
+            epistemic_status=guard_turn["epistemic_status"]
+        )
 
         # 5. Critique attaque les angles morts
         if is_improvement:
@@ -415,23 +521,44 @@ class RecursiveSwarmSession:
             )
         else:
             critic_prompt = f"""Voici les propositions de l'essaim pour '{self.goal}' :
-ARCHITECTE : {arch_plan}
-EXÉCUTEUR : {exec_plan}
-GARDIEN : {guard_eval}
+ARCHITECTE : {arch_turn['response']}
+EXÉCUTEUR : {exec_turn['response']}
+GARDIEN : {guard_turn['response']}
 
 Attaque ce plan de manière critique et rigoureuse :
 - Quels sont les angles morts ou risques de régression ?
 - Que manque-t-il pour un résultat concret et tangible pour Maverick ?
 - Donne tes exigences de correction immédiates."""
 
-        criticism = call_neural_node(self.client, AGENT_METADATA["Critique"]["system_prompt"], critic_prompt, temperature=0.4)
-        self.notify("🧐 Agent Critique", 2, f"Objections récursives soulevées :\n{criticism}", 88)
+        critic_turn = nora_cognitive_engine.generate_conscious_turn(
+            client=self.client,
+            agent_id="critique",
+            base_system_prompt=AGENT_METADATA["Critique"]["system_prompt"],
+            mission_goal=self.goal,
+            turn_prompt=critic_prompt,
+            shared_context=self.blackboard.get_summary_context(),
+            temperature=0.35
+        )
+        self.blackboard.post_fact("🧐 Agent Critique", critic_turn["response"][:160])
+        self.notify(
+            "🧐 Agent Critique", 2,
+            f"Objections récursives soulevées :\n{critic_turn['response']}",
+            88,
+            thinking=critic_turn["thinking"],
+            epistemic_status=critic_turn["epistemic_status"]
+        )
 
         # --- TOUR 3 : RAFFINEMENT & CONVERGENCE UNANIME ---
-        self.notify("👑 Nora Prime", 3, "Tour 3 : Intégration des corrections et convergence unanime de l'essaim.", 92)
+        self.notify(
+            "👑 Nora Prime", 3,
+            "Tour 3 : Intégration des corrections et convergence unanime de l'essaim.",
+            92,
+            thinking="Arbitrage final. Synthèse structurée en actions vérifiables.",
+            epistemic_status="SUPERVISION"
+        )
 
         refine_prompt = f"""L'Agent Critique a posé ces exigences :
-{criticism}
+{critic_turn['response']}
 
 En symbiose parfaite, intègre les critiques et formule le PLAN D'ACTION DÉFINITIF prêt à être exécuté sur le système.
 RÈGLE STRICTE : Ne répète en aucun cas la question de Maverick mot pour mot dans les étapes. Formule 2 à 4 étapes concrètes, techniques et directement applicables.
@@ -440,13 +567,34 @@ Format JSON strict :
   {{"step": 1, "action": "nom_action", "details": "description concise de l'acte concrétisé"}}
 ]
 """
-        final_solution = call_neural_node(self.client, AGENT_METADATA["Architecte"]["system_prompt"], refine_prompt, temperature=0.2)
-        self.notify("🏛️ Agent Architecte", 3, f"Plan optimisé après intégration des critiques :\n{final_solution}", 96)
+        arch_final_turn = nora_cognitive_engine.generate_conscious_turn(
+            client=self.client,
+            agent_id="architecte",
+            base_system_prompt=AGENT_METADATA["Architecte"]["system_prompt"],
+            mission_goal=self.goal,
+            turn_prompt=refine_prompt,
+            shared_context=self.blackboard.get_summary_context(),
+            temperature=0.15
+        )
+        final_solution = arch_final_turn["response"]
+        self.notify(
+            "🏛️ Agent Architecte", 3,
+            f"Plan optimisé après intégration des critiques :\n{final_solution}",
+            96,
+            thinking=arch_final_turn["thinking"],
+            epistemic_status=arch_final_turn["epistemic_status"]
+        )
 
         # Déclaration de consensus unanime par Nora Prime
         self.consensus_reached = True
         self.consensus_score = 99
-        self.notify("👑 Nora Prime", 3, "✨ Consensus unanime atteint à 99% ! Le plan d'action est prêt pour exécution immédiate par Maverick.", 99)
+        self.notify(
+            "👑 Nora Prime", 3,
+            "✨ Consensus unanime atteint à 99% ! Le plan d'action est prêt pour exécution immédiate par Maverick.",
+            99,
+            thinking="Consensus validé. Vérification de l'admissibilité du plan d'action.",
+            epistemic_status="CONSENSUS_VALIDÉ"
+        )
 
         # Extraction JSON robuste
         actions = []
@@ -478,58 +626,99 @@ Format JSON strict :
         }
 
     def execute_autonomous_consensus(self, callback_step: Optional[Callable] = None) -> str:
-        """Exécute réellement les actions arrêtées par consensus avec les vrais outils système Windows / Web."""
+        """
+        Exécute réellement les actions arrêtées par consensus avec les vrais outils système Windows / Web.
+        Produit un rapport d'exécution strict avec preuves matérielles réelles (Zéro Illusion).
+        """
         if not self.consensus_reached:
             self.run_recursive_debate()
 
-        results_log = []
+        receipts_list: List[nora_receipts.ExecutionReceipt] = []
+
         for i, item in enumerate(self.final_action_plan):
             step_num = item.get("step", i + 1)
+            action_name = item.get("action", f"action_{step_num}")
             action_desc = item.get("details", str(item))
+            
             if callback_step:
                 callback_step(f"⚡ [Étape {step_num}] Déploiement : {action_desc[:70]}...")
 
-            try:
-                exec_result = execute_step_with_tools(self.client, action_desc, callback_step)
-                results_log.append(f"✔ Étape {step_num} validée : {action_desc}\n  ↳ Résultat : {exec_result}")
-            except Exception as e:
-                results_log.append(f"⚠ Étape {step_num} (erreur d'exécution) : {e}")
+            receipt = execute_step_with_tools(
+                client=self.client,
+                step_index=step_num,
+                action_name=action_name,
+                step_instruction=action_desc,
+                callback_step=callback_step
+            )
+            receipts_list.append(receipt)
 
-        summary = (
-            f"🎯 Plan d'action exécuté par l'Essaim Neuronal de Nora (Consensus : {self.consensus_score} %) :\n"
-            + "\n".join(results_log)
-        )
+            if callback_step:
+                callback_step(receipt.format_console_badge())
+
+            # Enregistrer l'expérience dans la mémoire de l'Exécuteur
+            nora_agent_memory.record_agent_experience(
+                agent_id="executeur",
+                goal=action_desc,
+                stance=f"Outil appelé: {receipt.tool_called or 'Aucun'}",
+                tools_used=[receipt.tool_called] if receipt.tool_called else [],
+                verified_success=receipt.verified_on_disk,
+                learning=f"Étape '{action_name}' traitée avec statut {receipt.status}."
+            )
+
+        # Déterminer la réalité matérielle globale
+        has_verified_changes = any(r.verified_on_disk for r in receipts_list)
+        
+        lines = []
+        if has_verified_changes:
+            lines.append("🎯 ✔ ACTIONS PHYSIQUES VÉRIFIÉES SUR LE DISQUE :")
+        else:
+            lines.append("🎯 ⚠ VALIDATION CONCEPTUELLE UNIQUEMENT (Aucune modification disque) :")
+
+        for r in receipts_list:
+            if r.verified_on_disk:
+                target_str = f" ({r.target_path})" if r.target_path else ""
+                lines.append(f"  • [Étape {r.step_index}] {r.action_name} -> {r.status}{target_str} [{r.duration_ms:.1f}ms]")
+            else:
+                lines.append(f"  • [Étape {r.step_index}] {r.action_name} -> {r.status} (Proposition théorique sans modification)")
+
+        summary = "\n".join(lines)
 
         try:
-            memory_manager.record_mission(self.goal, summary)
+            memory_manager.record_completed_mission(self.goal, summary)
         except Exception:
             pass
 
         return summary
 
+# =====================================================================
+# CONSULTATION TÊTE-À-TÊTE D'UN AGENT (AVEC MÉMOIRE & CONSCIENCE)
+# =====================================================================
+
 def consult_single_agent(agent_name: str, question: str) -> str:
     """Permet à Maverick de dialoguer en tête-à-tête avec un agent précis de l'essaim."""
     meta = None
+    agent_id = "prime"
     for k, v in AGENT_METADATA.items():
         if k.lower() in agent_name.lower() or v["short_name"].lower() in agent_name.lower():
             meta = v
+            agent_id = v["id"]
             break
 
     if not meta:
         return f"Agent '{agent_name}' introuvable."
 
     client = get_genai_client()
-    sys_prompt = (
-        meta["system_prompt"]
-        + "\nTu t'adresses directement à Maverick en 1-à-1 avec vouvoiement, respect et expertise technique de pointe."
-        + "\nRÈGLES D'OR :"
-        + "\n1. Ne répète JAMAIS sa question ni ne commence par paraphraser ce qu'il a dit."
-        + "\n2. Réponds directement avec du contenu tangible, des solutions précises et des propositions réelles dans ton domaine."
-        + "\n3. Si Maverick demande ce qu'on peut améliorer chez toi ou chez les agents : donne tes vraies pistes d'optimisation technique (outils, vitesse, automatisation) et ce que tu es prêt à mettre en place."
+    turn = nora_cognitive_engine.generate_conscious_turn(
+        client=client,
+        agent_id=agent_id,
+        base_system_prompt=meta["system_prompt"] + "\nTu t'adresses directement à Maverick en 1-à-1 avec vouvoiement et rigueur absolue.",
+        mission_goal=question,
+        turn_prompt=f"Question directe de Maverick : '{question}'. Réponds de manière concise, précise, experte et directement utile sans aucune reformulation.",
+        shared_context="Consultation directe en tête-à-tête.",
+        temperature=0.3
     )
-    user_prompt = f"Question directe de Maverick :\n'{question}'\nRéponds de manière concise, précise, experte et directement utile."
 
-    return call_neural_node(client, sys_prompt, user_prompt, temperature=0.3)
+    return turn["response"]
 
 def run_recursive_swarm(goal: str, callback_event: Optional[Callable] = None, callback_step: Optional[Callable] = None) -> str:
     """Point d'entrée principal pour déclencher une mission via l'essaim neuronal récursif."""
@@ -541,7 +730,7 @@ def run_recursive_swarm(goal: str, callback_event: Optional[Callable] = None, ca
         return f"Erreur de l'essaim neuronal : {e}"
 
 if __name__ == "__main__":
-    print("Test du Moteur d'Essaim avec 6 Agents...")
+    print("Test de l'Essaim Cognitif Haute Fidélité...")
     print(f"Agents configurés : {list(AGENT_METADATA.keys())}")
     ans = consult_single_agent("Maker 3D", "Quels sont les meilleurs réglages pour imprimer du PETG sans fils ?")
-    print(f"\nConsultation Maker 3D :\n{ans}")
+    print(f"\nConsultation Maker 3D (avec conscience & mémoire) :\n{ans}")

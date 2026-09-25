@@ -178,7 +178,7 @@ class NoraCompanionManager:
                     "\"dialogue\": \"Ce que tu dis avec émotion et respect à Maverick pour lui présenter ton animal (adresse-toi à Maverick avec vouvoiement)\"}"
                 )
                 resp = client.models.generate_content(
-                    model="gemini-3.6-flash",
+                    model="gemini-3.5-flash-lite",
                     contents=prompt,
                     config=types.GenerateContentConfig(temperature=0.7)
                 )

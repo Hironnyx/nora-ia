@@ -1,0 +1,12 @@
+[
+  {
+    "timestamp": "2026-09-25 01:10:19",
+    "goal": "Vérification de l'intégrité Windows",
+    "stance": "Exécution réussie de Get-Process sans fenêtre CMD.",
+    "tools_used": [
+      "run_powershell"
+    ],
+    "verified_success": true,
+    "learning": "Les commandes PowerShell courtes s'exécutent en < 50ms sans console."
+  }
+]

@@ -1,0 +1,8 @@
+{
+  "learnings": [
+    "Interdire formellement toute commande destructive sans confirmation explicite.",
+    "Protéger les clés d'API dans .env et ne jamais les afficher en clair dans les logs.",
+    "Vérifier la validité des chemins de fichiers avant toute opération d'écriture."
+  ],
+  "trusted_methods": []
+}

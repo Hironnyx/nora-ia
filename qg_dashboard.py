@@ -1042,9 +1042,12 @@ class QGDashboard(QWidget):
         try:
             if hasattr(self, 'btn_execute_swarm_plan') and self.btn_execute_swarm_plan:
                 self.btn_execute_swarm_plan.setEnabled(True)
-                self.btn_execute_swarm_plan.setText("✔ PLAN EXÉCUTÉ AVEC SUCCÈS")
+                self.btn_execute_swarm_plan.setText("✔ TRAITEMENT TERMINÉ")
             if hasattr(self, 'swarm_console') and self.swarm_console:
-                self.swarm_console.append("<br><b style='color:#10b981; font-size:12px;'>🎉 TOUTES LES ACTIONS DU PLAN ONT ÉTÉ CONCRÉTISÉES !</b>")
+                if "ACTIONS PHYSIQUES VÉRIFIÉES" in summary or "PREUVE PHYSIQUE" in summary:
+                    self.swarm_console.append("<br><b style='color:#10b981; font-size:12px;'>🎉 ACTIONS PHYSIQUES CONCRÉTISÉES ET VÉRIFIÉES SUR LE DISQUE !</b>")
+                else:
+                    self.swarm_console.append("<br><b style='color:#f59e0b; font-size:12px;'>⚠ DÉPLOIEMENT CONCEPTUEL : Aucun fichier n'a été modifié et aucun outil système n'a été appelé sur le PC.</b>")
                 for line in summary.split("\n"):
                     if line.strip():
                         self.swarm_console.append(f"  {line}")

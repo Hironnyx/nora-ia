@@ -1,0 +1,9 @@
+{
+  "learnings": [
+    "Zéro console CMD intempestive : utiliser l'exécution masquée Windows.",
+    "Toujours vérifier sur le disque l'existence du fichier avant et après modification.",
+    "Si une consigne est trop abstraite, demander des précisions au lieu de simuler un succès.",
+    "Les commandes PowerShell courtes s'exécutent en < 50ms sans console."
+  ],
+  "trusted_methods": []
+}

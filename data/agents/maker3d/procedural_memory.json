@@ -1,0 +1,8 @@
+{
+  "learnings": [
+    "PrusaSlicer CLI permet de trancher en arrière-plan en moins d'une seconde.",
+    "Le remplissage Gyroid offre la meilleure résistance isotrope pour les pièces mécaniques.",
+    "Vérifier la compatibilité buse/matériau avant d'envoyer un fichier à l'impression."
+  ],
+  "trusted_methods": []
+}
