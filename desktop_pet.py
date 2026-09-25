@@ -1508,21 +1508,26 @@ class NoraMascot(QWidget):
             QApplication.quit()
 
 def run_app():
-    app = QApplication(sys.argv)
-    mascot = NoraMascot()
-    mascot.show()
+    try:
+        app = QApplication(sys.argv)
+        mascot = NoraMascot()
+        mascot.show()
 
-    # Démarrage ultra-rapide non bloquant du serveur mobile en arrière-plan
-    def _start_bg_server():
-        try:
-            import nora_server
-            nora_server.start_server_background(8000)
-        except Exception as e:
-            print(f"Avertissement serveur mobile: {e}")
+        # Démarrage ultra-rapide non bloquant du serveur mobile en arrière-plan
+        def _start_bg_server():
+            try:
+                import nora_server
+                nora_server.start_server_background(8000)
+            except Exception as e:
+                print(f"Avertissement serveur mobile: {e}")
 
-    threading.Thread(target=_start_bg_server, daemon=True).start()
+        threading.Thread(target=_start_bg_server, daemon=True).start()
 
-    sys.exit(app.exec())
+        sys.exit(app.exec())
+    except Exception:
+        import traceback
+        with open("crash_log.txt", "w", encoding="utf-8") as f:
+            traceback.print_exc(file=f)
 
 if __name__ == "__main__":
     run_app()
