@@ -1557,6 +1557,28 @@ class QGDashboard(QWidget):
 
         return p
 
+    def _get_project_btn_style(self, active: bool) -> str:
+        if active:
+            return """
+                QPushButton {
+                    background: rgba(37, 99, 235, 0.25);
+                    border: 1px solid #38bdf8;
+                    border-radius: 8px;
+                }
+            """
+        else:
+            return """
+                QPushButton {
+                    background: rgba(30, 41, 59, 0.7);
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    border-radius: 8px;
+                }
+                QPushButton:hover {
+                    background: rgba(56, 189, 248, 0.15);
+                    border-color: rgba(56, 189, 248, 0.4);
+                }
+            """
+
     def refresh_projects_list(self):
         # Vider les éléments actuels
         while self.plf_layout.count():
@@ -1565,32 +1587,54 @@ class QGDashboard(QWidget):
             if w:
                 w.deleteLater()
 
+        self.project_btns = {}
+        self.project_labels = {}
         projs = project_manager.project_manager.get_all()
         for p in projs:
-            btn = QPushButton(f"<b>{p['title']}</b><br><span style='font-size:9px; color:#94a3b8;'>[{p['category']}] • {p['progress']}%</span>")
-            btn.setFixedHeight(48)
+            pid = p["id"]
+            btn = QPushButton()
+            btn.setFixedHeight(50)
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn.setStyleSheet("""
-                QPushButton {
-                    background: rgba(30, 41, 59, 0.7);
-                    color: #f1f5f9;
-                    border: 1px solid rgba(56, 189, 248, 0.3);
-                    border-radius: 8px;
-                    text-align: left;
-                    padding-left: 8px;
-                }
-                QPushButton:hover {
-                    background: rgba(56, 189, 248, 0.2);
-                    border-color: #38bdf8;
-                }
-            """)
-            btn.clicked.connect(lambda checked, pid=p["id"]: self.show_project_detail(pid))
+            is_sel = (hasattr(self, 'current_project_id') and self.current_project_id == pid)
+            btn.setStyleSheet(self._get_project_btn_style(is_sel))
+
+            b_layout = QVBoxLayout(btn)
+            b_layout.setContentsMargins(10, 5, 10, 5)
+            b_layout.setSpacing(2)
+
+            lbl_title = QLabel(str(p.get('title', 'Projet sans titre')))
+            lbl_title.setStyleSheet("color: #38bdf8; font-weight: 800; font-size: 11px; background: transparent; border: none;" if is_sel else "color: #f1f5f9; font-weight: 700; font-size: 11px; background: transparent; border: none;")
+            lbl_title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+            lbl_sub = QLabel(f"[{p.get('category', 'Projet')}] • {p.get('progress', 0)}%")
+            lbl_sub.setStyleSheet("color: #bae6fd; font-size: 9px; background: transparent; border: none;" if is_sel else "color: #94a3b8; font-size: 9px; background: transparent; border: none;")
+            lbl_sub.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+            b_layout.addWidget(lbl_title)
+            b_layout.addWidget(lbl_sub)
+
+            btn.clicked.connect(lambda checked, pid_val=pid: self.show_project_detail(pid_val))
             self.plf_layout.addWidget(btn)
+            self.project_btns[pid] = btn
+            self.project_labels[pid] = (lbl_title, lbl_sub)
 
         self.plf_layout.addStretch()
 
     def show_project_detail(self, project_id: str):
         self.current_project_id = project_id
+        if hasattr(self, 'project_btns') and hasattr(self, 'project_labels'):
+            for pid, b in self.project_btns.items():
+                is_active = (pid == project_id)
+                b.setStyleSheet(self._get_project_btn_style(is_active))
+                if pid in self.project_labels:
+                    lt, ls = self.project_labels[pid]
+                    if is_active:
+                        lt.setStyleSheet("color: #38bdf8; font-weight: 800; font-size: 11px; background: transparent; border: none;")
+                        ls.setStyleSheet("color: #bae6fd; font-size: 9px; background: transparent; border: none;")
+                    else:
+                        lt.setStyleSheet("color: #f1f5f9; font-weight: 700; font-size: 11px; background: transparent; border: none;")
+                        ls.setStyleSheet("color: #94a3b8; font-size: 9px; background: transparent; border: none;")
+
         p = project_manager.project_manager.get_project(project_id)
         if not p:
             return
@@ -2309,6 +2353,7 @@ class QGDashboard(QWidget):
         outfits_layout.setSpacing(8)
 
         self.outfit_btns = {}
+        self.outfit_labels = {}
         outfits_list = [
             ("franxx", "Pilote Franxx", "Combinaison rouge standard"),
             ("school", "Tenue Élève", "Uniforme marine sobre"),
@@ -2318,13 +2363,34 @@ class QGDashboard(QWidget):
         ]
 
         for code, label, sub in outfits_list:
-            btn = QPushButton(f"<b>{label}</b><br><span style='font-size:9px;'>{sub}</span>")
-            btn.setFixedHeight(50)
+            btn = QPushButton()
+            btn.setFixedHeight(52)
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-            btn.setStyleSheet(self._get_outfit_btn_style(code == self.current_outfit))
+            is_active = (code == self.current_outfit)
+            btn.setStyleSheet(self._get_outfit_btn_style(is_active))
+
+            b_layout = QVBoxLayout(btn)
+            b_layout.setContentsMargins(8, 5, 8, 5)
+            b_layout.setSpacing(2)
+            b_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+
+            lbl_title = QLabel(label)
+            lbl_title.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_title.setStyleSheet("color: #38bdf8; font-weight: 800; font-size: 11px; background: transparent; border: none;" if is_active else "color: #f8fafc; font-weight: 700; font-size: 11px; background: transparent; border: none;")
+            lbl_title.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+            lbl_sub = QLabel(sub)
+            lbl_sub.setAlignment(Qt.AlignmentFlag.AlignCenter)
+            lbl_sub.setStyleSheet("color: #bae6fd; font-size: 9px; background: transparent; border: none;" if is_active else "color: #94a3b8; font-size: 9px; background: transparent; border: none;")
+            lbl_sub.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
+
+            b_layout.addWidget(lbl_title)
+            b_layout.addWidget(lbl_sub)
+
             btn.clicked.connect(lambda checked, c=code: self.on_select_outfit(c))
             outfits_layout.addWidget(btn)
             self.outfit_btns[code] = btn
+            self.outfit_labels[code] = (lbl_title, lbl_sub)
 
         layout.addLayout(outfits_layout)
 
@@ -2377,9 +2443,8 @@ class QGDashboard(QWidget):
         if active:
             return """
                 QPushButton {
-                    background: rgba(99, 102, 241, 0.2);
-                    color: #e0e7ff;
-                    border: 1px solid #6366f1;
+                    background: rgba(37, 99, 235, 0.25);
+                    border: 1px solid #38bdf8;
                     border-radius: 8px;
                 }
             """
@@ -2387,14 +2452,12 @@ class QGDashboard(QWidget):
             return """
                 QPushButton {
                     background: rgba(30, 41, 59, 0.7);
-                    color: #94a3b8;
                     border: 1px solid rgba(255, 255, 255, 0.08);
                     border-radius: 8px;
                 }
                 QPushButton:hover {
                     background: rgba(51, 65, 85, 0.8);
-                    border-color: rgba(99, 102, 241, 0.5);
-                    color: #f1f5f9;
+                    border-color: rgba(56, 189, 248, 0.5);
                 }
             """
 
@@ -2407,7 +2470,16 @@ class QGDashboard(QWidget):
 
     def update_outfit_buttons(self, active_code: str):
         for code, btn in self.outfit_btns.items():
-            btn.setStyleSheet(self._get_outfit_btn_style(code == active_code))
+            is_active = (code == active_code)
+            btn.setStyleSheet(self._get_outfit_btn_style(is_active))
+            if hasattr(self, 'outfit_labels') and code in self.outfit_labels:
+                lt, ls = self.outfit_labels[code]
+                if is_active:
+                    lt.setStyleSheet("color: #38bdf8; font-weight: 800; font-size: 11px; background: transparent; border: none;")
+                    ls.setStyleSheet("color: #bae6fd; font-size: 9px; background: transparent; border: none;")
+                else:
+                    lt.setStyleSheet("color: #f8fafc; font-weight: 700; font-size: 11px; background: transparent; border: none;")
+                    ls.setStyleSheet("color: #94a3b8; font-size: 9px; background: transparent; border: none;")
 
     def on_trigger_animation(self, anim_name: str):
         dialogs = {
