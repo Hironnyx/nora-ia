@@ -53,20 +53,37 @@ class ExecutionReceipt:
             self.verified_on_disk = False
             return
 
-        # 1. Cas d'écriture ou modification de fichier
-        path_candidate = (
-            self.tool_args.get("file_path") or
-            self.tool_args.get("path") or
-            self.tool_args.get("destination") or
-            self.tool_args.get("folder_path")
-        )
+        # 1. Cas d'écriture ou modification de fichier ou dossier
+        path_candidate = None
+        for key in ["filepath", "file_path", "path", "destination", "folder_path", "target", "filename"]:
+            val = self.tool_args.get(key)
+            if val and isinstance(val, (str, Path)):
+                path_candidate = str(val)
+                break
+
+        if not path_candidate:
+            for val in self.tool_args.values():
+                if isinstance(val, (str, Path)) and len(str(val)) < 500:
+                    try:
+                        p_test = Path(str(val))
+                        if p_test.exists():
+                            path_candidate = str(val)
+                            break
+                    except Exception:
+                        pass
+
         if path_candidate:
-            p = Path(path_candidate)
+            try:
+                import tools_pc
+                p = tools_pc.resolve_user_path(path_candidate)
+            except Exception:
+                p = Path(path_candidate)
+
             if p.exists():
                 self.target_path = str(p.resolve())
                 self.verified_on_disk = True
-                self.status = "SUCCESS_VERIFIED"
                 if p.is_file():
+                    self.status = "SUCCESS_VERIFIED"
                     try:
                         self.file_size_bytes = p.stat().st_size
                         with open(p, "rb") as f:
@@ -149,6 +166,12 @@ class ExecutionReceipt:
                 f"<b style='color:#38bdf8;'>🔍 INSPECTION TÉLÉMÉTRIE / DONNÉES</b> "
                 f"<span style='color:#94a3b8;'>({self.tool_called})</span><br>"
                 f"  ↳ Données captées : {self.raw_output[:120]}..."
+            )
+        elif self.status == "TOOL_EXECUTED":
+            return (
+                f"<b style='color:#10b981;'>✔ ACTION MATÉRIELLE EXÉCUTÉE</b> "
+                f"<span style='color:#94a3b8;'>({self.tool_called} en {self.duration_ms:.1f}ms)</span><br>"
+                f"  ↳ Résultat : {self.raw_output[:140]}..."
             )
         elif self.status == "CONCEPTUAL_ONLY":
             return (

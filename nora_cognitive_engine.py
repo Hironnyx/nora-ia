@@ -22,11 +22,12 @@ if sys.platform == "win32":
 
 # Modèles neuronaux Gemini par ordre de disponibilité et quota actif
 COGNITIVE_MODELS = [
-    "gemini-3.5-flash-lite",
-    "gemini-flash-lite-latest",
     "gemini-3.1-flash-lite",
+    "gemma-4-26b-a4b-it",
+    "gemini-3-flash-preview",
     "gemini-3.8-flash",
-    "gemini-3.5-flash"
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite"
 ]
 
 def clean_anti_parrot(text: str, user_prompt: str) -> str:

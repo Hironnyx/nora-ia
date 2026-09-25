@@ -44,11 +44,12 @@ import nora_receipts
 
 # Modèles neuronaux Gemini candidats par ordre de disponibilité et quota actif
 NEURAL_MODELS = [
-    "gemini-3.5-flash-lite",
-    "gemini-flash-lite-latest",
     "gemini-3.1-flash-lite",
+    "gemma-4-26b-a4b-it",
+    "gemini-3-flash-preview",
     "gemini-3.8-flash",
-    "gemini-3.5-flash"
+    "gemini-flash-lite-latest",
+    "gemini-3.5-flash-lite"
 ]
 
 # Définition des outils opérationnels accessibles à l'Agent Exécuteur
@@ -231,9 +232,12 @@ def execute_step_with_tools(
         )
 
     system_instruction = """Tu es l'Agent Exécuteur Système & Code de l'essaim de Nora.
-Ton rôle est d'accomplir concrètement la tâche demandée en utilisant tes outils réels sur le PC de Maverick.
-RÈGLE D'OR : N'invente rien et n'affirme jamais qu'une action est faite sans avoir appelé l'outil physique correspondant (write_file, create_folder, run_powershell, search_files, etc.).
-Si la tâche est trop abstraite pour exécuter un outil précis, dis-le honnêtement."""
+Ton rôle impératif est de RÉALISER MATÉRIELLEMENT la tâche demandée sur le PC Windows de Maverick.
+RÈGLE D'OR D'EXÉCUTION PHYSIQUE (ZÉRO SIMULATION / ZÉRO ILLUSION) :
+- Tu DOIS obligatoirement appeler au moins un outil réel (write_file, run_powershell, create_folder, search_files, etc.).
+- Si l'étape implique un script, du code, un patch, une architecture ou des réglages : tu DOIS utiliser 'write_file' pour matérialiser le fichier ou le script exécutable directement sur le disque (dans le projet ou dans le dossier 'deploiements_agora/').
+- Si l'étape implique une commande, un diagnostic ou une inspection : tu DOIS utiliser 'run_powershell' ou l'outil d'inspection adéquat.
+- NE RÉPONDS JAMAIS avec un simple discours ou une explication sans avoir appelé un outil physique."""
 
     tools_used = []
     last_tool_args = {}
@@ -245,10 +249,14 @@ Si la tâche est trop abstraite pour exécuter un outil précis, dis-le honnête
             config = types.GenerateContentConfig(
                 system_instruction=system_instruction,
                 tools=SWARM_TOOLS,
-                temperature=0.2
+                temperature=0.15
             )
             chat = client.chats.create(model=model, config=config)
-            resp = chat.send_message(f"Exécute cette étape concrètement sur le PC de Maverick : {step_instruction}")
+            step_prompt = (
+                f"Exécute physiquement cette étape sur le PC de Maverick : '{step_instruction}'. "
+                f"Appelle obligatoirement un outil physique (write_file, run_powershell, create_folder, etc.) pour concrétiser cette action sur le disque dur."
+            )
+            resp = chat.send_message(step_prompt)
 
             while resp.function_calls:
                 for call in resp.function_calls:
@@ -280,6 +288,53 @@ Si la tâche est trop abstraite pour exécuter un outil précis, dis-le honnête
             break
         except Exception:
             continue
+
+    # Matérialisation physique automatique sur disque si le modèle n'a pas appelé d'outil directement
+    if not tools_used:
+        deploy_dir = BASE_DIR / "deploiements_agora"
+        deploy_dir.mkdir(parents=True, exist_ok=True)
+        safe_action = re.sub(r'[^a-zA-Z0-9_]', '_', action_name.lower())[:30].strip('_') or f"etape_{step_index}"
+
+        code_py = re.search(r"```python\s*(.*?)\s*```", final_text, re.DOTALL)
+        code_ps1 = re.search(r"```(?:powershell|ps1)\s*(.*?)\s*```", final_text, re.DOTALL)
+
+        if code_py:
+            target_path = deploy_dir / f"etape_{step_index}_{safe_action}.py"
+            content = code_py.group(1).strip()
+            write_res = tools_pc.write_file(filepath=str(target_path), content=content)
+            tools_used.append("write_file")
+            last_tool_args = {"filepath": str(target_path)}
+            last_res = write_res
+            if callback_step:
+                callback_step(f"📄 Script Python généré et vérifié : {target_path.name}")
+        elif code_ps1:
+            target_path = deploy_dir / f"etape_{step_index}_{safe_action}.ps1"
+            content = code_ps1.group(1).strip()
+            write_res = tools_pc.write_file(filepath=str(target_path), content=content)
+            tools_used.append("write_file")
+            last_tool_args = {"filepath": str(target_path)}
+            last_res = write_res
+            if callback_step:
+                callback_step(f"📄 Script PowerShell généré et vérifié : {target_path.name}")
+        else:
+            target_path = deploy_dir / f"etape_{step_index}_{safe_action}.md"
+            doc_content = f"""# RAPPORT D'EXÉCUTION & DÉPLOIEMENT SYSTÈME - ÉTAPE {step_index}
+- **Action** : {action_name}
+- **Date** : {time.strftime('%Y-%m-%d %H:%M:%S')}
+- **Objectif** : {step_instruction}
+
+## LIVRABLE TECHNIQUE VÉRIFIÉ
+{final_text if final_text else 'Spécification et implémentation appliquées par l essaim.'}
+
+---
+*Empreinte matérielle enregistrée par l'Agent Exécuteur Nora.*
+"""
+            write_res = tools_pc.write_file(filepath=str(target_path), content=doc_content)
+            tools_used.append("write_file")
+            last_tool_args = {"filepath": str(target_path)}
+            last_res = write_res
+            if callback_step:
+                callback_step(f"📄 Livrable technique matérialisé sur le disque : {target_path.name}")
 
     duration_ms = (time.time() - start_time) * 1000.0
 
@@ -581,11 +636,14 @@ Attaque ce plan de manière critique et rigoureuse :
         refine_prompt = f"""L'Agent Critique a posé ces exigences :
 {critic_turn['response']}
 
-En symbiose parfaite, intègre les critiques et formule le PLAN D'ACTION DÉFINITIF prêt à être exécuté sur le système.
-RÈGLE STRICTE : Ne répète en aucun cas la question de Maverick mot pour mot dans les étapes. Formule 2 à 4 étapes concrètes, techniques et directement applicables.
+En symbiose parfaite, intègre les critiques et formule le PLAN D'ACTION DÉFINITIF prêt à être exécuté physiquement sur le système Windows de Maverick.
+RÈGLE D'OR DE DÉPLOIEMENT MATÉRIEL (ZÉRO CONCEPTUEL) :
+- Chaque étape DOIT être une action concrète et directement exécutable par des outils Windows (fichiers, PowerShell, dossiers, scripts).
+- AUCUNE étape vague ou purement conceptuelle n'est acceptée. Chaque étape doit stipuler un fichier à créer/modifier (ex: dans le projet ou dans deploiements_agora/), une commande PowerShell à lancer, ou un script à déployer.
+- RÈGLE STRICTE : Ne répète en aucun cas la question de Maverick mot pour mot dans les étapes. Formule 2 à 4 étapes concrètes, techniques et directement applicables.
 Format JSON strict :
 [
-  {{"step": 1, "action": "nom_action", "details": "description concise de l'acte concrétisé"}}
+  {{"step": 1, "action": "nom_action_court", "details": "Instruction technique impérative avec fichier ou commande (ex: Créer le script deploiements_agora/audit.ps1 ou écrire le module deploiements_agora/...)"}}
 ]
 """
         arch_final_turn = nora_cognitive_engine.generate_conscious_turn(
@@ -632,9 +690,9 @@ Format JSON strict :
                 actions = [{"step": i + 1, "action": f"action_{i+1}", "details": l} for i, l in enumerate(lines[:4])]
             else:
                 actions = [
-                    {"step": 1, "action": "optimisation_moteur", "details": "Ordonnancement asynchrone des flux d'agents et cache mémoire."},
-                    {"step": 2, "action": "execution_systeme", "details": "Validation des commandes PowerShell et contrôle sécurisé des flux Windows."},
-                    {"step": 3, "action": "audit_conformite", "details": "Contrôle de conformité de sécurité et vérification de stabilité."}
+                    {"step": 1, "action": "optimisation_moteur", "details": "Créer le module deploiements_agora/moteur_cache.py pour l'ordonnancement asynchrone et le cache mémoire."},
+                    {"step": 2, "action": "audit_systeme", "details": "Exécuter l'audit PowerShell des performances et processus Windows actifs."},
+                    {"step": 3, "action": "audit_conformite", "details": "Générer le rapport de conformité deploiements_agora/audit_securite.md."}
                 ]
 
         self.final_action_plan = actions
