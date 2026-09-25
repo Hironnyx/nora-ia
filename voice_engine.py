@@ -114,6 +114,34 @@ def _speech_worker_loop():
             text, on_start, on_end, done_event = item
             _is_speaking = True
 
+            # 1. Vérification dans le cache audio instantané Zero Two (0 ms de latence)
+            try:
+                import nora_audio_cache
+                cached_audio = nora_audio_cache.get_cached_audio(text)
+                if cached_audio and cached_audio.exists():
+                    if on_start:
+                        try:
+                            on_start()
+                        except Exception:
+                            pass
+                    if sys.platform == "win32":
+                        try:
+                            import winsound
+                            winsound.PlaySound(str(cached_audio), winsound.SND_FILENAME)
+                        except Exception:
+                            pass
+                    if on_end:
+                        try:
+                            on_end()
+                        except Exception:
+                            pass
+                    if done_event:
+                        done_event.set()
+                    _is_speaking = False
+                    continue
+            except Exception:
+                pass
+
             audio_file = AUDIO_DIR / f"speech_{int(time.time()*1000)}.mp3"
             final_audio = audio_file
 
@@ -147,6 +175,14 @@ def _speech_worker_loop():
                         )
                         if wav_file.exists() and wav_file.stat().st_size > 1000:
                             final_audio = wav_file
+
+                # Enregistrement automatique dans le cache audio Zero Two
+                if final_audio and final_audio.exists():
+                    try:
+                        import nora_audio_cache
+                        nora_audio_cache.save_cached_audio(text, final_audio)
+                    except Exception:
+                        pass
 
                 if on_start:
                     try:

@@ -252,6 +252,37 @@ class Print3DManager:
             t[k] = v
         self._save_state()
 
+    def analyze_gcode(self, filepath: str) -> Dict[str, Any]:
+        """Audite la sécurité et les paramètres techniques d'un fichier G-code."""
+        try:
+            import nora_gcode_analyzer
+            return nora_gcode_analyzer.analyze_gcode_file(filepath)
+        except Exception as e:
+            return {"success": False, "error": str(e)}
+
+    def fetch_camera_snapshot(self, endpoint: Optional[str] = None) -> Optional[bytes]:
+        """Récupère instantanément un instantané de la caméra Klipper/Moonraker ou OctoPrint."""
+        import requests
+        target_url = endpoint or self.get_telemetry().get("endpoint", "")
+        if not target_url:
+            return None
+
+        clean_base = target_url.rstrip("/")
+        candidates = [
+            f"{clean_base}/webcam/?action=snapshot",
+            f"{clean_base}/webcam/snapshot",
+            f"{clean_base}:8080/?action=snapshot",
+            f"{clean_base}/server/files/snapshot.jpg"
+        ]
+        for url in candidates:
+            try:
+                resp = requests.get(url, timeout=2.5)
+                if resp.status_code == 200 and len(resp.content) > 1000:
+                    return resp.content
+            except Exception:
+                continue
+        return None
+
     # =========================================================================
     # CONSEILLER IA EN TRANCHAGE & RÉSOUDRE LES DÉFAUTS
     # =========================================================================

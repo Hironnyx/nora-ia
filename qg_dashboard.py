@@ -24,7 +24,8 @@ from PyQt6.QtWidgets import (
     QWidget, QLabel, QPushButton, QVBoxLayout, QHBoxLayout,
     QProgressBar, QFrame, QScrollArea, QGraphicsDropShadowEffect,
     QLineEdit, QStackedWidget, QTextEdit, QSlider, QGridLayout,
-    QCheckBox, QComboBox, QDialog, QFileDialog, QMessageBox, QSpinBox
+    QCheckBox, QComboBox, QDialog, QFileDialog, QMessageBox, QSpinBox,
+    QListWidget, QListWidgetItem, QApplication
 )
 from PyQt6.QtCore import Qt, QTimer, pyqtSignal, QPoint, QSize
 from PyQt6.QtGui import QColor, QFont, QCursor, QPixmap, QIcon
@@ -164,6 +165,7 @@ class QGDashboard(QWidget):
     project_advice_signal = pyqtSignal(str)
     swarm_exec_log_signal = pyqtSignal(str)
     swarm_exec_finished_signal = pyqtSignal(str)
+    proactive_context_signal = pyqtSignal(str, str, str)
 
     def __init__(self, parent_mascot=None):
         super().__init__()
@@ -178,6 +180,14 @@ class QGDashboard(QWidget):
         self.project_advice_signal.connect(self._on_project_advice_received)
         self.swarm_exec_log_signal.connect(self._on_swarm_exec_log)
         self.swarm_exec_finished_signal.connect(self._on_swarm_exec_finished)
+        self.proactive_context_signal.connect(self._on_proactive_context_ui)
+
+        try:
+            import nora_proactive_vision
+            nora_proactive_vision.proactive_engine.add_listener(self._on_proactive_event_received)
+            nora_proactive_vision.proactive_engine.start()
+        except Exception as e:
+            print(f"Avertissement veille contextuelle : {e}")
 
         self.init_ui()
 
@@ -803,6 +813,134 @@ class QGDashboard(QWidget):
         self.swarm_console.setPlainText("👑 [Nora Prime] Agora prête. Les 6 agents spécialistes attendent vos consignes pour délibérer.")
         arena_layout.addWidget(self.swarm_console, stretch=1)
 
+        # --- SECTION LIVRABLES & DÉPLOIEMENTS PHYSIQUES SUR LE DISQUE (AXE 1) ---
+        deploy_box = QFrame()
+        deploy_box.setFixedHeight(135)
+        deploy_box.setStyleSheet("""
+            QFrame {
+                background: rgba(15, 23, 42, 0.75);
+                border: 1px solid rgba(16, 185, 129, 0.3);
+                border-radius: 8px;
+            }
+        """)
+        deploy_layout = QVBoxLayout(deploy_box)
+        deploy_layout.setContentsMargins(8, 6, 8, 6)
+        deploy_layout.setSpacing(4)
+
+        # En-tête déploiements
+        dh_layout = QHBoxLayout()
+        dh_layout.setSpacing(8)
+        self.lbl_deploy_title = QLabel("📦 LIVRABLES & DÉPLOIEMENTS PHYSIQUES (deploiements_agora/)")
+        self.lbl_deploy_title.setStyleSheet("color: #10b981; font-weight: bold; font-size: 10px; border: none;")
+        dh_layout.addWidget(self.lbl_deploy_title)
+
+        dh_layout.addStretch()
+
+        self.btn_open_deploy_dir = QPushButton("📂 Dossier Windows")
+        self.btn_open_deploy_dir.setFixedHeight(22)
+        self.btn_open_deploy_dir.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_open_deploy_dir.setStyleSheet("""
+            QPushButton {
+                background: rgba(30, 41, 59, 0.8); color: #38bdf8; font-size: 9px; font-weight: bold;
+                border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.3); padding: 2px 8px;
+            }
+            QPushButton:hover { background: #38bdf8; color: #0f172a; }
+        """)
+        self.btn_open_deploy_dir.clicked.connect(self.open_deployments_directory)
+        dh_layout.addWidget(self.btn_open_deploy_dir)
+
+        self.btn_refresh_deploy = QPushButton("🔄 Actualiser")
+        self.btn_refresh_deploy.setFixedHeight(22)
+        self.btn_refresh_deploy.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_refresh_deploy.setStyleSheet("""
+            QPushButton {
+                background: rgba(30, 41, 59, 0.8); color: #94a3b8; font-size: 9px; font-weight: bold;
+                border-radius: 4px; border: 1px solid rgba(148, 163, 184, 0.3); padding: 2px 8px;
+            }
+            QPushButton:hover { background: #64748b; color: white; }
+        """)
+        self.btn_refresh_deploy.clicked.connect(self.refresh_deployments_list)
+        dh_layout.addWidget(self.btn_refresh_deploy)
+
+        deploy_layout.addLayout(dh_layout)
+
+        # Liste des déploiements et boutons d'action
+        d_body_layout = QHBoxLayout()
+        d_body_layout.setSpacing(8)
+
+        self.deploy_list_widget = QListWidget()
+        self.deploy_list_widget.setStyleSheet("""
+            QListWidget {
+                background: rgba(2, 6, 23, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.05);
+                border-radius: 6px;
+                color: #e2e8f0;
+                font-family: Consolas, monospace;
+                font-size: 10px;
+            }
+            QListWidget::item {
+                padding: 2px 6px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+            }
+            QListWidget::item:selected {
+                background: rgba(16, 185, 129, 0.25);
+                color: #34d399;
+            }
+        """)
+        self.deploy_list_widget.itemDoubleClicked.connect(self.open_selected_deployment)
+        d_body_layout.addWidget(self.deploy_list_widget, stretch=1)
+
+        # Actions latérales pour le déploiement sélectionné
+        d_actions_layout = QVBoxLayout()
+        d_actions_layout.setSpacing(4)
+
+        self.btn_open_file = QPushButton("👁 Ouvrir")
+        self.btn_open_file.setFixedHeight(24)
+        self.btn_open_file.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_open_file.setStyleSheet("""
+            QPushButton {
+                background: rgba(56, 189, 248, 0.2); color: #38bdf8; font-size: 9px; font-weight: bold;
+                border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.4); padding: 0 6px;
+            }
+            QPushButton:hover { background: #38bdf8; color: #0f172a; }
+        """)
+        self.btn_open_file.clicked.connect(self.open_selected_deployment)
+        d_actions_layout.addWidget(self.btn_open_file)
+
+        self.btn_run_file = QPushButton("▶ Exécuter")
+        self.btn_run_file.setFixedHeight(24)
+        self.btn_run_file.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_run_file.setStyleSheet("""
+            QPushButton {
+                background: rgba(16, 185, 129, 0.2); color: #10b981; font-size: 9px; font-weight: bold;
+                border-radius: 4px; border: 1px solid rgba(16, 185, 129, 0.4); padding: 0 6px;
+            }
+            QPushButton:hover { background: #10b981; color: white; }
+        """)
+        self.btn_run_file.clicked.connect(self.run_selected_deployment)
+        d_actions_layout.addWidget(self.btn_run_file)
+
+        self.btn_copy_hash = QPushButton("📋 SHA-256")
+        self.btn_copy_hash.setFixedHeight(24)
+        self.btn_copy_hash.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_copy_hash.setStyleSheet("""
+            QPushButton {
+                background: rgba(168, 85, 247, 0.2); color: #c084fc; font-size: 9px; font-weight: bold;
+                border-radius: 4px; border: 1px solid rgba(168, 85, 247, 0.4); padding: 0 6px;
+            }
+            QPushButton:hover { background: #c084fc; color: white; }
+        """)
+        self.btn_copy_hash.clicked.connect(self.copy_selected_hash)
+        d_actions_layout.addWidget(self.btn_copy_hash)
+
+        d_body_layout.addLayout(d_actions_layout)
+        deploy_layout.addLayout(d_body_layout)
+
+        arena_layout.addWidget(deploy_box)
+
+        # Remplissage initial de la liste des déploiements
+        QTimer.singleShot(500, self.refresh_deployments_list)
+
         # --- SOUS-PAGE B : FICHES INDIVIDUELLES DES IA (UNE PAGE PAR AGENT) ---
         profiles_widget = QWidget()
         prof_layout = QHBoxLayout(profiles_widget)
@@ -1088,8 +1226,134 @@ class QGDashboard(QWidget):
                         self.swarm_console.append(f"  {line}")
             import sound_effects
             sound_effects.play_success_chime()
+            if hasattr(self, 'refresh_deployments_list'):
+                self.refresh_deployments_list()
         except Exception as e:
             print(f"Erreur notification fin exécution : {e}")
+
+    def open_deployments_directory(self):
+        try:
+            deploy_dir = BASE_DIR / "deploiements_agora"
+            deploy_dir.mkdir(parents=True, exist_ok=True)
+            os.startfile(str(deploy_dir))
+        except Exception as e:
+            print(f"Erreur ouverture dossier deploiements: {e}")
+
+    def refresh_deployments_list(self):
+        try:
+            if not hasattr(self, 'deploy_list_widget') or not self.deploy_list_widget:
+                return
+            self.deploy_list_widget.clear()
+            deploy_dir = BASE_DIR / "deploiements_agora"
+            deploy_dir.mkdir(parents=True, exist_ok=True)
+
+            import tools_pc
+            import time
+            files = sorted(list(deploy_dir.glob("*.*")), key=lambda p: p.stat().st_mtime, reverse=True)
+            if hasattr(self, 'lbl_deploy_title') and self.lbl_deploy_title:
+                self.lbl_deploy_title.setText(f"📦 LIVRABLES & DÉPLOIEMENTS PHYSIQUES ({len(files)} fichiers dans deploiements_agora/)")
+
+            if not files:
+                item = QListWidgetItem("Aucun livrable généré pour l'instant. Lancez un débat puis 'Exécuter le plan'.")
+                item.setFlags(item.flags() & ~Qt.ItemFlag.ItemIsSelectable)
+                self.deploy_list_widget.addItem(item)
+                return
+
+            for f in files:
+                ext = f.suffix.lower()
+                icon = "📄"
+                if ext == ".py":
+                    icon = "🐍"
+                elif ext in [".ps1", ".bat", ".cmd"]:
+                    icon = "⚡"
+                elif ext == ".json":
+                    icon = "⚙️"
+                elif ext == ".md":
+                    icon = "📑"
+
+                size = f.stat().st_size
+                mtime = time.strftime("%Y-%m-%d %H:%M", time.localtime(f.stat().st_mtime))
+                full_hash = tools_pc.calculate_file_hash(f)
+                sha = full_hash[:10]
+
+                text = f"{icon} {f.name}  |  {size} octets  |  {mtime}  |  SHA: {sha}..."
+                item = QListWidgetItem(text)
+                item.setData(Qt.ItemDataRole.UserRole, str(f))
+                item.setData(Qt.ItemDataRole.UserRole + 1, full_hash)
+                self.deploy_list_widget.addItem(item)
+        except Exception as e:
+            print(f"Erreur actualisation liste deploiements: {e}")
+
+    def open_selected_deployment(self):
+        try:
+            cur = self.deploy_list_widget.currentItem()
+            if not cur:
+                return
+            path_str = cur.data(Qt.ItemDataRole.UserRole)
+            if path_str and Path(path_str).exists():
+                os.startfile(path_str)
+        except Exception as e:
+            print(f"Erreur ouverture fichier déploiement: {e}")
+
+    def run_selected_deployment(self):
+        try:
+            cur = self.deploy_list_widget.currentItem()
+            if not cur:
+                return
+            path_str = cur.data(Qt.ItemDataRole.UserRole)
+            if not path_str or not Path(path_str).exists():
+                return
+            p = Path(path_str)
+            ext = p.suffix.lower()
+
+            self.swarm_console.append(f"<hr><b style='color:#38bdf8;'>▶ Lancement du livrable : {p.name}</b>")
+            import subprocess
+            flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+
+            if ext == ".py":
+                python_exe = sys.executable
+                res = subprocess.run([python_exe, str(p)], capture_output=True, text=True, creationflags=flags)
+                out = res.stdout or res.stderr or "Exécution terminée avec succès (zéro sortie console)."
+                self.swarm_console.append(f"<pre style='color:#10b981;'>{out[:600]}</pre>")
+            elif ext in [".ps1", ".bat", ".cmd"]:
+                import tools_pc
+                out = tools_pc.run_powershell(f"& '{p}'")
+                self.swarm_console.append(f"<pre style='color:#10b981;'>{out[:600]}</pre>")
+            else:
+                os.startfile(str(p))
+                self.swarm_console.append("<span style='color:#94a3b8;'>Fichier ouvert dans l'éditeur Windows par défaut.</span>")
+        except Exception as e:
+            self.swarm_console.append(f"<span style='color:#ef4444;'>Erreur lors du lancement : {e}</span>")
+
+    def copy_selected_hash(self):
+        try:
+            cur = self.deploy_list_widget.currentItem()
+            if not cur:
+                return
+            sha = cur.data(Qt.ItemDataRole.UserRole + 1)
+            if sha:
+                clipboard = QApplication.clipboard()
+                clipboard.setText(sha)
+                self.swarm_console.append(f"<span style='color:#c084fc;'>✔ Empreinte SHA-256 copiée : <code>{sha}</code></span>")
+        except Exception as e:
+            print(f"Erreur copie hash: {e}")
+
+    def _on_proactive_event_received(self, old_cat: str, new_cat: str, ctx: dict):
+        try:
+            app = ctx.get("app", "Bureau Windows")
+            title = ctx.get("title", "")
+            cat = ctx.get("category", "GENERAL")
+            self.proactive_context_signal.emit(app, title, cat)
+        except Exception:
+            pass
+
+    def _on_proactive_context_ui(self, app: str, title: str, cat: str):
+        try:
+            if hasattr(self, 'lbl_active_context') and self.lbl_active_context:
+                display_title = title if len(title) <= 25 else title[:22] + "..."
+                self.lbl_active_context.setText(f"👁️ Contexte actif : <b style='color:#38bdf8;'>{app}</b> ({display_title}) [{cat}]")
+        except Exception:
+            pass
 
     def update_swarm_event(self, agent: str, round_num: int, text: str, consensus: int = 100):
         try:
@@ -1459,6 +1723,20 @@ class QGDashboard(QWidget):
         """)
         btn_prusa.clicked.connect(lambda: self.on_launch_prusa_click())
         h_layout.addWidget(btn_prusa)
+
+        btn_audit_gcode = QPushButton("🔍 AUDITER G-CODE")
+        btn_audit_gcode.setFixedHeight(30)
+        btn_audit_gcode.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_audit_gcode.setStyleSheet("""
+            QPushButton {
+                background: rgba(30, 41, 59, 0.85); color: #38bdf8; font-weight: bold; font-size: 11px;
+                border-radius: 6px; padding: 4px 12px; border: 1px solid rgba(56, 189, 248, 0.4);
+            }
+            QPushButton:hover { background: #38bdf8; color: #0f172a; }
+        """)
+        btn_audit_gcode.clicked.connect(self.on_audit_gcode_click)
+        h_layout.addWidget(btn_audit_gcode)
+
         layout.addLayout(h_layout)
 
         # Grille télémétrie imprimante (100% réelle)
@@ -1713,6 +1991,52 @@ class QGDashboard(QWidget):
                 self.refresh_3d_files_list()
                 if self.parent_mascot:
                     self.parent_mascot.display_message(f"Modèle 3D importé : {imported['name']}")
+
+    def on_audit_gcode_click(self):
+        try:
+            start_dir = str(print3d_manager.MODELS_DIR)
+            file_path, _ = QFileDialog.getOpenFileName(
+                self,
+                "Sélectionner un fichier G-code à auditer pour Maverick",
+                start_dir,
+                "Fichiers G-code (*.gcode *.gco *.nc);;Tous les fichiers (*.*)"
+            )
+            if not file_path:
+                return
+
+            res = print3d_manager.print3d_manager.analyze_gcode(file_path)
+            if not res.get("success"):
+                QMessageBox.warning(self, "Audit G-code", f"Impossible d'auditer le fichier :\n{res.get('error')}")
+                return
+
+            verdict_color = "#10b981" if res.get("safety_score", 0) >= 80 else "#f59e0b"
+            warn_html = ""
+            if res.get("warnings"):
+                warn_html = "<br><b style='color:#f59e0b;'>Avertissements détectés :</b><ul>" + "".join(f"<li>{w}</li>" for w in res['warnings']) + "</ul>"
+
+            html = f"""
+            <h3>🔍 Rapport d'Audit G-code - Agent Maker 3D</h3>
+            <b>Fichier :</b> {res.get('filename')} ({res.get('file_size_mb')} Mo)<br>
+            <b>Trancheur détecté :</b> <span style='color:#38bdf8;'>{res.get('slicer')}</span><br>
+            <b>Temps d'impression estimé :</b> ⏱️ {res.get('estimated_time')}<br>
+            <b>Consommation filament :</b> 🧵 {res.get('filament_weight_g')} g ({res.get('filament_length_m')} m) [{res.get('filament_type')}]<br>
+            <b>Températures prévues :</b> Buse {res.get('nozzle_temp_c')}°C | Plateau {res.get('bed_temp_c')}°C<br>
+            <b>Couches :</b> {res.get('total_layers')} couches (hauteur : {res.get('layer_height_mm')} mm)<br>
+            <hr>
+            <b>Score de Sécurité :</b> <span style='color:{verdict_color}; font-size:14px; font-weight:bold;'>{res.get('safety_score')}% - {res.get('safety_verdict')}</span>
+            {warn_html}
+            """
+
+            msg = QMessageBox(self)
+            msg.setWindowTitle(f"Audit G-code : {res.get('filename')}")
+            msg.setTextFormat(Qt.TextFormat.RichText)
+            msg.setText(html)
+            msg.setIcon(QMessageBox.Icon.Information if res.get("safety_score", 0) >= 80 else QMessageBox.Icon.Warning)
+            msg.setStandardButtons(QMessageBox.StandardButton.Ok)
+            msg.exec()
+
+        except Exception as e:
+            print(f"Erreur audit G-code: {e}")
 
     def on_add_spool_click(self):
         dlg = AddSpoolDialog(self)
