@@ -58,22 +58,14 @@ def create_windows_shortcut(
     ico_str = str(icon_path) if icon_path.exists() else target_str
     lnk_str = str(shortcut_path)
 
-    ps_script = f"""
-$WshShell = New-Object -ComObject WScript.Shell
-$Shortcut = $WshShell.CreateShortcut("{lnk_str}")
-$Shortcut.TargetPath = "{target_str}"
-$Shortcut.Arguments = "{arguments}"
-$Shortcut.WorkingDirectory = "{work_str}"
-$Shortcut.IconLocation = "{ico_str},0"
-$Shortcut.Description = "{description}"
-if ("{hotkey}") {{
-    $Shortcut.Hotkey = "{hotkey}"
-}}
-$Shortcut.Save()
-"""
+    ps1_script = PROJECT_DIR / "make_shortcut.ps1"
     try:
         res = subprocess.run(
-            ["powershell", "-NoProfile", "-Command", ps_script],
+            [
+                "powershell", "-NoProfile", "-ExecutionPolicy", "Bypass",
+                "-File", str(ps1_script),
+                lnk_str, target_str, arguments, work_str, f"{ico_str},0", description, hotkey
+            ],
             capture_output=True,
             text=True,
             creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
@@ -88,7 +80,7 @@ def create_desktop_shortcut() -> bool:
     desktop_lnk = DESKTOP_DIR / "Nora.lnk"
     if PYTHONW_EXE.exists():
         target = PYTHONW_EXE
-        args = str(DESKTOP_PET)
+        args = "desktop_pet.py"
         work_dir = PROJECT_DIR
         icon = ICON_PATH
     elif NORA_EXE.exists():
@@ -100,7 +92,7 @@ def create_desktop_shortcut() -> bool:
             icon = ICON_PATH
     else:
         target = PYTHON_EXE
-        args = str(DESKTOP_PET)
+        args = "desktop_pet.py"
         work_dir = PROJECT_DIR
         icon = ICON_PATH
 
@@ -125,7 +117,7 @@ def set_startup_enabled(enabled: bool) -> bool:
     if enabled:
         if PYTHONW_EXE.exists():
             target = PYTHONW_EXE
-            args = str(DESKTOP_PET)
+            args = "desktop_pet.py"
             work_dir = PROJECT_DIR
             icon = ICON_PATH
         elif NORA_EXE.exists():
@@ -137,7 +129,7 @@ def set_startup_enabled(enabled: bool) -> bool:
                 icon = ICON_PATH
         else:
             target = PYTHON_EXE
-            args = str(DESKTOP_PET)
+            args = "desktop_pet.py"
             work_dir = PROJECT_DIR
             icon = ICON_PATH
 
