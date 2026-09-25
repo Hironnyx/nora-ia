@@ -10,8 +10,8 @@
     "Vérifier la compatibilité buse/matériau avant d'envoyer un fichier à l'impression."
   ],
   "stats": {
-    "missions": 1,
-    "successes": 1,
+    "missions": 2,
+    "successes": 2,
     "tools_called": 0
   }
 }

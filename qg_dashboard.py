@@ -749,7 +749,42 @@ class QGDashboard(QWidget):
         self.btn_execute_swarm_plan.clicked.connect(self.on_execute_swarm_plan_click)
         bar_layout.addWidget(self.btn_execute_swarm_plan)
 
+        # Barre de Contexte Actif & Options d'Affichage Cognitif (Axe 1 & Axe 2)
+        meta_top_layout = QHBoxLayout()
+        meta_top_layout.setSpacing(10)
+        
+        self.lbl_active_context = QLabel("👁️ Contexte actif : Détection...")
+        self.lbl_active_context.setStyleSheet("""
+            QLabel {
+                color: #38bdf8;
+                font-size: 10px;
+                font-weight: bold;
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid rgba(56, 189, 248, 0.3);
+                border-radius: 6px;
+                padding: 3px 8px;
+            }
+        """)
+        meta_top_layout.addWidget(self.lbl_active_context)
+        meta_top_layout.addStretch()
+
+        self.chk_show_thinking = QCheckBox("🧠 Monologues Intérieurs (<thinking>)")
+        self.chk_show_thinking.setChecked(True)
+        self.chk_show_thinking.setStyleSheet("""
+            QCheckBox {
+                color: #a5b4fc;
+                font-size: 10px;
+                font-weight: bold;
+            }
+            QCheckBox::indicator {
+                width: 14px;
+                height: 14px;
+            }
+        """)
+        meta_top_layout.addWidget(self.chk_show_thinking)
+
         arena_layout.addLayout(bar_layout)
+        arena_layout.addLayout(meta_top_layout)
 
         # Console de transcription du débat
         self.swarm_console = QTextEdit()
@@ -1060,6 +1095,20 @@ class QGDashboard(QWidget):
         try:
             if hasattr(self, 'consensus_bar') and self.consensus_bar:
                 self.consensus_bar.setValue(int(consensus or 0))
+
+            # Mise à jour instantanée du contexte actif de Maverick (Axe 2 : Context Vision)
+            if hasattr(self, 'lbl_active_context') and self.lbl_active_context:
+                try:
+                    import nora_context_vision
+                    c = nora_context_vision.context_vision.get_current_context()
+                    app_name = c.get("app", "Bureau Windows")
+                    title_name = c.get("title", "")
+                    if len(title_name) > 30:
+                        title_name = title_name[:27] + "..."
+                    self.lbl_active_context.setText(f"👁️ Contexte actif : <b style='color:#38bdf8;'>{app_name}</b> ({title_name})")
+                except Exception:
+                    pass
+
             color = "#38bdf8"
             if "Critique" in agent:
                 color = "#a855f7"
@@ -1072,7 +1121,13 @@ class QGDashboard(QWidget):
             elif "Prime" in agent:
                 color = "#ff2a85"
 
-            text_html = text.replace('\n', '<br>')
+            # Gestion de l'affichage du monologue intérieur (Axe 1 : Thinking Toggle)
+            final_text = text
+            if hasattr(self, 'chk_show_thinking') and self.chk_show_thinking and not self.chk_show_thinking.isChecked():
+                import re
+                final_text = re.sub(r"<div style=.*?MONOLOGUE INTÉRIEUR.*?</div>", "", text, flags=re.DOTALL | re.IGNORECASE).strip()
+
+            text_html = final_text.replace('\n', '<br>')
             msg = f"<span style='color:{color}; font-weight:bold;'>[{agent} - Tour {round_num}]</span><br>{text_html}<br>"
             if hasattr(self, 'swarm_console') and self.swarm_console:
                 self.swarm_console.append(msg)

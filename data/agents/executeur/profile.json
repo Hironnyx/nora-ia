@@ -10,8 +10,8 @@
     "Si une consigne est trop abstraite, demander des précisions au lieu de simuler un succès."
   ],
   "stats": {
-    "missions": 1,
-    "successes": 1,
-    "tools_called": 1
+    "missions": 2,
+    "successes": 2,
+    "tools_called": 2
   }
 }

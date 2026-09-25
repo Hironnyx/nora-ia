@@ -324,6 +324,22 @@ class RecursiveSwarmSession:
         # Initialisation des mémoires d'agents (Pilier 1)
         nora_agent_memory.init_all_agent_memories()
 
+        # Capture de l'activité au premier plan de Maverick (Axe 2 : Context Vision)
+        self.current_window_context = {}
+        try:
+            import nora_context_vision
+            self.current_window_context = nora_context_vision.context_vision.get_current_context()
+            app_name = self.current_window_context.get("app", "Bureau Windows")
+            win_title = self.current_window_context.get("title", "Bureau")
+            cat = self.current_window_context.get("category", "GÉNÉRAL")
+            desc = self.current_window_context.get("description", "")
+            self.blackboard.post_fact(
+                "👁️ Vision Contexte",
+                f"Maverick travaille actuellement sur {app_name} ('{win_title}') [Activité: {cat}]. {desc}"
+            )
+        except Exception:
+            pass
+
     def notify(
         self,
         agent: str,
@@ -335,8 +351,13 @@ class RecursiveSwarmSession:
     ):
         display_text = text
         if thinking and thinking != "Pensée synthétique directe (mode rapide).":
-            status_badge = f"<span style='color:#64748b; font-size:10px;'>[🧠 Conscience ({epistemic_status}) : <i>{thinking[:120]}...</i>]</span><br>"
-            display_text = f"{status_badge}{text}"
+            thinking_box = (
+                f"<div style='background: rgba(15, 23, 42, 0.92); border-left: 3px solid #818cf8; border-radius: 6px; padding: 6px 10px; margin: 4px 0 6px 0;'>"
+                f"<span style='color: #818cf8; font-size: 10px; font-weight: bold;'>🧠 MONOLOGUE INTÉRIEUR [<span style='color: #38bdf8;'>{epistemic_status}</span>] :</span><br>"
+                f"<span style='color: #cbd5e1; font-size: 10px; font-style: italic; line-height: 1.4;'>{thinking}</span>"
+                f"</div>"
+            )
+            display_text = f"{thinking_box}{text}"
 
         evt = {
             "agent": agent,
