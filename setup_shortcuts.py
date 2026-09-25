@@ -86,7 +86,12 @@ $Shortcut.Save()
 def create_desktop_shortcut() -> bool:
     """Crée le raccourci officiel sur le Bureau avec le raccourci clavier Ctrl+Alt+N."""
     desktop_lnk = DESKTOP_DIR / "Nora.lnk"
-    if NORA_EXE.exists():
+    if PYTHONW_EXE.exists():
+        target = PYTHONW_EXE
+        args = str(DESKTOP_PET)
+        work_dir = PROJECT_DIR
+        icon = ICON_PATH
+    elif NORA_EXE.exists():
         target = NORA_EXE
         args = ""
         work_dir = NORA_EXE.parent
@@ -94,7 +99,7 @@ def create_desktop_shortcut() -> bool:
         if not icon.exists():
             icon = ICON_PATH
     else:
-        target = PYTHONW_EXE if PYTHONW_EXE.exists() else PYTHON_EXE
+        target = PYTHON_EXE
         args = str(DESKTOP_PET)
         work_dir = PROJECT_DIR
         icon = ICON_PATH
@@ -106,7 +111,7 @@ def create_desktop_shortcut() -> bool:
         working_dir=work_dir,
         icon_path=icon,
         hotkey="Ctrl+Alt+N",
-        description="🌸 Nora - Copilote IA Zero Two (Raccourci : Ctrl+Alt+N)"
+        description="NORA WORKSTATION | Copilote & Ingénierie (Ctrl+Alt+N)"
     )
 
 def is_startup_enabled() -> bool:
@@ -118,7 +123,12 @@ def set_startup_enabled(enabled: bool) -> bool:
     """Active ou désactive le lancement de Nora au démarrage de Windows."""
     startup_lnk = STARTUP_DIR / "Nora.lnk"
     if enabled:
-        if NORA_EXE.exists():
+        if PYTHONW_EXE.exists():
+            target = PYTHONW_EXE
+            args = str(DESKTOP_PET)
+            work_dir = PROJECT_DIR
+            icon = ICON_PATH
+        elif NORA_EXE.exists():
             target = NORA_EXE
             args = ""
             work_dir = NORA_EXE.parent
@@ -126,7 +136,7 @@ def set_startup_enabled(enabled: bool) -> bool:
             if not icon.exists():
                 icon = ICON_PATH
         else:
-            target = PYTHONW_EXE if PYTHONW_EXE.exists() else PYTHON_EXE
+            target = PYTHON_EXE
             args = str(DESKTOP_PET)
             work_dir = PROJECT_DIR
             icon = ICON_PATH
