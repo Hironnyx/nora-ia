@@ -283,7 +283,7 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
             },
             {
                 "id": "health_report",
-                "title": "Bilan Santé Darling",
+                "title": "Bilan de Santé",
                 "icon": "🩺",
                 "category": "sante",
                 "action": "health_report",
@@ -523,7 +523,7 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         if outfit in ["franxx", "school", "hoodie"]:
             memory_manager.set_current_outfit(outfit)
             mascot_assets.set_active_outfit(outfit)
-            msg = f"J'ai revêtu ma tenue {outfit}, Darling !"
+            msg = f"Profil d'apparence {outfit} activé, Maverick."
             self._set_cors_headers(200)
             self.wfile.write(json.dumps({"success": True, "outfit": outfit, "reply": msg}).encode("utf-8"))
         else:
@@ -613,7 +613,7 @@ class NoraAPIHandler(BaseHTTPRequestHandler):
         self.wfile.write(json.dumps({
             "success": True,
             "today": agent_health.health_agent.get_today(),
-            "reply": "Données santé synchronisées avec succès, Darling !"
+            "reply": "Données santé synchronisées avec succès, Maverick."
         }, ensure_ascii=False).encode("utf-8"))
 
     def _handle_finances_get(self):

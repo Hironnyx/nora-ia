@@ -189,24 +189,27 @@ def autonomous_web_browse_and_summarize(query: str, visual: bool = True) -> dict
             extracted_text = read_webpage(target_url, max_chars=2500)
 
     # Synthèse IA
-    speech_summary = f"J'ai cherché sur le web pour toi, Darling ! Voici ce que j'ai trouvé sur '{query}'."
+    speech_summary = f"Recherche web effectuée pour Maverick sur '{query}'."
     if api_key:
         try:
             client = genai.Client(api_key=api_key)
             prompt = f"""
-Tu es Zero Two (Nora). L'utilisateur (ton Darling) a demandé : "{query}".
-Voici les résultats du web :
+Tu es Nora, assistante IA et copilote technique de Maverick.
+Maverick a demandé une recherche sur : "{query}".
+Voici les données extraites du web :
 {raw_search}
 
 Contenu de la page explorée :
 {extracted_text[:2000]}
 
-RÈGLE : Fais une synthèse vive, intéressante et concise (2 à 3 phrases maximum) pour ton Darling, en lui donnant la réponse clé.
+CONSIGNES STRICTES :
+- Formule une synthèse claire, technique et concise (2 à 3 phrases maximum) pour Maverick.
+- Vouvoie systématiquement Maverick et ne mentionne jamais aucun surnom affectif.
 """
             resp = client.models.generate_content(
-                model="gemini-3.8-flash",
+                model="gemini-2.5-flash",
                 contents=prompt,
-                config=types.GenerateContentConfig(temperature=0.3)
+                config=types.GenerateContentConfig(temperature=0.2)
             )
             speech_summary = resp.text.strip()
         except Exception:

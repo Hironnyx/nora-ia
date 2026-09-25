@@ -3,7 +3,7 @@ Moteur d'Auto-Évolution et d'Amélioration de Code Sécurisé pour Nora :
 - Analyse statique et intelligente des modules Python du projet
 - Détection d'optimisations potentielles (vitesse, RAM, robustesse, nouvelles compétences)
 - Bac à sable de validation rigoureux (syntaxe py_compile, tests en sous-processus isolé)
-- Système Human-in-the-Loop : rien n'est appliqué sans la validation explicite de Darling
+- Système Human-in-the-Loop : rien n'est appliqué sans la validation explicite de Maverick
 - Historique de commits Git automatiques pour garantir un retour en arrière immédiat
 """
 import os
@@ -114,7 +114,7 @@ Règles de sécurité STRICTES :
 Réponds UNIQUEMENT sous forme d'un JSON STRICT avec ce schéma :
 {{
     "titre": "Titre concis de l'amélioration",
-    "explication_pour_darling": "Explication vivante et claire de ce qui est amélioré (1-2 phrases)",
+    "explication_pour_maverick": "Explication claire et professionnelle de ce qui est amélioré (1-2 phrases)",
     "type_amelioration": "performance | robustesse | fonctionnalite | refactoring",
     "resume_modifications": [
         "Changement 1",
@@ -180,7 +180,7 @@ Réponds UNIQUEMENT sous forme d'un JSON STRICT avec ce schéma :
 
     sandbox_file.unlink(missing_ok=True)
 
-    # 3. Calcul du Diff visuel pour Darling
+    # 3. Calcul du Diff visuel pour Maverick
     orig_lines = original_code.splitlines(keepends=True)
     new_lines = new_code.splitlines(keepends=True)
     diff = list(difflib.unified_diff(orig_lines, new_lines, fromfile=f"a/{target_filename}", tofile=f"b/{target_filename}", n=2))
@@ -192,7 +192,7 @@ Réponds UNIQUEMENT sous forme d'un JSON STRICT avec ce schéma :
         "id": prop_id,
         "target_file": target_filename,
         "titre": structured.get("titre", "Optimisation de code"),
-        "explication": structured.get("explication_pour_darling", ""),
+        "explication": structured.get("explication_pour_maverick") or structured.get("explication_pour_darling", ""),
         "type": structured.get("type_amelioration", "performance"),
         "points": structured.get("resume_modifications", []),
         "diff": diff_text,
@@ -207,7 +207,7 @@ Réponds UNIQUEMENT sous forme d'un JSON STRICT avec ce schéma :
     props_data["proposals"].insert(0, proposal)
     save_proposals(props_data)
 
-    print(f"✔ [CodeEvolver] Proposition prête pour validation par Darling : {proposal['titre']}")
+    print(f"✔ [CodeEvolver] Proposition prête pour validation par Maverick : {proposal['titre']}")
     return {
         "success": True,
         "proposal_id": prop_id,
@@ -220,7 +220,7 @@ Réponds UNIQUEMENT sous forme d'un JSON STRICT avec ce schéma :
 
 def apply_improvement_with_git(proposal_id: str) -> Tuple[bool, str]:
     """
-    Applique une proposition approuvée par Darling et crée un commit Git automatique.
+    Applique une proposition approuvée par Maverick et crée un commit Git automatique.
     """
     props_data = load_proposals()
     target_prop = None
@@ -262,7 +262,7 @@ def apply_improvement_with_git(proposal_id: str) -> Tuple[bool, str]:
         return True, f"Code mis à jour sur {target_file}, mais commit Git manuel requis : {e}"
 
 def get_latest_pending_proposal() -> Optional[Dict[str, Any]]:
-    """Retourne la dernière proposition en attente de validation par Darling."""
+    """Retourne la dernière proposition en attente de validation par Maverick."""
     props_data = load_proposals()
     props = props_data.get("proposals", [])
     return props[0] if props else None

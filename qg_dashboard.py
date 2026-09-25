@@ -67,7 +67,7 @@ class AddSpoolDialog(QDialog):
             QDialog {
                 background: #0f172a;
                 color: #f1f5f9;
-                border: 1px solid rgba(236, 72, 153, 0.4);
+                border: 1px solid rgba(59, 130, 246, 0.3);
                 border-radius: 12px;
             }
             QLabel { color: #cbd5e1; font-size: 11px; font-weight: bold; }
@@ -80,14 +80,14 @@ class AddSpoolDialog(QDialog):
                 font-size: 11px;
             }
             QLineEdit:focus, QComboBox:focus, QSpinBox:focus {
-                border-color: #ec4899;
+                border-color: #3b82f6;
             }
         """)
         layout = QVBoxLayout(self)
         layout.setSpacing(10)
 
-        title = QLabel("🧵 ENREGISTRER UNE BOBINE RÉELLE")
-        title.setStyleSheet("color: #ec4899; font-size: 13px; font-weight: 800;")
+        title = QLabel("ENREGISTRER UNE BOBINE")
+        title.setStyleSheet("color: #38bdf8; font-size: 13px; font-weight: 800; letter-spacing: 0.5px;")
         layout.addWidget(title)
 
         layout.addWidget(QLabel("Marque (ex: Prusament, Sunlu, Polymaker, eSun) :"))
@@ -107,7 +107,7 @@ class AddSpoolDialog(QDialog):
 
         layout.addWidget(QLabel("Code Couleur Hex (#RRGGBB) :"))
         self.color_hex_edit = QLineEdit()
-        self.color_hex_edit.setText("#ec4899")
+        self.color_hex_edit.setText("#38bdf8")
         layout.addWidget(self.color_hex_edit)
 
         layout.addWidget(QLabel("Poids total / restant (grammes) :"))
@@ -119,12 +119,12 @@ class AddSpoolDialog(QDialog):
 
         btn_box = QHBoxLayout()
         btn_cancel = QPushButton("Annuler")
-        btn_cancel.setStyleSheet("background: rgba(51, 65, 85, 0.7); color: #cbd5e1; border-radius: 6px; padding: 6px 12px;")
+        btn_cancel.setStyleSheet("background: rgba(51, 65, 85, 0.7); color: #cbd5e1; border-radius: 6px; padding: 6px 12px; border: 1px solid rgba(255, 255, 255, 0.08);")
         btn_cancel.clicked.connect(self.reject)
         btn_box.addWidget(btn_cancel)
 
         btn_save = QPushButton("Enregistrer")
-        btn_save.setStyleSheet("background: #be185d; color: white; font-weight: bold; border-radius: 6px; padding: 6px 16px;")
+        btn_save.setStyleSheet("background: #2563eb; color: white; font-weight: bold; border-radius: 6px; padding: 6px 16px; border: 1px solid #3b82f6;")
         btn_save.clicked.connect(self.accept)
         btn_box.addWidget(btn_save)
 
@@ -136,7 +136,7 @@ class AddSpoolDialog(QDialog):
         color_name = self.color_name_edit.text().strip() or "Standard"
         color_hex = self.color_hex_edit.text().strip()
         if not color_hex.startswith("#") or len(color_hex) not in (4, 7):
-            color_hex = "#ec4899"
+            color_hex = "#38bdf8"
         weight = self.weight_spin.value()
         return {
             "brand": brand,
@@ -219,9 +219,9 @@ class QGDashboard(QWidget):
         self.main_frame.setObjectName("MainGlassFrame")
         self.main_frame.setStyleSheet("""
             #MainGlassFrame {
-                background-color: rgba(10, 15, 29, 0.97);
-                border: 2px solid #00f0ff;
-                border-radius: 20px;
+                background-color: rgba(9, 13, 22, 0.98);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 14px;
             }
         """)
 
@@ -283,13 +283,10 @@ class QGDashboard(QWidget):
         tb = QFrame()
         tb.setStyleSheet("""
             QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0,
-                    stop:0 rgba(15, 23, 42, 0.95),
-                    stop:0.5 rgba(30, 41, 59, 0.85),
-                    stop:1 rgba(15, 23, 42, 0.95));
-                border-top-left-radius: 18px;
-                border-top-right-radius: 18px;
-                border-bottom: 1px solid rgba(0, 240, 255, 0.25);
+                background: rgba(15, 23, 42, 0.92);
+                border-top-left-radius: 14px;
+                border-top-right-radius: 14px;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.06);
                 padding: 4px 14px;
             }
         """)
@@ -297,13 +294,13 @@ class QGDashboard(QWidget):
         layout.setContentsMargins(12, 6, 12, 6)
 
         # Indicateur de statut LED
-        led_label = QLabel("● CORE ONLINE")
-        led_label.setStyleSheet("color: #10b981; font-weight: 800; font-size: 11px; letter-spacing: 1px; border: none;")
+        led_label = QLabel("● SYSTEM ONLINE")
+        led_label.setStyleSheet("color: #10b981; font-weight: 700; font-size: 10px; letter-spacing: 1.2px; border: none;")
         layout.addWidget(led_label)
 
         # Titre central
-        title = QLabel("✦ NORA QUARTIER GÉNÉRAL ✦  |  Cockpit de Supervision Dédié à Maverick")
-        title.setStyleSheet("color: #fda4af; font-weight: 800; font-size: 13px; letter-spacing: 0.5px; border: none;")
+        title = QLabel("NORA WORKSTATION  |  Poste de Contrôle & Ingénierie")
+        title.setStyleSheet("color: #f8fafc; font-weight: 700; font-size: 12px; letter-spacing: 0.8px; border: none;")
         layout.addWidget(title)
         layout.addStretch()
 
@@ -313,13 +310,13 @@ class QGDashboard(QWidget):
         btn_min.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_min.setStyleSheet("""
             QPushButton {
-                background: rgba(255, 255, 255, 0.08);
+                background: rgba(255, 255, 255, 0.06);
                 color: #e2e8f0;
                 font-size: 12px;
-                border-radius: 6px;
+                border-radius: 5px;
                 border: none;
             }
-            QPushButton:hover { background: rgba(255, 255, 255, 0.2); }
+            QPushButton:hover { background: rgba(255, 255, 255, 0.15); }
         """)
         btn_min.clicked.connect(self.hide)
         layout.addWidget(btn_min)
@@ -329,11 +326,11 @@ class QGDashboard(QWidget):
         btn_close.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_close.setStyleSheet("""
             QPushButton {
-                background: rgba(239, 68, 68, 0.2);
+                background: rgba(239, 68, 68, 0.15);
                 color: #f87171;
                 font-size: 12px;
-                border-radius: 6px;
-                border: 1px solid rgba(239, 68, 68, 0.4);
+                border-radius: 5px;
+                border: 1px solid rgba(239, 68, 68, 0.3);
             }
             QPushButton:hover { background: #ef4444; color: white; }
         """)
@@ -360,36 +357,36 @@ class QGDashboard(QWidget):
     # =========================================================================
     def create_sidebar(self) -> QWidget:
         sb = QFrame()
-        sb.setFixedWidth(190)
+        sb.setFixedWidth(185)
         sb.setStyleSheet("""
             QFrame {
-                background: rgba(15, 23, 42, 0.65);
-                border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 14px;
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 10px;
             }
         """)
         layout = QVBoxLayout(sb)
         layout.setContentsMargins(6, 8, 6, 8)
-        layout.setSpacing(4)
+        layout.setSpacing(3)
 
         self.nav_buttons = []
         nav_items = [
-            ("🚀  Cockpit", 0),
-            ("🤖  Essaim IA", 1),
-            ("📁  Projets", 2),
-            ("🖨️  Atelier 3D", 3),
-            ("🐾  Compagnon", 4),
-            ("👗  Garde-Robe", 5),
-            ("⚡  Système", 6),
-            ("🛡️  Sécurité", 7),
-            ("🏠  Domotique", 8),
-            ("🧠  Mémoire IA", 9),
-            ("📱  Mobile 4G/5G", 10),
+            ("Cockpit Central", 0),
+            ("Orchestration IA", 1),
+            ("Projets", 2),
+            ("Atelier 3D", 3),
+            ("Compagnon", 4),
+            ("Profils & Style", 5),
+            ("Télémétrie Système", 6),
+            ("Sécurité OS", 7),
+            ("Domotique", 8),
+            ("Mémoire & Faits", 9),
+            ("Passerelle Réseau", 10),
         ]
 
         for text, idx in nav_items:
             btn = QPushButton(text)
-            btn.setFixedHeight(34)
+            btn.setFixedHeight(32)
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             btn.setStyleSheet(self._get_nav_btn_style(idx == 0))
             btn.clicked.connect(lambda checked, i=idx: self.switch_screen(i))
@@ -398,21 +395,21 @@ class QGDashboard(QWidget):
 
         layout.addStretch()
 
-        # Mini badge Zero Two en bas de la sidebar
+        # Badge d'état système sobre en bas de la sidebar
         mini_card = QFrame()
         mini_card.setStyleSheet("""
             QFrame {
-                background: rgba(255, 42, 133, 0.12);
-                border: 1px solid rgba(255, 42, 133, 0.4);
-                border-radius: 10px;
+                background: rgba(30, 41, 59, 0.4);
+                border: 1px solid rgba(255, 255, 255, 0.06);
+                border-radius: 8px;
                 padding: 4px;
             }
         """)
         mc_layout = QVBoxLayout(mini_card)
-        mc_layout.setContentsMargins(4, 4, 4, 4)
-        lbl_info = QLabel("NORA COPILOTE\nStyle Zero Two 002")
+        mc_layout.setContentsMargins(6, 6, 6, 6)
+        lbl_info = QLabel("NORA ENGINE v2.4\nStation d'Ingénierie")
         lbl_info.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        lbl_info.setStyleSheet("color: #fda4af; font-size: 10px; font-weight: bold; border: none;")
+        lbl_info.setStyleSheet("color: #64748b; font-size: 9px; font-weight: 600; border: none; line-height: 12px;")
         mc_layout.addWidget(lbl_info)
         layout.addWidget(mini_card)
 
@@ -422,14 +419,14 @@ class QGDashboard(QWidget):
         if active:
             return """
                 QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ff2a85, stop:1 #e11d48);
-                    color: white;
+                    background: rgba(59, 130, 246, 0.15);
+                    color: #60a5fa;
                     font-size: 11px;
-                    font-weight: 800;
-                    border-radius: 8px;
+                    font-weight: 600;
+                    border-radius: 6px;
                     text-align: left;
                     padding-left: 12px;
-                    border: none;
+                    border: 1px solid rgba(59, 130, 246, 0.35);
                 }
             """
         else:
@@ -438,15 +435,15 @@ class QGDashboard(QWidget):
                     background: transparent;
                     color: #94a3b8;
                     font-size: 11px;
-                    font-weight: 600;
-                    border-radius: 8px;
+                    font-weight: 500;
+                    border-radius: 6px;
                     text-align: left;
                     padding-left: 12px;
                     border: none;
                 }
                 QPushButton:hover {
-                    background: rgba(255, 255, 255, 0.06);
-                    color: #f1f5f9;
+                    background: rgba(255, 255, 255, 0.04);
+                    color: #f8fafc;
                 }
             """
 
@@ -464,16 +461,16 @@ class QGDashboard(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(10)
 
-        title = QLabel("🚀 CENTRE DE COMMANDEMENT & COCKPIT")
-        title.setStyleSheet("color: #00f0ff; font-size: 15px; font-weight: 800;")
+        title = QLabel("COCKPIT CENTRAL & EXÉCUTION")
+        title.setStyleSheet("color: #f8fafc; font-size: 14px; font-weight: 700; letter-spacing: 0.5px;")
         layout.addWidget(title)
 
         omni_frame = QFrame()
         omni_frame.setStyleSheet("""
             QFrame {
                 background: rgba(15, 23, 42, 0.85);
-                border: 2px solid #38bdf8;
-                border-radius: 12px;
+                border: 1px solid rgba(59, 130, 246, 0.4);
+                border-radius: 8px;
                 padding: 4px;
             }
         """)
@@ -1007,12 +1004,12 @@ class QGDashboard(QWidget):
         pdf_layout.setContentsMargins(12, 10, 12, 10)
         pdf_layout.setSpacing(8)
 
-        self.prof_header_lbl = QLabel("👑 NORA PRIME")
-        self.prof_header_lbl.setStyleSheet("color: #ff2a85; font-size: 16px; font-weight: 800; border: none;")
+        self.prof_header_lbl = QLabel("NORA PRIME")
+        self.prof_header_lbl.setStyleSheet("color: #818cf8; font-size: 15px; font-weight: 700; border: none;")
         pdf_layout.addWidget(self.prof_header_lbl)
 
         self.prof_title_lbl = QLabel("Superviseure & Synthèse Centrale")
-        self.prof_title_lbl.setStyleSheet("color: #fda4af; font-size: 12px; font-weight: bold; border: none;")
+        self.prof_title_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; font-weight: 600; border: none;")
         pdf_layout.addWidget(self.prof_title_lbl)
 
         self.prof_role_lbl = QLabel()
@@ -1381,9 +1378,9 @@ class QGDashboard(QWidget):
             elif "Exécuteur" in agent:
                 color = "#f59e0b"
             elif "Maker" in agent:
-                color = "#ec4899"
+                color = "#06b6d4"
             elif "Prime" in agent:
-                color = "#ff2a85"
+                color = "#6366f1"
 
             # Gestion de l'affichage du monologue intérieur (Axe 1 : Thinking Toggle)
             final_text = text
@@ -1690,19 +1687,19 @@ class QGDashboard(QWidget):
 
         # En-tête avec boutons d'actions réelles
         h_layout = QHBoxLayout()
-        title = QLabel("🖨️ ATELIER D'IMPRESSION 3D & FABRICATION")
-        title.setStyleSheet("color: #ec4899; font-size: 15px; font-weight: 800;")
+        title = QLabel("ATELIER D'IMPRESSION 3D & FABRICATION")
+        title.setStyleSheet("color: #38bdf8; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;")
         h_layout.addWidget(title)
         h_layout.addStretch()
 
-        btn_folder = QPushButton("📂 DOSSIER 3D")
+        btn_folder = QPushButton("Dossier 3D")
         btn_folder.setFixedHeight(30)
         btn_folder.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_folder.setStyleSheet("""
             QPushButton {
                 background: rgba(30, 41, 59, 0.8);
-                color: #f1f5f9; font-weight: bold; font-size: 11px;
-                border: 1px solid rgba(255, 255, 255, 0.15);
+                color: #f1f5f9; font-weight: 600; font-size: 11px;
+                border: 1px solid rgba(255, 255, 255, 0.12);
                 border-radius: 6px; padding: 4px 12px;
             }
             QPushButton:hover { background: rgba(51, 65, 85, 0.9); }
@@ -1710,26 +1707,26 @@ class QGDashboard(QWidget):
         btn_folder.clicked.connect(self.on_open_3d_folder_click)
         h_layout.addWidget(btn_folder)
 
-        btn_prusa = QPushButton("⚡ LANCER PRUSASLICER")
+        btn_prusa = QPushButton("Lancer PrusaSlicer")
         btn_prusa.setFixedHeight(30)
         btn_prusa.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_prusa.setStyleSheet("""
             QPushButton {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ec4899, stop:1 #be185d);
-                color: white; font-weight: 800; font-size: 11px;
+                background: #2563eb;
+                color: white; font-weight: 600; font-size: 11px;
                 border-radius: 6px; padding: 4px 14px; border: none;
             }
-            QPushButton:hover { background: #db2777; }
+            QPushButton:hover { background: #1d4ed8; }
         """)
         btn_prusa.clicked.connect(lambda: self.on_launch_prusa_click())
         h_layout.addWidget(btn_prusa)
 
-        btn_audit_gcode = QPushButton("🔍 AUDITER G-CODE")
+        btn_audit_gcode = QPushButton("Auditer G-Code")
         btn_audit_gcode.setFixedHeight(30)
         btn_audit_gcode.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_audit_gcode.setStyleSheet("""
             QPushButton {
-                background: rgba(30, 41, 59, 0.85); color: #38bdf8; font-weight: bold; font-size: 11px;
+                background: rgba(30, 41, 59, 0.85); color: #38bdf8; font-weight: 600; font-size: 11px;
                 border-radius: 6px; padding: 4px 12px; border: 1px solid rgba(56, 189, 248, 0.4);
             }
             QPushButton:hover { background: #38bdf8; color: #0f172a; }
@@ -1744,8 +1741,8 @@ class QGDashboard(QWidget):
         tele_frame.setStyleSheet("""
             QFrame {
                 background: rgba(15, 23, 42, 0.7);
-                border: 1px solid rgba(236, 72, 153, 0.3);
-                border-radius: 10px;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
                 padding: 6px;
             }
         """)
@@ -1817,7 +1814,7 @@ class QGDashboard(QWidget):
         btn_add_spool = QPushButton("+ NOUVELLE")
         btn_add_spool.setFixedHeight(22)
         btn_add_spool.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        btn_add_spool.setStyleSheet("background: #be185d; color: white; font-size: 10px; font-weight: bold; border-radius: 4px; padding: 0 8px; border: none;")
+        btn_add_spool.setStyleSheet("background: #2563eb; color: white; font-size: 10px; font-weight: 600; border-radius: 4px; padding: 0 8px; border: none;")
         btn_add_spool.clicked.connect(self.on_add_spool_click)
         s_header.addWidget(btn_add_spool)
         s_v.addLayout(s_header)
@@ -1837,11 +1834,11 @@ class QGDashboard(QWidget):
 
         # Recommandation IA Slicer Maker
         advice_lbl = QLabel(
-            "💡 <b>Conseil Maker 3D pour Maverick :</b> Privilégiez un remplissage Gyroid (20%) "
+            "<b>Recommandation Ingénierie 3D :</b> Privilégiez un remplissage Gyroid (20%) "
             "pour vos boîtiers afin de garantir une résistance mécanique isotrope sans déformation thermique."
         )
         advice_lbl.setWordWrap(True)
-        advice_lbl.setStyleSheet("color: #fbcfe8; font-size: 11px; background: rgba(236, 72, 153, 0.1); padding: 8px; border-radius: 8px; border: 1px solid rgba(236, 72, 153, 0.3);")
+        advice_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; background: rgba(30, 41, 59, 0.5); padding: 8px 12px; border-radius: 6px; border: 1px solid rgba(255, 255, 255, 0.08);")
         layout.addWidget(advice_lbl)
 
         # Chargement initial
@@ -1868,10 +1865,10 @@ class QGDashboard(QWidget):
         bed = f"{tele.get('bed_temp', 0)}°C / {tele.get('bed_target', 0)}°C" if tele.get('bed_target', 0) > 0 else f"{tele.get('bed_temp', 0)}°C"
 
         t_data = [
-            ("🔥 Buse Extrudeur", nozzle, "#ec4899"),
-            ("🛏️ Plateau Chauffant", bed, "#f59e0b"),
-            ("🌀 Ventilateur", f"{tele.get('fan_speed', 0)} %", "#38bdf8"),
-            ("📊 Statut Télémétrie", stat, stat_col),
+            ("Buse Extrudeur", nozzle, "#38bdf8"),
+            ("Plateau Chauffant", bed, "#f59e0b"),
+            ("Ventilateur", f"{tele.get('fan_speed', 0)} %", "#06b6d4"),
+            ("Statut Télémétrie", stat, stat_col),
         ]
         for name, val, col in t_data:
             c = QVBoxLayout()
@@ -1912,10 +1909,10 @@ class QGDashboard(QWidget):
                 info.addWidget(m)
                 jl.addLayout(info, stretch=1)
 
-                btn_s = QPushButton("⚡ Trancher")
+                btn_s = QPushButton("Trancher")
                 btn_s.setFixedHeight(24)
                 btn_s.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                btn_s.setStyleSheet("background: #be185d; color: white; font-size: 9px; font-weight: bold; border-radius: 4px; border: none; padding: 0 8px;")
+                btn_s.setStyleSheet("background: #2563eb; color: white; font-size: 10px; font-weight: 600; border-radius: 4px; border: none; padding: 0 10px;")
                 btn_s.clicked.connect(lambda checked, p=f['path']: self.on_launch_prusa_click(p))
                 jl.addWidget(btn_s)
 
@@ -1946,7 +1943,7 @@ class QGDashboard(QWidget):
 
                 top_l = QHBoxLayout()
                 t_lbl = QLabel(f"● {s['brand']} {s['material']} - {s['color_name']}")
-                t_lbl.setStyleSheet(f"color: {s.get('color_hex', '#ec4899')}; font-weight: bold; font-size: 10px;")
+                t_lbl.setStyleSheet(f"color: {s.get('color_hex', '#38bdf8')}; font-weight: 600; font-size: 10px;")
                 top_l.addWidget(t_lbl, stretch=1)
 
                 btn_del = QPushButton("✕")
@@ -1963,7 +1960,7 @@ class QGDashboard(QWidget):
                 pb.setFixedHeight(8)
                 pb.setStyleSheet(f"""
                     QProgressBar {{ background: #0f172a; border-radius: 4px; text-align: right; }}
-                    QProgressBar::chunk {{ background: {s.get('color_hex', '#ec4899')}; border-radius: 4px; }}
+                    QProgressBar::chunk {{ background: {s.get('color_hex', '#38bdf8')}; border-radius: 4px; }}
                 """)
                 sl.addWidget(pb)
 
@@ -2071,24 +2068,24 @@ class QGDashboard(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(10)
 
-        title = QLabel("🐾 COMPAGNON VIRTUEL DE NORA")
-        title.setStyleSheet("color: #ff2a85; font-size: 15px; font-weight: 800;")
+        title = QLabel("COMPAGNON VIRTUEL & AGENT EMBARQUÉ")
+        title.setStyleSheet("color: #38bdf8; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;")
         layout.addWidget(title)
 
         # Badge Moteur de Conscience Autonome
         badge = QFrame()
         badge.setStyleSheet("""
             QFrame {
-                background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 rgba(168, 85, 247, 0.25), stop:1 rgba(255, 42, 133, 0.25));
-                border: 1px solid #c084fc;
-                border-radius: 8px;
+                background: rgba(30, 41, 59, 0.6);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 6px;
                 padding: 6px 12px;
             }
         """)
         b_layout = QHBoxLayout(badge)
         b_layout.setContentsMargins(8, 4, 8, 4)
-        lbl_badge = QLabel("🧠 <b>MOTEUR DE CONSCIENCE AUTONOME ACTIF :</b> Nora s'occupe de Vermeil d'elle-même (Function Calling en arrière-plan)")
-        lbl_badge.setStyleSheet("color: #f3e8ff; font-size: 11px;")
+        lbl_badge = QLabel("<b>MOTEUR D'AUTONOMIE ACTIF :</b> Gestion autonome en arrière-plan via function calling")
+        lbl_badge.setStyleSheet("color: #94a3b8; font-size: 11px;")
         b_layout.addWidget(lbl_badge)
         layout.addWidget(badge)
 
@@ -2099,9 +2096,9 @@ class QGDashboard(QWidget):
         hero_frame = QFrame()
         hero_frame.setStyleSheet("""
             QFrame {
-                background: rgba(255, 42, 133, 0.1);
-                border: 2px solid #ff2a85;
-                border-radius: 14px;
+                background: rgba(15, 23, 42, 0.7);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
                 padding: 10px;
             }
         """)
@@ -2119,14 +2116,14 @@ class QGDashboard(QWidget):
         # Infos
         info_v = QVBoxLayout()
         self.pet_name_lbl = QLabel(f"<b>{pet_info.get('name', 'Klaxo')}</b> ({pet_info.get('species', 'Dragonnet Écarlate')})")
-        self.pet_name_lbl.setStyleSheet("color: #fda4af; font-size: 15px; font-weight: 800; border: none;")
+        self.pet_name_lbl.setStyleSheet("color: #f1f5f9; font-size: 14px; font-weight: 700; border: none;")
         info_v.addWidget(self.pet_name_lbl)
 
         self.pet_status_lbl = QLabel(f"Statut : {pet_info.get('status', 'Éveillé')}  |  Niveau : {stats.get('level', 1)} (XP: {stats.get('xp', 0)}%)")
-        self.pet_status_lbl.setStyleSheet("color: #f1f5f9; font-size: 11px; font-weight: bold; border: none;")
+        self.pet_status_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; font-weight: 500; border: none;")
         info_v.addWidget(self.pet_status_lbl)
 
-        quote = pet_info.get("nora_announcement", "Nora prend soin de son compagnon avec amour.")
+        quote = pet_info.get("nora_announcement", "Nora assure la supervision de l'agent compagnon.")
         self.pet_quote_lbl = QLabel(f"<i>« {quote[:140]}... »</i>")
         self.pet_quote_lbl.setWordWrap(True)
         self.pet_quote_lbl.setStyleSheet("color: #cbd5e1; font-size: 10px; border: none;")
@@ -2141,7 +2138,7 @@ class QGDashboard(QWidget):
             QFrame {
                 background: rgba(15, 23, 42, 0.7);
                 border: 1px solid rgba(255, 255, 255, 0.08);
-                border-radius: 10px;
+                border-radius: 8px;
                 padding: 8px;
             }
         """)
@@ -2149,28 +2146,28 @@ class QGDashboard(QWidget):
         sf_layout.setSpacing(10)
 
         # Faim
-        sf_layout.addWidget(QLabel("🍖 Faim / Satiété :"), 0, 0)
+        sf_layout.addWidget(QLabel("Faim / Satiété :"), 0, 0)
         self.bar_hunger = QProgressBar()
         self.bar_hunger.setValue(stats.get("hunger", 85))
         self.bar_hunger.setStyleSheet("QProgressBar::chunk { background: #f59e0b; }")
         sf_layout.addWidget(self.bar_hunger, 0, 1)
 
-        # Bonheur
-        sf_layout.addWidget(QLabel("💖 Bonheur :"), 0, 2)
+        # Bonheur / Vitalité
+        sf_layout.addWidget(QLabel("Vitalité / Humeur :"), 0, 2)
         self.bar_happy = QProgressBar()
         self.bar_happy.setValue(stats.get("happiness", 90))
-        self.bar_happy.setStyleSheet("QProgressBar::chunk { background: #ff2a85; }")
+        self.bar_happy.setStyleSheet("QProgressBar::chunk { background: #6366f1; }")
         sf_layout.addWidget(self.bar_happy, 0, 3)
 
         # Énergie
-        sf_layout.addWidget(QLabel("⚡ Énergie :"), 1, 0)
+        sf_layout.addWidget(QLabel("Énergie :"), 1, 0)
         self.bar_energy = QProgressBar()
         self.bar_energy.setValue(stats.get("energy", 90))
         self.bar_energy.setStyleSheet("QProgressBar::chunk { background: #38bdf8; }")
         sf_layout.addWidget(self.bar_energy, 1, 1)
 
-        # Affection envers Nora
-        sf_layout.addWidget(QLabel("🌸 Affection :"), 1, 2)
+        # Affection / Affinité
+        sf_layout.addWidget(QLabel("Affinité Système :"), 1, 2)
         self.bar_affect = QProgressBar()
         self.bar_affect.setValue(stats.get("affection", 95))
         self.bar_affect.setStyleSheet("QProgressBar::chunk { background: #10b981; }")
@@ -2178,36 +2175,36 @@ class QGDashboard(QWidget):
 
         layout.addWidget(stats_frame)
 
-        # Boutons de soins interactifs (Soutien ponctuel optionnel)
-        care_label = QLabel("ACTIONS DE SOUTIEN (Nora gère Vermeil seule, mais vous pouvez l'assister) :")
-        care_label.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: bold; margin-top: 4px;")
+        # Boutons d'assistance ponctuelle
+        care_label = QLabel("COMMANDES D'ASSISTANCE PONCTUELLE :")
+        care_label.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 600; margin-top: 4px;")
         layout.addWidget(care_label)
 
         actions_layout = QHBoxLayout()
         actions_layout.setSpacing(8)
 
         care_buttons = [
-            ("🍖 Nourrir", self.on_pet_feed),
-            ("🎾 Jouer", self.on_pet_play),
-            ("💖 Câliner", self.on_pet_pet),
-            ("💤 Faire la sieste", self.on_pet_nap),
+            ("Nourrir", self.on_pet_feed),
+            ("Stimuler", self.on_pet_play),
+            ("Interagir", self.on_pet_pet),
+            ("Mettre au repos", self.on_pet_nap),
         ]
         for label, handler in care_buttons:
             btn = QPushButton(label)
-            btn.setFixedHeight(34)
+            btn.setFixedHeight(30)
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             btn.setStyleSheet("""
                 QPushButton {
-                    background: rgba(30, 41, 59, 0.7);
-                    color: #fda4af;
-                    border: 1px solid rgba(255, 42, 133, 0.4);
-                    border-radius: 8px;
+                    background: rgba(30, 41, 59, 0.8);
+                    color: #cbd5e1;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 6px;
                     font-size: 11px;
-                    font-weight: bold;
+                    font-weight: 600;
                 }
                 QPushButton:hover {
-                    background: rgba(255, 42, 133, 0.25);
-                    border-color: #ff2a85;
+                    background: rgba(51, 65, 85, 0.9);
+                    border-color: #38bdf8;
                     color: white;
                 }
             """)
@@ -2216,8 +2213,8 @@ class QGDashboard(QWidget):
 
         layout.addLayout(actions_layout)
 
-        # Journal des attentions de Nora
-        layout.addWidget(QLabel("JOURNAL DES ATTENTIONS PROACTIVES DE NORA :"))
+        # Journal d'activité autonome
+        layout.addWidget(QLabel("JOURNAL D'ACTIVITÉ AUTONOME :"))
         self.pet_journal_text = QTextEdit()
         self.pet_journal_text.setReadOnly(True)
         self.pet_journal_text.setStyleSheet("""
@@ -2300,11 +2297,11 @@ class QGDashboard(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(10)
 
-        title = QLabel("👗 STUDIO GARDE-ROBE & ASSETS PLEIN CORPS")
-        title.setStyleSheet("color: #ff2a85; font-size: 15px; font-weight: 800;")
+        title = QLabel("PROFILS D'APPARENCE & SÉQUENCES VISUELLES")
+        title.setStyleSheet("color: #38bdf8; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;")
         layout.addWidget(title)
 
-        desc = QLabel("Sélectionnez l'une des 5 tenues complètes et déclenchez les animations corporelles :")
+        desc = QLabel("Sélectionnez le profil visuel de l'agent et testez les séquences cinématiques :")
         desc.setStyleSheet("color: #94a3b8; font-size: 11px;")
         layout.addWidget(desc)
 
@@ -2313,8 +2310,8 @@ class QGDashboard(QWidget):
 
         self.outfit_btns = {}
         outfits_list = [
-            ("franxx", "Pilote Franxx", "Combinaison rouge & cornes"),
-            ("school", "Écolière", "Uniforme militaire marine"),
+            ("franxx", "Pilote Franxx", "Combinaison rouge standard"),
+            ("school", "Tenue Élève", "Uniforme marine sobre"),
             ("hoodie", "Street Hoodie", "Sweat oversize & sneakers"),
             ("cyberpunk", "Cyber Techwear", "Veste tactique & sangles cyan"),
             ("commander", "Commandant", "Manteau écarlate & or"),
@@ -2331,40 +2328,41 @@ class QGDashboard(QWidget):
 
         layout.addLayout(outfits_layout)
 
-        anim_title = QLabel("DÉCLENCHEURS D'ANIMATIONS PLEIN CORPS (BRAS & JAMBES) :")
-        anim_title.setStyleSheet("color: #fda4af; font-size: 11px; font-weight: bold; margin-top: 8px;")
+        anim_title = QLabel("SÉQUENCES CINÉMATIQUES & POSTURES :")
+        anim_title.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 600; margin-top: 8px;")
         layout.addWidget(anim_title)
 
         anim_grid = QGridLayout()
         anim_grid.setSpacing(8)
 
         animations = [
-            ("🚶 Démarche Articulée", "walk"),
-            ("🏃 Course Rapide Dash", "run"),
-            ("👋 Saluer Maverick", "idle_wave"),
-            ("🤔 Réflexion Stratégique", "idle_thinking"),
-            ("🪑 Assise Barre des Tâches", "idle_sitting"),
-            ("💻 Hologrammes de Travail", "idle_work_hologram"),
-            ("🎮 Session Gaming", "idle_gaming"),
-            ("🛡️ Bouclier Cyber-Sécurité", "alert_shield")
+            ("Déplacement articulé", "walk"),
+            ("Accélération rapide", "run"),
+            ("Salutation", "idle_wave"),
+            ("Réflexion cognitive", "idle_thinking"),
+            ("Veille active", "idle_sitting"),
+            ("Analyse de télémétrie", "idle_work_hologram"),
+            ("Mode immersion / gaming", "idle_gaming"),
+            ("Protocole de sécurité", "alert_shield")
         ]
 
         for i, (label, anim_name) in enumerate(animations):
             btn = QPushButton(label)
-            btn.setFixedHeight(34)
+            btn.setFixedHeight(30)
             btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
             btn.setStyleSheet("""
                 QPushButton {
                     background: rgba(30, 41, 59, 0.7);
-                    color: #f1f5f9;
-                    border: 1px solid rgba(255, 42, 133, 0.4);
-                    border-radius: 8px;
+                    color: #e2e8f0;
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    border-radius: 6px;
                     font-size: 11px;
-                    font-weight: bold;
+                    font-weight: 500;
                 }
                 QPushButton:hover {
-                    background: rgba(255, 42, 133, 0.25);
-                    border-color: #ff2a85;
+                    background: rgba(51, 65, 85, 0.85);
+                    border-color: #38bdf8;
+                    color: white;
                 }
             """)
             btn.clicked.connect(lambda checked, a=anim_name: self.on_trigger_animation(a))
@@ -2379,23 +2377,24 @@ class QGDashboard(QWidget):
         if active:
             return """
                 QPushButton {
-                    background: qlineargradient(x1:0, y1:0, x2:1, y2:0, stop:0 #ff2a85, stop:1 #e11d48);
-                    color: white;
-                    border: 2px solid #fda4af;
-                    border-radius: 10px;
+                    background: rgba(99, 102, 241, 0.2);
+                    color: #e0e7ff;
+                    border: 1px solid #6366f1;
+                    border-radius: 8px;
                 }
             """
         else:
             return """
                 QPushButton {
                     background: rgba(30, 41, 59, 0.7);
-                    color: #cbd5e1;
-                    border: 1px solid rgba(255, 255, 255, 0.1);
-                    border-radius: 10px;
+                    color: #94a3b8;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    border-radius: 8px;
                 }
                 QPushButton:hover {
-                    background: rgba(255, 42, 133, 0.2);
-                    border-color: #ff2a85;
+                    background: rgba(51, 65, 85, 0.8);
+                    border-color: rgba(99, 102, 241, 0.5);
+                    color: #f1f5f9;
                 }
             """
 
@@ -2743,16 +2742,16 @@ class QGDashboard(QWidget):
         btn_day.clicked.connect(self.on_hue_all_on)
         global_box.addWidget(btn_day)
 
-        btn_pink = QPushButton("🌸 Ambiance Zero Two")
+        btn_pink = QPushButton("Ambiance Focus Nocturne")
         btn_pink.setFixedHeight(34)
         btn_pink.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         btn_pink.setStyleSheet("""
             QPushButton {
-                background: rgba(236, 72, 153, 0.2); color: #fbcfe8;
-                border: 1px solid rgba(236, 72, 153, 0.4);
-                border-radius: 8px; font-size: 11px; font-weight: bold;
+                background: rgba(99, 102, 241, 0.15); color: #c7d2fe;
+                border: 1px solid rgba(99, 102, 241, 0.35);
+                border-radius: 6px; font-size: 11px; font-weight: 600;
             }
-            QPushButton:hover { background: rgba(236, 72, 153, 0.35); }
+            QPushButton:hover { background: rgba(99, 102, 241, 0.3); }
         """)
         btn_pink.clicked.connect(self.on_hue_zero_two_scene)
         global_box.addWidget(btn_pink)
@@ -2828,9 +2827,9 @@ class QGDashboard(QWidget):
                 toggle_btn.setFixedSize(85, 26)
                 toggle_btn.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
                 if is_on:
-                    toggle_btn.setStyleSheet("background: #be185d; color: white; font-weight: bold; font-size: 10px; border-radius: 5px; border: none;")
+                    toggle_btn.setStyleSheet("background: #dc2626; color: white; font-weight: 600; font-size: 10px; border-radius: 4px; border: none;")
                 else:
-                    toggle_btn.setStyleSheet("background: #0284c7; color: white; font-weight: bold; font-size: 10px; border-radius: 5px; border: none;")
+                    toggle_btn.setStyleSheet("background: #2563eb; color: white; font-weight: 600; font-size: 10px; border-radius: 4px; border: none;")
                 toggle_btn.clicked.connect(lambda checked, lid=l_id, cur=is_on: self.on_toggle_hue_light(lid, not cur))
                 top_row.addWidget(toggle_btn)
                 card_l.addLayout(top_row)
@@ -2853,24 +2852,24 @@ class QGDashboard(QWidget):
                 bot_row.addWidget(slider, stretch=1)
 
                 if "xy" in state or "hue" in state:
-                    btn_c_rose = QPushButton("🌸 Rose")
+                    btn_c_rose = QPushButton("Ambiance Douce")
                     btn_c_rose.setFixedHeight(22)
                     btn_c_rose.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                    btn_c_rose.setStyleSheet("background: rgba(236, 72, 153, 0.3); color: #fbcfe8; font-size: 9px; font-weight: bold; border-radius: 4px; border: 1px solid rgba(236, 72, 153, 0.5);")
+                    btn_c_rose.setStyleSheet("background: rgba(99, 102, 241, 0.2); color: #c7d2fe; font-size: 9px; font-weight: 600; border-radius: 4px; border: 1px solid rgba(99, 102, 241, 0.4);")
                     btn_c_rose.clicked.connect(lambda checked, lid=l_id: self.on_hue_color_click(lid, "rose"))
                     bot_row.addWidget(btn_c_rose)
 
-                    btn_c_warm = QPushButton("🔥 Chaud")
+                    btn_c_warm = QPushButton("Blanc Chaud")
                     btn_c_warm.setFixedHeight(22)
                     btn_c_warm.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                    btn_c_warm.setStyleSheet("background: rgba(245, 158, 11, 0.3); color: #fde68a; font-size: 9px; font-weight: bold; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.5);")
+                    btn_c_warm.setStyleSheet("background: rgba(245, 158, 11, 0.2); color: #fde68a; font-size: 9px; font-weight: 600; border-radius: 4px; border: 1px solid rgba(245, 158, 11, 0.4);")
                     btn_c_warm.clicked.connect(lambda checked, lid=l_id: self.on_hue_color_click(lid, "blanc chaud"))
                     bot_row.addWidget(btn_c_warm)
 
-                    btn_c_cyan = QPushButton("⚡ Cyan")
+                    btn_c_cyan = QPushButton("Blanc Froid / Cyan")
                     btn_c_cyan.setFixedHeight(22)
                     btn_c_cyan.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-                    btn_c_cyan.setStyleSheet("background: rgba(56, 189, 248, 0.3); color: #bae6fd; font-size: 9px; font-weight: bold; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.5);")
+                    btn_c_cyan.setStyleSheet("background: rgba(56, 189, 248, 0.2); color: #bae6fd; font-size: 9px; font-weight: 600; border-radius: 4px; border: 1px solid rgba(56, 189, 248, 0.4);")
                     btn_c_cyan.clicked.connect(lambda checked, lid=l_id: self.on_hue_color_click(lid, "cyan"))
                     bot_row.addWidget(btn_c_cyan)
 
@@ -2923,8 +2922,8 @@ class QGDashboard(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(10)
 
-        title = QLabel("🧠 CERVEAU NEURONAL & MÉMOIRE PERSISTANTE")
-        title.setStyleSheet("color: #c084fc; font-size: 15px; font-weight: 800;")
+        title = QLabel("BASE DE CONNAISSANCES & MÉMOIRE PERSISTANTE")
+        title.setStyleSheet("color: #38bdf8; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;")
         layout.addWidget(title)
 
         desc = QLabel("Faits mémorisés par Nora sur Maverick et ses projets :")
@@ -2936,9 +2935,9 @@ class QGDashboard(QWidget):
         self.memory_view.setStyleSheet("""
             QTextEdit {
                 background: rgba(15, 23, 42, 0.7);
-                border: 1px solid rgba(192, 132, 252, 0.3);
-                border-radius: 10px;
-                color: #e9d5ff;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 8px;
+                color: #e2e8f0;
                 font-family: Consolas, monospace;
                 font-size: 11px;
                 padding: 10px;
@@ -2948,11 +2947,11 @@ class QGDashboard(QWidget):
         mem = memory_manager.load_memory()
         user_data = mem.get("user", {})
         facts = user_data.get("faits_appris", [])
-        text = f"👤 UTILISATEUR : {user_data.get('name', 'Maverick')}\n\n📚 FAITS APPRIS :\n"
+        text = f"UTILISATEUR : {user_data.get('name', 'Maverick')}\n\nFAITS ENREGISTRÉS :\n"
         for f in facts:
             text += f"• {f}\n"
 
-        text += f"\n📊 STATISTIQUES :\n• Missions réussies : {mem.get('statistiques', {}).get('missions_reussies', 0)}"
+        text += f"\nSTATISTIQUES OPÉRATIONNELLES :\n• Missions accomplies : {mem.get('statistiques', {}).get('missions_reussies', 0)}"
         self.memory_view.setPlainText(text)
         layout.addWidget(self.memory_view, stretch=1)
 
@@ -2967,8 +2966,8 @@ class QGDashboard(QWidget):
         layout.setContentsMargins(6, 6, 6, 6)
         layout.setSpacing(10)
 
-        title = QLabel("📱 PASSERELLE MOBILE & ACCÈS DISTANT (4G / 5G / WIFI)")
-        title.setStyleSheet("color: #22d3ee; font-size: 15px; font-weight: 800;")
+        title = QLabel("PASSERELLE RÉSEAU & ACCÈS DISTANT (4G / 5G / LAN)")
+        title.setStyleSheet("color: #38bdf8; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;")
         layout.addWidget(title)
 
         url_file = BASE_DIR / "remote_url.txt"

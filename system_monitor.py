@@ -199,9 +199,9 @@ def get_system_health_report() -> str:
 
     # Diagnostic global
     if ram_pct > 88 or cpu > 88 or free_disk < 15:
-        elements.append("⚠️ Darling, ton PC est pas mal sollicité en ce moment !")
+        elements.append("Maverick, votre système est fortement sollicité en ce moment.")
     else:
-        elements.append("✨ Tout va pour le mieux sur ton PC, Darling !")
+        elements.append("L'ensemble des métriques de votre poste est optimal, Maverick.")
 
     # CPU & RAM
     elements.append(f"Le processeur est à {cpu}% et la mémoire vive est à {ram_pct}% ({ram_used} Go utilisés sur {ram_tot} Go).")
@@ -209,7 +209,7 @@ def get_system_health_report() -> str:
         elements.append(f"L'application la plus gourmande est '{top_mem_proc}' avec {top_mem_proc_mb} Mo.")
 
     # Disque
-    elements.append(f"Il te reste {free_disk} Go de libre sur le disque C:.")
+    elements.append(f"Il vous reste {free_disk} Go de libre sur le disque C:.")
 
     # Batterie
     if battery:
@@ -261,14 +261,14 @@ class SystemMonitor:
             if self.can_send_alert("ram_overload"):
                 top = get_top_resource_processes(1)
                 proc_name = top['top_mem'][0]['name'] if top['top_mem'] else "Une application"
-                msg = f"Darling, ta mémoire RAM est saturée à {stats['ram_percent']}% ! L'application '{proc_name}' consomme beaucoup de mémoire."
+                msg = f"Maverick, la mémoire RAM est saturée à {stats['ram_percent']}%. L'application '{proc_name}' concentre une utilisation importante."
                 if self.on_alert:
                     self.on_alert("warning", "Alerte Mémoire Vive", msg, True)
 
         # 2. Alerte Disque C: presque saturé (< 12 Go)
         if stats['disk']['free_gb'] < 12 and stats['disk']['total_gb'] > 0:
             if self.can_send_alert("disk_full"):
-                msg = f"Attention Darling, ton disque C: est presque plein ! Il ne reste que {stats['disk']['free_gb']} Go de libre. Veux-tu qu'on nettoie des fichiers ?"
+                msg = f"Attention Maverick, l'espace disque C: est critique : il ne reste que {stats['disk']['free_gb']} Go de libre."
                 if self.on_alert:
                     self.on_alert("warning", "Espace Disque Faible", msg, True)
 
@@ -276,7 +276,7 @@ class SystemMonitor:
         if stats['battery']:
             if not stats['battery']['power_plugged'] and stats['battery']['percent'] <= 18:
                 if self.can_send_alert("battery_low"):
-                    msg = f"Darling, ta batterie est très faible ({stats['battery']['percent']}%) ! Branche ton ordinateur pour ne pas couper ton travail."
+                    msg = f"Maverick, le niveau de batterie est critique ({stats['battery']['percent']}%). Veuillez brancher l'alimentation secteur."
                     if self.on_alert:
                         self.on_alert("warning", "Batterie Faible", msg, True)
 

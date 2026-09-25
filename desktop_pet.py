@@ -326,20 +326,20 @@ class NoraMascot(QWidget):
         self.bubble_label.setMaximumWidth(235)
         self.bubble_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.bubble_label.setStyleSheet("""
-            background-color: rgba(15, 23, 42, 0.95);
-            color: #ffffff;
-            border: 2px solid #fb7185;
-            border-radius: 14px;
+            background-color: rgba(9, 13, 22, 0.96);
+            color: #f1f5f9;
+            border: 1px solid rgba(56, 189, 248, 0.4);
+            border-radius: 8px;
             padding: 8px 12px;
-            font-size: 11.5px;
-            font-weight: 600;
+            font-size: 11px;
+            font-weight: 500;
         """)
         bubble_layout.addWidget(self.bubble_label)
 
-        # Flèche manga de la bulle vers la tête de Nora
+        # Flèche de la bulle vers la tête de Nora
         self.bubble_tail = QLabel("▼")
         self.bubble_tail.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.bubble_tail.setStyleSheet("color: #fb7185; font-size: 10px; margin-top: -3px; border: none; background: transparent;")
+        self.bubble_tail.setStyleSheet("color: rgba(56, 189, 248, 0.6); font-size: 10px; margin-top: -3px; border: none; background: transparent;")
         bubble_layout.addWidget(self.bubble_tail)
 
         main_layout.addWidget(self.bubble_container)
@@ -382,13 +382,13 @@ class NoraMascot(QWidget):
     # INTÉGRATION WINDOWS SYSTEM TRAY & NOTIFICATIONS
     # =================================================================
     def init_system_tray(self):
-        """Place l'icône de Zero Two dans la zone de notification près de l'horloge Windows."""
+        """Place l'icône de Nora dans la zone de notification près de l'horloge Windows."""
         self.tray_icon = QSystemTrayIcon(self)
         ico_path = ASSETS_DIR / "nora.ico"
         if not ico_path.exists():
             ico_path = ASSETS_DIR / "nora_idle.png"
         self.tray_icon.setIcon(QIcon(str(ico_path)))
-        self.tray_icon.setToolTip("🌸 Nora - Votre Copilote Zero Two")
+        self.tray_icon.setToolTip("NORA WORKSTATION | Copilote & Ingénierie")
 
         # Clic sur l'icône de la barre des tâches pour afficher/masquer
         self.tray_icon.activated.connect(self.on_tray_activated)
@@ -415,7 +415,7 @@ class NoraMascot(QWidget):
         """Affiche une notification native Windows (Toast/Bulle près de l'horloge)."""
         if hasattr(self, 'tray_icon') and self.tray_icon and self.tray_icon.isVisible():
             msg_icon = QSystemTrayIcon.MessageIcon.Warning if is_warning else QSystemTrayIcon.MessageIcon.Information
-            self.tray_icon.showMessage(f"🌸 {title}", message, msg_icon, 4500)
+            self.tray_icon.showMessage(f"NORA | {title}", message, msg_icon, 4500)
 
     # =================================================================
     # ANIMATIONS OPTION A : CLIGNEMENT NATUREL + LIP-SYNC
@@ -1279,75 +1279,97 @@ class NoraMascot(QWidget):
         menu = QMenu(self)
         menu.setStyleSheet("""
             QMenu {
-                background-color: #1e293b;
-                color: #ffffff;
-                border: 1px solid #475569;
+                background-color: #0b1120;
+                color: #f1f5f9;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 6px;
                 padding: 6px;
-                font-size: 12px;
+                font-size: 11px;
+                font-family: 'Segoe UI', system-ui, sans-serif;
+            }
+            QMenu::item {
+                padding: 6px 20px 6px 12px;
+                border-radius: 4px;
             }
             QMenu::item:selected {
-                background-color: #e11d48;
+                background-color: #2563eb;
+                color: #ffffff;
+            }
+            QMenu::separator {
+                height: 1px;
+                background: rgba(255, 255, 255, 0.08);
+                margin: 4px 6px;
             }
         """)
 
-        action_qg = menu.addAction("📊 Ouvrir / Rétracter le QG")
-        action_voice = menu.addAction("🎙️ Parler au micro (Ctrl+Alt+N)")
-        action_handsfree = menu.addAction("🎧 Activer / Désactiver Mains-Libres")
-        action_vision = menu.addAction("👁️ Regarder mon Écran (Vision IA)")
+        action_qg = menu.addAction("Poste de Contrôle QG")
+        if self.isVisible():
+            action_toggle_mascot = menu.addAction("Masquer la mascotte (Mode Silencieux / Systray)")
+        else:
+            action_toggle_mascot = menu.addAction("Afficher la mascotte sur le bureau")
+
+        action_voice = menu.addAction("Entrée vocale (Ctrl+Alt+N)")
+        action_handsfree = menu.addAction("Mode Mains-Libres")
+        action_vision = menu.addAction("Analyser l'écran (Vision IA)")
         
-        # Vie Autonome & Balade Libre
+        # Vie Autonome & Déplacement
         menu.addSeparator()
         is_roaming = self.life_engine.roaming_enabled
-        roam_label = "🚶 Désactiver la Balade Libre" if is_roaming else "🚶 Activer la Balade Libre"
+        roam_label = "Désactiver le déplacement libre" if is_roaming else "Activer le déplacement libre"
         action_roam = menu.addAction(roam_label)
-        action_walk_now = menu.addAction("🚶 Se balader maintenant")
-        action_nap = menu.addAction("😴 Faire une sieste")
-        action_read = menu.addAction("📖 Lire une note du carnet")
+        action_walk_now = menu.addAction("Effectuer un déplacement")
+        action_nap = menu.addAction("Mettre en veille active")
+        action_read = menu.addAction("Consulter la base de connaissances")
         menu.addSeparator()
 
-        # Garde-Robe Zero Two
-        outfit_menu = menu.addMenu("👗 Garde-Robe Zero Two")
+        # Profils d'Apparence
+        outfit_menu = menu.addMenu("Profils d'apparence")
         outfit_menu.setStyleSheet("""
             QMenu {
-                background-color: #1e293b;
-                color: #ffffff;
-                border: 1px solid #475569;
+                background-color: #0b1120;
+                color: #f1f5f9;
+                border: 1px solid rgba(255, 255, 255, 0.12);
+                border-radius: 6px;
                 padding: 4px;
-                font-size: 12px;
+                font-size: 11px;
+            }
+            QMenu::item {
+                padding: 5px 16px 5px 10px;
+                border-radius: 4px;
             }
             QMenu::item:selected {
-                background-color: #e11d48;
+                background-color: #2563eb;
             }
         """)
         curr_outfit = memory_manager.get_current_outfit()
-        act_franxx = outfit_menu.addAction("🚀 Pilote Franxx" + (" ✓" if curr_outfit == "franxx" else ""))
-        act_school = outfit_menu.addAction("🎓 Écolière Sailor" + (" ✓" if curr_outfit == "school" else ""))
-        act_hoodie = outfit_menu.addAction("🧸 Hoodie Doux" + (" ✓" if curr_outfit == "hoodie" else ""))
-        act_cyberpunk = outfit_menu.addAction("⚡ Cyberpunk Techwear" + (" ✓" if curr_outfit == "cyberpunk" else ""))
-        act_commander = outfit_menu.addAction("👑 Commandant Écarlate" + (" ✓" if curr_outfit == "commander" else ""))
+        act_franxx = outfit_menu.addAction("Pilote Franxx" + (" ✓" if curr_outfit == "franxx" else ""))
+        act_school = outfit_menu.addAction("Tenue Élève" + (" ✓" if curr_outfit == "school" else ""))
+        act_hoodie = outfit_menu.addAction("Street Hoodie" + (" ✓" if curr_outfit == "hoodie" else ""))
+        act_cyberpunk = outfit_menu.addAction("Cyber Techwear" + (" ✓" if curr_outfit == "cyberpunk" else ""))
+        act_commander = outfit_menu.addAction("Commandant" + (" ✓" if curr_outfit == "commander" else ""))
 
-        # Mode Gaming & RAM Boost
+        # Mode Gaming & Optimisation
         menu.addSeparator()
         is_gaming = gaming_mode.is_gaming_mode()
-        gaming_label = "🎮 Désactiver Mode Gaming" if is_gaming else "🎮 Activer Mode Gaming (Boost FPS)"
+        gaming_label = "Désactiver Mode Gaming" if is_gaming else "Activer Mode Gaming (Priorité GPU)"
         action_gaming = menu.addAction(gaming_label)
-        action_boost_ram = menu.addAction("⚡ Vider le cache RAM (Boost FPS)")
+        action_boost_ram = menu.addAction("Libérer la mémoire RAM")
 
-        # Clonage Vocal Zero Two RVC (RTX 4080)
+        # Synthèse Vocale Haute Définition
         menu.addSeparator()
         is_vc_on = memory_manager.is_voice_cloning_enabled()
-        vc_label = "🎙️ Voix Zero Two Clonnée (RTX 4080) " + ("[Activée ✓]" if is_vc_on else "[Désactivée]")
+        vc_label = "Synthèse Vocale RVC (RTX 4080) " + ("[Activée ✓]" if is_vc_on else "[Désactivée]")
         action_toggle_vc = menu.addAction(vc_label)
 
         # Domotique & Philips Hue
         menu.addSeparator()
-        action_smart_home = menu.addAction("🏠 Maison & Domotique (Philips Hue)...")
+        action_smart_home = menu.addAction("Éclairage & Domotique (Philips Hue)...")
 
         menu.addSeparator()
 
         # Sécurité et Santé
-        action_security = menu.addAction("🛡️ Scan de Sécurité Complet")
-        action_health = menu.addAction("📊 Bilan Santé du PC")
+        action_security = menu.addAction("Audit de Sécurité Système")
+        action_health = menu.addAction("Télémétrie & Santé Machine")
         
         # Contrôles PC directs
         menu.addSeparator()
@@ -1359,14 +1381,14 @@ class NoraMascot(QWidget):
                 vol_muted = bool(spk.EndpointVolume.GetMute())
         except Exception:
             pass
-        mute_label = "🔊 Rétablir le Son" if vol_muted else "🔇 Couper le Son"
+        mute_label = "Rétablir le son" if vol_muted else "Couper le son"
         action_mute = menu.addAction(mute_label)
-        action_clean_bin = menu.addAction("🗑️ Vider la Corbeille")
-        action_lock = menu.addAction("🔒 Verrouiller le PC")
+        action_clean_bin = menu.addAction("Vider la corbeille")
+        action_lock = menu.addAction("Verrouiller la session Windows")
 
         # Alertes & Démarrage
         menu.addSeparator()
-        alerts_text = "🔔 Désactiver Alertes PC" if self.system_alerts_enabled else "🔕 Activer Alertes PC"
+        alerts_text = "Désactiver les alertes PC" if self.system_alerts_enabled else "Activer les alertes PC"
         action_toggle_alerts = menu.addAction(alerts_text)
 
         is_startup = setup_shortcuts.is_startup_enabled()
@@ -1374,14 +1396,18 @@ class NoraMascot(QWidget):
         action_startup = menu.addAction(startup_text)
 
         menu.addSeparator()
-        action_clean = menu.addAction("🧹 Ranger mes Téléchargements")
-        action_dup = menu.addAction("🔍 Isoler les doublons")
+        action_clean = menu.addAction("Classer le dossier Téléchargements")
+        action_dup = menu.addAction("Analyser les fichiers en double")
         menu.addSeparator()
-        action_quit = menu.addAction("❌ Quitter Nora")
+        action_quit = menu.addAction("Quitter la station Nora")
 
         action = menu.exec(global_pos)
         if action == action_qg:
             self.toggle_qg()
+        elif action == action_toggle_mascot:
+            self.toggle_mascot_visibility()
+            if not self.isVisible():
+                self.notify_windows("Mode Silencieux", "Nora reste active en arrière-plan. Cliquez sur l'icône dans la barre des tâches pour me réafficher.")
         elif action == action_voice:
             self.start_voice_input()
         elif action == action_handsfree:
@@ -1396,26 +1422,26 @@ class NoraMascot(QWidget):
             max_x = max(min_x + 100, screen.right() - self.width() - 20)
             import random
             target = random.randint(min_x, max_x)
-            self.start_walking_to(target, speed=3, announcement="C'est parti pour une petite promenade sur votre écran, Maverick !")
+            self.start_walking_to(target, speed=3, announcement="Déplacement de contrôle sur l'espace de travail, Maverick.")
         elif action == action_nap:
             self.force_nap_mode()
         elif action == action_read:
             self.read_learning_note()
         elif action == act_franxx:
             self.set_outfit("franxx")
-            self.display_message("🚀 Tenue de Pilote Franxx enfilée, Maverick.")
+            self.display_message("Profil visuel Pilote Franxx appliqué, Maverick.")
         elif action == act_school:
             self.set_outfit("school")
-            self.display_message("🎓 Tenue d'Écolière Sailor enfilée, Maverick.")
+            self.display_message("Profil visuel Tenue Élève appliqué, Maverick.")
         elif action == act_hoodie:
             self.set_outfit("hoodie")
-            self.display_message("🧸 Hoodie tout doux enfilé, Maverick.")
+            self.display_message("Profil visuel Street Hoodie appliqué, Maverick.")
         elif action == act_cyberpunk:
             self.set_outfit("cyberpunk")
-            self.display_message("⚡ Tenue Cyberpunk Techwear enfilée, Maverick !")
+            self.display_message("Profil visuel Cyber Techwear appliqué, Maverick.")
         elif action == act_commander:
             self.set_outfit("commander")
-            self.display_message("👑 Manteau d'Officier Commandant Écarlate enfilé, Maverick !")
+            self.display_message("Profil visuel Commandant appliqué, Maverick.")
         elif action == action_gaming:
             new_state, msg = gaming_mode.toggle_gaming_mode()
             if hasattr(self, 'qg') and self.qg:

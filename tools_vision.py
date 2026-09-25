@@ -68,7 +68,7 @@ def analyze_screen_with_gemini(user_prompt: str = "") -> dict:
     if not api_key:
         return {
             "status": "error",
-            "speech": "Oups Darling ! Il me manque ma clé d'yeux magique (GEMINI_API_KEY).",
+            "speech": "Maverick, la clé GEMINI_API_KEY est manquante pour l'analyse visuelle.",
             "summary": "GEMINI_API_KEY manquante."
         }
 
@@ -77,7 +77,7 @@ def analyze_screen_with_gemini(user_prompt: str = "") -> dict:
     except Exception as e:
         return {
             "status": "error",
-            "speech": f"Je n'ai pas réussi à regarder ton écran cette fois, Darling ({e}).",
+            "speech": f"Impossible de capturer l'écran actuellement, Maverick ({e}).",
             "summary": str(e)
         }
 
@@ -87,20 +87,21 @@ def analyze_screen_with_gemini(user_prompt: str = "") -> dict:
     custom_question = user_prompt.strip() if user_prompt else "Que vois-tu sur mon écran ?"
 
     system_instructions = f"""
-Tu es Nora, incarnant avec passion et fidélité le personnage de Zero Two (Darling in the Franxx).
-Tu regardes l'écran de ton "Darling" (qui s'appelle aussi {user_name}).
+Tu es Nora, assistante IA avancée et copilote d'ingénierie logicielle et matérielle.
+Tu analyses l'écran de travail de Maverick ({user_name}).
 
-CONSIGNES :
-1. Analyse ce qui est affiché à l'écran : applications ouvertes, fenêtres, code source, pages web, jeux, vidéos, messages d'erreur ou bureau.
-2. Si le Darling a posé une question précise ("{custom_question}"), réponds-y directement en t'appuyant sur ce que tu vois.
-3. Si la question est générale ("regarde mon écran" / "qu'est-ce que tu vois"), décris brièvement l'activité en cours, repère les éléments clés et propose ton aide ou fais un commentaire complice.
-4. Adopte la personnalité authentique de Zero Two :
-   - Appelle-le "Darling".
-   - Sois taquine, perspicace, curieuse et protectrice.
-   - Réponse VIVE, PERCUTANTE et COURTE (2 à 3 phrases maximum, environ 30 à 45 mots). Pas de listes à puces ni de longs discours.
+CONSIGNES STRICTES :
+1. Analyse avec rigueur ce qui est affiché à l'écran : éditeur de code, terminal, logiciel de CAO/3D (PrusaSlicer), documentation, alertes système ou navigateur.
+2. Si Maverick a posé une question précise ("{custom_question}"), réponds-y directement avec précision technique.
+3. Si la demande est générale, résume brièvement le contexte opérationnel en cours et formule une observation utile.
+4. RÈGLES DE COMMUNICATION :
+   - Adresse-toi systématiquement à Maverick en utilisant son nom ("Maverick") et le VOUVOIEMENT STRICT.
+   - N'utilise JAMAIS le mot "Darling" ni aucun surnom familier ou enfantin.
+   - Ton de voix : professionnel, sobre, posé et hautement compétent.
+   - Réponse VIVE, PERCUTANTE et COURTE (2 à 3 phrases maximum, environ 30 à 45 mots).
 """
 
-    prompt = f"Voici la capture de mon écran. Question / Demande : {custom_question}"
+    prompt = f"Voici la capture de mon écran. Demande de Maverick : {custom_question}"
 
     for model in VISION_MODELS:
         try:
@@ -109,7 +110,7 @@ CONSIGNES :
                 contents=[screen_img, prompt],
                 config=types.GenerateContentConfig(
                     system_instruction=system_instructions,
-                    temperature=0.4
+                    temperature=0.3
                 )
             )
             text = response.text.strip()
@@ -123,7 +124,7 @@ CONSIGNES :
 
     return {
         "status": "error",
-        "speech": "Mes yeux se sont un peu brouillés sur ton écran, Darling... Réessaie dans une seconde !",
+        "speech": "L'analyse optique de l'écran n'a pas pu aboutir, Maverick. Veuillez relancer la capture.",
         "summary": "Échec de l'appel vision Gemini."
     }
 

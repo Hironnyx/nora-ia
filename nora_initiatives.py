@@ -66,8 +66,8 @@ def _run_scan_background():
                         "id": "organize_downloads",
                         "title": "Rangement des Téléchargements",
                         "speech": (
-                            f"Dis Darling, j'ai remarqué que ton dossier Téléchargements a accumulé {len(unorganized_files)} fichiers en vrac. "
-                            "Veux-tu que je range tout automatiquement par catégories propres ?"
+                            f"Maverick, le dossier Téléchargements contient {len(unorganized_files)} fichiers non classés. "
+                            "Souhaitez-vous que j'organise ces fichiers par catégories techniques ?"
                         ),
                         "action_name": "Ranger Téléchargements"
                     }
@@ -89,8 +89,8 @@ def _run_scan_background():
                         "id": "clean_temp",
                         "title": "Nettoyage Fichiers Temporaires",
                         "speech": (
-                            f"Darling, j'ai repéré environ {size_mb} Mo de fichiers temporaires inutiles qui dorment sur ton disque C:. "
-                            "Tu veux que je fasse un brin de ménage pour libérer cet espace ?"
+                            f"Maverick, environ {size_mb} Mo de fichiers temporaires obsolètes occupent de l'espace sur le disque C:. "
+                            "Souhaitez-vous que je procède à un nettoyage pour libérer ces ressources ?"
                         ),
                         "action_name": "Nettoyer Fichiers Temp"
                     }
@@ -102,7 +102,7 @@ def _run_scan_background():
                 _current_pending_initiative = {
                     "id": "routine_security_scan",
                     "title": "Scan de Sécurité Périodique",
-                    "speech": "Darling, nous n'avons pas vérifié les défenses et les ports de ton PC depuis un moment. Tu veux qu'on lance un scan rapide de sécurité ?",
+                    "speech": "Maverick, aucun audit de sécurité récent n'a été exécuté. Souhaitez-vous lancer une analyse d'intégrité du système ?",
                     "action_name": "Lancer Scan Sécurité"
                 }
                 return
@@ -136,13 +136,13 @@ def execute_accepted_initiative(init_id: str) -> str:
     global _current_pending_initiative
     clear_pending_initiative()
 
-    result_message = "C'est fait Darling !"
+    result_message = "Opération terminée avec succès, Maverick."
 
     if init_id == "organize_downloads":
         try:
             report = tools_pc.organize_folder(DOWNLOADS_DIR)
-            result_message = "Super Darling ! J'ai rangé tous tes téléchargements par catégories bien nettes."
-            _record_learned_skill("Rangement autonome des téléchargements sur demande du Darling")
+            result_message = "Classement terminé avec succès, Maverick. Vos téléchargements sont organisés par typologie."
+            _record_learned_skill("Rangement autonome des téléchargements validé par Maverick")
         except Exception as e:
             result_message = f"Une erreur est survenue pendant le rangement : {e}"
 
@@ -162,15 +162,15 @@ def execute_accepted_initiative(init_id: str) -> str:
                     except Exception:
                         pass
             cleaned_mb = int(cleaned_mb / (1024 * 1024))
-            result_message = f"Ménage terminé Darling ! J'ai libéré {cleaned_mb} Mo de fichiers temporaires inutiles."
-            _record_learned_skill(f"Nettoyage de {cleaned_mb} Mo temporaires validé par le Darling")
+            result_message = f"Nettoyage achevé, Maverick. {cleaned_mb} Mo de fichiers temporaires ont été libérés."
+            _record_learned_skill(f"Nettoyage de {cleaned_mb} Mo temporaires validé par Maverick")
         except Exception as e:
             result_message = f"Ménage partiel effectué : {e}"
 
     elif init_id == "routine_security_scan":
         import agent_security
         scan = agent_security.run_security_scan()
-        result_message = f"Scan terminé avec succès Darling ! Score : {scan['score']}/100. Tout est sous contrôle !"
+        result_message = f"Audit de sécurité terminé, Maverick. Indice de sécurité : {scan['score']}/100."
         _record_learned_skill(f"Audit de sécurité validé avec un score de {scan['score']}/100")
 
     return result_message
@@ -178,7 +178,7 @@ def execute_accepted_initiative(init_id: str) -> str:
 def refuse_initiative(init_id: str) -> str:
     """Enregistre le refus de l'utilisateur sans rien faire."""
     clear_pending_initiative()
-    return "C'est compris Darling, je ne touche à rien !"
+    return "Bien reçu Maverick, aucune modification n'a été apportée."
 
 def _record_learned_skill(description: str):
     """Enregistre l'action réussie dans la mémoire persistante de Nora."""
