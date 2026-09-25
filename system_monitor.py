@@ -149,20 +149,38 @@ def get_system_diagnostics() -> Dict[str, Any]:
     disk_info = stats.get('disk', {})
     disk_pct = disk_info.get('percent', 0.0)
     ram_pct = stats.get('ram_percent', 0.0)
+    ram_used = stats.get('ram_used_gb', 0.0)
+    ram_tot = stats.get('ram_total_gb', 0.0)
 
     # Récupération télémétrie GPU NVIDIA si disponible
-    gpu_pct = 0.0
+    gpu_info = {
+        'available': False,
+        'model': 'RTX 4080',
+        'load_percent': 0.0,
+        'memory_used_mb': 0,
+        'memory_total_mb': 0,
+        'temperature_c': 0
+    }
     try:
         import subprocess
         flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
         res = subprocess.run(
-            ["nvidia-smi", "--query-gpu=utilization.gpu", "--format=csv,noheader,nounits"],
+            ["nvidia-smi", "--query-gpu=name,utilization.gpu,memory.used,memory.total,temperature.gpu", "--format=csv,noheader,nounits"],
             capture_output=True, text=True, timeout=1, creationflags=flags
         )
         if res.returncode == 0 and res.stdout.strip():
-            gpu_pct = float(res.stdout.strip().split("\n")[0])
+            parts = [p.strip() for p in res.stdout.strip().split("\n")[0].split(",")]
+            if len(parts) >= 2:
+                gpu_info['available'] = True
+                gpu_info['model'] = parts[0]
+                gpu_info['load_percent'] = float(parts[1]) if parts[1] else 0.0
+            if len(parts) >= 4:
+                gpu_info['memory_used_mb'] = int(float(parts[2])) if parts[2] else 0
+                gpu_info['memory_total_mb'] = int(float(parts[3])) if parts[3] else 0
+            if len(parts) >= 5:
+                gpu_info['temperature_c'] = int(float(parts[4])) if parts[4] else 0
     except Exception:
-        gpu_pct = 0.0
+        pass
 
     # Score de santé global sur 100
     health = max(15, int(100 - (_last_cpu_percent * 0.3) - (ram_pct * 0.3) - (disk_pct * 0.2)))
@@ -170,12 +188,19 @@ def get_system_diagnostics() -> Dict[str, Any]:
     return {
         'cpu_percent': _last_cpu_percent,
         'ram_percent': ram_pct,
-        'ram_used_gb': stats.get('ram_used_gb', 0.0),
-        'ram_total_gb': stats.get('ram_total_gb', 0.0),
+        'ram_used_gb': ram_used,
+        'ram_total_gb': ram_tot,
+        'ram': {
+            'percent': ram_pct,
+            'used_gb': ram_used,
+            'total_gb': ram_tot
+        },
         'disk_percent': disk_pct,
         'disk_total_gb': disk_info.get('total_gb', 0.0),
         'disk_free_gb': disk_info.get('free_gb', 0.0),
-        'gpu_percent': gpu_pct,
+        'disk': disk_info,
+        'gpu_percent': gpu_info['load_percent'],
+        'gpu': gpu_info,
         'health_score': health,
         'battery': stats.get('battery')
     }

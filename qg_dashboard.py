@@ -2581,25 +2581,27 @@ class QGDashboard(QWidget):
             }}
         """)
         layout = QVBoxLayout(card)
-        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setContentsMargins(10, 10, 10, 10)
+        layout.setSpacing(6)
 
         lbl_title = QLabel(name)
-        lbl_title.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: bold; border: none;")
+        lbl_title.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 700; border: none; letter-spacing: 0.5px;")
         layout.addWidget(lbl_title)
 
         lbl_val = QLabel("0 %")
-        lbl_val.setStyleSheet(f"color: {color}; font-size: 18px; font-weight: 800; border: none;")
+        lbl_val.setStyleSheet(f"color: {color}; font-size: 16px; font-weight: 800; border: none;")
         layout.addWidget(lbl_val)
 
         pbar = QProgressBar()
         pbar.setRange(0, 100)
         pbar.setValue(0)
+        pbar.setTextVisible(False)
+        pbar.setFixedHeight(8)
         pbar.setStyleSheet(f"""
             QProgressBar {{
                 background: rgba(30, 41, 59, 0.8);
                 border-radius: 4px;
-                height: 8px;
-                text-align: right;
+                border: none;
             }}
             QProgressBar::chunk {{
                 background: {color};
@@ -2613,29 +2615,55 @@ class QGDashboard(QWidget):
     def update_telemetry(self):
         try:
             diag = system_monitor.get_system_diagnostics()
-            cpu_pct = diag.get("cpu_percent", 0)
-            ram_info = diag.get("ram", {})
-            ram_pct = ram_info.get("percent", 0)
-            gpu_info = diag.get("gpu", {})
-            gpu_pct = gpu_info.get("load_percent", 0) if gpu_info.get("available") else 0
-            disk_info = diag.get("disk", {})
-            disk_pct = disk_info.get("percent", 0)
 
+            # 1. CPU
+            cpu_pct = float(diag.get("cpu_percent", 0.0))
             self.cpu_lbl.setText(f"{cpu_pct:.1f} %")
-            self.cpu_bar.findChild(QProgressBar).setValue(int(cpu_pct))
+            cpu_pbar = self.cpu_bar.findChild(QProgressBar)
+            if cpu_pbar:
+                cpu_pbar.setValue(min(100, max(0, int(cpu_pct))))
 
-            self.ram_lbl.setText(f"{ram_pct:.1f} % ({ram_info.get('used_gb', 0):.1f}/{ram_info.get('total_gb', 0):.1f} Go)")
-            self.ram_bar.findChild(QProgressBar).setValue(int(ram_pct))
+            # 2. RAM
+            ram_info = diag.get("ram", {})
+            ram_pct = float(ram_info.get("percent") if ram_info.get("percent") is not None else diag.get("ram_percent", 0.0))
+            ram_used = float(ram_info.get("used_gb") if ram_info.get("used_gb") is not None else diag.get("ram_used_gb", 0.0))
+            ram_total = float(ram_info.get("total_gb") if ram_info.get("total_gb") is not None else diag.get("ram_total_gb", 0.0))
+            self.ram_lbl.setText(f"{ram_pct:.1f} % ({ram_used:.1f} / {ram_total:.1f} Go)")
+            ram_pbar = self.ram_bar.findChild(QProgressBar)
+            if ram_pbar:
+                ram_pbar.setValue(min(100, max(0, int(ram_pct))))
 
-            if gpu_info.get("available"):
-                self.gpu_lbl.setText(f"{gpu_pct} % ({gpu_info.get('model', 'RTX 4080')})")
-                self.gpu_bar.findChild(QProgressBar).setValue(int(gpu_pct))
-            else:
-                self.gpu_lbl.setText("RTX 4080 (0% Veille)")
-                self.gpu_bar.findChild(QProgressBar).setValue(0)
+            # 3. GPU NVIDIA
+            gpu_info = diag.get("gpu", {})
+            gpu_avail = gpu_info.get("available", False)
+            gpu_pct = float(gpu_info.get("load_percent") if gpu_avail else diag.get("gpu_percent", 0.0))
+            gpu_model = gpu_info.get("model", "RTX 4080").replace("NVIDIA GeForce ", "")
+            vram_used_mb = gpu_info.get("memory_used_mb", 0)
+            vram_total_mb = gpu_info.get("memory_total_mb", 0)
+            temp_c = gpu_info.get("temperature_c", 0)
 
-            self.disk_lbl.setText(f"{disk_pct:.1f} % ({disk_info.get('free_gb', 0):.0f} Go libres)")
-            self.disk_bar.findChild(QProgressBar).setValue(int(disk_pct))
+            vram_detail = ""
+            if vram_total_mb > 0:
+                vram_used_gb = vram_used_mb / 1024.0
+                vram_tot_gb = vram_total_mb / 1024.0
+                temp_str = f" • {temp_c}°C" if temp_c > 0 else ""
+                vram_detail = f" ({vram_used_gb:.1f}/{vram_tot_gb:.0f} Go{temp_str})"
+
+            self.gpu_lbl.setText(f"{gpu_pct:.0f} % • {gpu_model}{vram_detail}")
+            gpu_pbar = self.gpu_bar.findChild(QProgressBar)
+            if gpu_pbar:
+                gpu_pbar.setValue(min(100, max(0, int(gpu_pct))))
+
+            # 4. Disque C:
+            disk_info = diag.get("disk", {})
+            disk_pct = float(disk_info.get("percent") if disk_info.get("percent") is not None else diag.get("disk_percent", 0.0))
+            disk_free = float(disk_info.get("free_gb") if disk_info.get("free_gb") is not None else diag.get("disk_free_gb", 0.0))
+            disk_total = float(disk_info.get("total_gb") if disk_info.get("total_gb") is not None else diag.get("disk_total_gb", 0.0))
+            self.disk_lbl.setText(f"{disk_pct:.1f} % ({disk_free:.0f} Go libres sur {disk_total:.0f} Go)")
+            disk_pbar = self.disk_bar.findChild(QProgressBar)
+            if disk_pbar:
+                disk_pbar.setValue(min(100, max(0, int(disk_pct))))
+
         except Exception:
             pass
 
