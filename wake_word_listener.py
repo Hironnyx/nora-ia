@@ -40,18 +40,23 @@ class WakeWordDetector:
     def _listen_loop(self):
         mic_idx = voice_engine.get_active_microphone_index()
         try:
-            with sr.Microphone(device_index=mic_idx) as source:
+            try:
+                mic_source = sr.Microphone(device_index=mic_idx)
+            except Exception:
+                mic_source = sr.Microphone()
+
+            with mic_source as source:
                 self.recognizer.adjust_for_ambient_noise(source, duration=0.8)
                 while self.is_running:
-                    # Ne pas écouter pendant que Nora parle pour éliminer les retours micro
-                    if voice_engine.is_speaking():
+                    # Ne pas écouter pendant que Nora parle ou écoute déjà sur une commande
+                    if voice_engine.is_speaking() or voice_engine.is_listening():
                         time.sleep(0.3)
                         continue
 
                     try:
                         # Écoute de courts segments de voix
                         audio = self.recognizer.listen(source, timeout=3.0, phrase_time_limit=7.0)
-                        if voice_engine.is_speaking():
+                        if voice_engine.is_speaking() or voice_engine.is_listening():
                             continue
 
                         text = self.recognizer.recognize_google(audio, language="fr-FR").lower()

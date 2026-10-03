@@ -182,6 +182,35 @@ cleanup_stale_audio()
 _speech_queue = queue.Queue()
 _speech_worker_thread = None
 
+def _play_audio_file(audio_path: Path) -> bool:
+    """
+    Lecture audio studio haute fidélité via Pygame Mixer (SDL2 / WASAPI).
+    - Maintient le canal audio ouvert en permanence (zéro pop, zéro clic, zéro crack d'ouverture)
+    - Lecture en mémoire RAM complète (aucun verrou sur le fichier disque)
+    - Fallback WinMM silencieux avec SND_NODEFAULT en cas de besoin
+    """
+    try:
+        if not pygame.mixer.get_init():
+            pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=1024)
+        sound = pygame.mixer.Sound(str(audio_path))
+        sound.set_volume(1.0)
+        channel = sound.play()
+        if channel:
+            t0 = time.time()
+            while channel.get_busy() and (time.time() - t0 < 20.0):
+                time.sleep(0.02)
+        return True
+    except Exception as e:
+        if sys.platform == "win32":
+            try:
+                import winsound
+                flags = getattr(winsound, 'SND_NODEFAULT', 2) | getattr(winsound, 'SND_FILENAME', 0x00020000)
+                winsound.PlaySound(str(audio_path), flags)
+                return True
+            except Exception:
+                pass
+    return False
+
 def _speech_worker_loop():
     global _is_speaking
     while True:
@@ -203,12 +232,7 @@ def _speech_worker_loop():
                             on_start()
                         except Exception:
                             pass
-                    if sys.platform == "win32":
-                        try:
-                            import winsound
-                            winsound.PlaySound(str(cached_audio), winsound.SND_FILENAME)
-                        except Exception:
-                            pass
+                    _play_audio_file(cached_audio)
                     if on_end:
                         try:
                             on_end()
@@ -253,31 +277,7 @@ def _speech_worker_loop():
                     except Exception:
                         pass
 
-                # Lecture audio ultra-fiable sans blocage
-                played_via_winsound = False
-                if sys.platform == "win32" and final_audio.suffix.lower() == ".wav" and final_audio.exists():
-                    try:
-                        import winsound
-                        winsound.PlaySound(str(final_audio), winsound.SND_FILENAME)
-                        played_via_winsound = True
-                    except Exception as we:
-                        print(f"Avertissement winsound : {we}")
-                        played_via_winsound = False
-
-                if not played_via_winsound:
-                    if not pygame.mixer.get_init():
-                        try:
-                            pygame.mixer.init()
-                        except Exception:
-                            pass
-
-                    pygame.mixer.music.load(str(final_audio))
-                    pygame.mixer.music.play()
-
-                    t_start = time.time()
-                    # Timeout de sécurité strict de 15s max pour ne jamais figer la boucle
-                    while pygame.mixer.music.get_busy() and (time.time() - t_start < 15.0):
-                        time.sleep(0.04)
+                _play_audio_file(final_audio)
 
             except Exception as e:
                 print(f"Erreur de lecture vocale : {e}")
@@ -333,16 +333,30 @@ def speak(text: str, on_start=None, on_end=None, blocking: bool = False):
     if blocking:
         done_event.wait()
 
+_is_listening = False
+
+def is_listening() -> bool:
+    """Indique si Nora est activement en train d'écouter au microphone."""
+    return _is_listening
+
 def listen_microphone(timeout: int = 5, phrase_time_limit: int = 10) -> str:
     """Écoute le microphone actif et retranscrit les paroles de l'utilisateur."""
+    global _is_listening
+    _is_listening = True
     mic_idx = get_active_microphone_index()
     r = sr.Recognizer()
     r.energy_threshold = 200
     r.dynamic_energy_threshold = True
 
     try:
-        with sr.Microphone(device_index=mic_idx) as source:
-            r.adjust_for_ambient_noise(source, duration=0.6)
+        mic_source = None
+        try:
+            mic_source = sr.Microphone(device_index=mic_idx)
+        except Exception:
+            mic_source = sr.Microphone()
+
+        with mic_source as source:
+            r.adjust_for_ambient_noise(source, duration=0.5)
             print("🎙️ Nora vous écoute sur le bon micro...")
             audio = r.listen(source, timeout=timeout, phrase_time_limit=phrase_time_limit)
 
@@ -356,6 +370,8 @@ def listen_microphone(timeout: int = 5, phrase_time_limit: int = 10) -> str:
     except Exception as e:
         print(f"Erreur micro : {e}")
         return ""
+    finally:
+        _is_listening = False
 
 def is_speaking():
     return _is_speaking or not _speech_queue.empty()

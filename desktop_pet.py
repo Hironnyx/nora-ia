@@ -58,7 +58,7 @@ from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
     QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QMenu, QSystemTrayIcon
 )
-from PyQt6.QtCore import Qt, QPoint, QTimer, pyqtSignal, QObject
+from PyQt6.QtCore import Qt, QPoint, QTimer, pyqtSignal, QObject, QThread
 from PyQt6.QtGui import QCursor, QFont, QIcon, QPainter, QColor, QBrush, QPen
 
 if getattr(sys, 'frozen', False):
@@ -101,6 +101,8 @@ class NoraBridge(QObject):
     screen_vision_requested = pyqtSignal(str)
     swarm_event = pyqtSignal(str, int, str, int)
     mission_requested = pyqtSignal(str)
+    user_message_received = pyqtSignal(str)
+    ram_boost_requested = pyqtSignal()
 
 
 class NoraWaveformWidget(QWidget):
@@ -195,10 +197,13 @@ class NoraDynamicIsland(QWidget):
         self.bridge.screen_vision_requested.connect(self.trigger_screen_vision)
         self.bridge.mission_requested.connect(self.execute_mission)
         self.bridge.swarm_event.connect(self.on_swarm_event_received)
+        self.bridge.user_message_received.connect(self.process_user_message)
+        self.bridge.ram_boost_requested.connect(self.optimize_ram_direct)
 
         self.drag_position = QPoint()
         self.is_dragging = False
         self.is_mission_running = False
+        self.is_recording_voice = False
         self.is_speaking_now = False
         self.hands_free_enabled = False
         self.system_alerts_enabled = True
@@ -220,8 +225,6 @@ class NoraDynamicIsland(QWidget):
 
         # Salutation sobre J.A.R.V.I.S. au démarrage
         QTimer.singleShot(900, self.welcome_greeting)
-        # QG prêt en arrière-plan
-        QTimer.singleShot(1400, self.open_qg_initial)
 
     def init_ui(self):
         self.setWindowFlags(
@@ -558,6 +561,10 @@ class NoraDynamicIsland(QWidget):
 
     def set_hud_state(self, state: str):
         """Bascule l'état visuel de la capsule (idle, listen, work)."""
+        if QThread.currentThread() != self.thread():
+            self.bridge.set_state.emit(state)
+            return
+
         if state == "listen":
             self.lbl_state.setText("LISTENING")
             self.lbl_state.setStyleSheet("color: #38bdf8; font-size: 8px; font-weight: 700; background: rgba(56, 189, 248, 0.2); padding: 2px 5px; border-radius: 4px; border: none;")
@@ -579,6 +586,9 @@ class NoraDynamicIsland(QWidget):
     # =========================================================================
     def display_message(self, text: str, duration_ms: int = 6500):
         """Affiche un message stylisé dans la carte HUD rétractable."""
+        if QThread.currentThread() != self.thread():
+            self.bridge.update_hud.emit(text, duration_ms)
+            return
         if not text:
             return
         self.hud_msg.setText(text)
@@ -627,6 +637,10 @@ class NoraDynamicIsland(QWidget):
     # GESTION DES MESSAGES UTILISATEUR & MISSIONS
     # =========================================================================
     def process_user_message(self, user_text: str):
+        if QThread.currentThread() != self.thread():
+            self.bridge.user_message_received.emit(user_text)
+            return
+
         if self.is_mission_running:
             self.display_message("⏳ Une mission est déjà en cours d'exécution, Maverick.")
             return
@@ -637,22 +651,22 @@ class NoraDynamicIsland(QWidget):
             if any(k in lower for k in ["denise", "executiv", "exécutiv"]):
                 memory_manager.set_voice_profile("denise")
                 msg = "Profil vocal configuré sur Nora Exécutive. Prête pour vos directives, Maverick."
-                self.on_chat_response(msg)
+                self.bridge.chat_response.emit(msg)
                 return
             elif any(k in lower for k in ["jarvis", "henri", "majordome"]):
                 memory_manager.set_voice_profile("henri")
                 msg = "Profil vocal configuré sur Nora J.A.R.V.I.S. À vos ordres, Maverick."
-                self.on_chat_response(msg)
+                self.bridge.chat_response.emit(msg)
                 return
             elif any(k in lower for k in ["vivienne", "studio"]):
                 memory_manager.set_voice_profile("vivienne")
                 msg = "Profil vocal configuré sur Nora Studio. À votre écoute, Maverick."
-                self.on_chat_response(msg)
+                self.bridge.chat_response.emit(msg)
                 return
             elif any(k in lower for k in ["remy", "cyber"]):
                 memory_manager.set_voice_profile("remy")
                 msg = "Profil vocal configuré sur Nora Cyber Tech. Systèmes parés, Maverick."
-                self.on_chat_response(msg)
+                self.bridge.chat_response.emit(msg)
                 return
 
         self.set_hud_state("work")
@@ -672,7 +686,7 @@ class NoraDynamicIsland(QWidget):
                     self.bridge.chat_response.emit(chat_reply)
                 elif intent == "BOOST_RAM":
                     self.bridge.chat_response.emit(chat_reply)
-                    self.optimize_ram_direct()
+                    self.bridge.ram_boost_requested.emit()
                 elif intent == "SCREEN_VISION":
                     self.bridge.screen_vision_requested.emit(chat_reply)
                 elif intent == "CHAT":
@@ -685,11 +699,17 @@ class NoraDynamicIsland(QWidget):
         threading.Thread(target=analyze_thread, daemon=True).start()
 
     def on_chat_response(self, reply_text: str):
+        if QThread.currentThread() != self.thread():
+            self.bridge.chat_response.emit(reply_text)
+            return
         self.set_hud_state("idle")
         self.display_message(reply_text, duration_ms=7500)
         self.speak_nora(reply_text)
 
     def execute_mission(self, mission_goal: str):
+        if QThread.currentThread() != self.thread():
+            self.bridge.mission_requested.emit(mission_goal)
+            return
         self.is_mission_running = True
         self.set_hud_state("work")
         self.display_message(f"⚙️ <b>MISSION DÉMARRÉE :</b>\n{mission_goal}\n\nMobilisation de l'Essaim Cognitif en cours...", duration_ms=0)
@@ -714,6 +734,9 @@ class NoraDynamicIsland(QWidget):
         threading.Thread(target=mission_worker, daemon=True).start()
 
     def on_mission_finished(self, report: str):
+        if QThread.currentThread() != self.thread():
+            self.bridge.mission_finished.emit(report)
+            return
         self.is_mission_running = False
         self.set_hud_state("idle")
         sound_effects.play_success_chime()
@@ -735,7 +758,7 @@ class NoraDynamicIsland(QWidget):
     def speak_nora(self, text: str, on_finished=None, force: bool = False):
         if gaming_mode.is_gaming_mode() and not force:
             if on_finished:
-                QTimer.singleShot(100, on_finished)
+                threading.Timer(0.1, on_finished).start()
             return
 
         def _on_start():
@@ -761,18 +784,25 @@ class NoraDynamicIsland(QWidget):
         self.is_speaking_now = False
 
     def start_voice_input(self):
-        if self.is_mission_running:
+        if self.is_mission_running or getattr(self, 'is_recording_voice', False):
             return
+        self.is_recording_voice = True
 
         def record_thread():
-            self.bridge.set_state.emit("listen")
-            self.bridge.update_hud.emit("🎙️ <i>À votre écoute, Maverick... Parlez librement.</i>", 5000)
-            spoken = voice_engine.listen_microphone()
-            if spoken:
-                self.process_user_message(spoken)
-            else:
+            try:
+                self.bridge.set_state.emit("listen")
+                self.bridge.update_hud.emit("🎙️ <i>À votre écoute, Maverick... Parlez librement.</i>", 5000)
+                spoken = voice_engine.listen_microphone()
+                if spoken:
+                    self.bridge.user_message_received.emit(spoken)
+                else:
+                    self.bridge.set_state.emit("idle")
+                    self.bridge.update_hud.emit("Je n'ai pas capté votre voix, Maverick. Cliquez sur 🎙️ ou écrivez-moi.", 5000)
+            except Exception as e:
                 self.bridge.set_state.emit("idle")
-                self.bridge.update_hud.emit("Je n'ai pas capté votre voix, Maverick. Cliquez sur 🎙️ ou écrivez-moi.", 5000)
+                self.bridge.update_hud.emit(f"Erreur microphone : {e}", 4000)
+            finally:
+                self.is_recording_voice = False
 
         threading.Thread(target=record_thread, daemon=True).start()
 
@@ -791,6 +821,9 @@ class NoraDynamicIsland(QWidget):
     # VISION D'ÉCRAN MULTIMODALE GEMINI
     # =========================================================================
     def trigger_screen_vision(self, prompt_text: str = ""):
+        if QThread.currentThread() != self.thread():
+            self.bridge.screen_vision_requested.emit(prompt_text)
+            return
         if self.is_mission_running:
             self.display_message("⏳ Une mission est déjà en cours Maverick, un instant s'il vous plaît.")
             return
@@ -1021,6 +1054,9 @@ class NoraDynamicIsland(QWidget):
             self.qg.update_gaming_ui()
 
     def optimize_ram_direct(self):
+        if QThread.currentThread() != self.thread():
+            self.bridge.ram_boost_requested.emit()
+            return
         sound_effects.play_wake_chime()
         count, freed = gaming_mode.optimize_ram_boost()
         msg = f"⚡ Mémoire vive optimisée : {count} processus allégés, {freed} Mo libérés !"
