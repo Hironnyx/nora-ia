@@ -102,8 +102,11 @@ def _get_or_init_converter():
             return None
 
 def warmup_in_background():
-    """Pré-charge le modèle en arrière-plan pour que la première phrase soit instantanée."""
+    """Pré-charge le modèle en arrière-plan si activé."""
     global _init_in_progress
+    import memory_manager
+    if not memory_manager.is_voice_cloning_enabled():
+        return
     if _is_initialized or _init_in_progress:
         return
 

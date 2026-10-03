@@ -22,19 +22,19 @@ CACHE_DIR.mkdir(parents=True, exist_ok=True)
 MAX_CACHE_FILES = 400
 MAX_CACHE_SIZE_BYTES = 150 * 1024 * 1024  # 150 Mo
 
-def _compute_key(text: str) -> str:
-    """Génère une clé de hachage unique normalisée à partir du texte."""
-    clean = " ".join(text.strip().lower().split())
+def _compute_key(text: str, profile_id: str = "denise") -> str:
+    """Génère une clé de hachage unique normalisée à partir du profil vocal et du texte."""
+    clean = f"{profile_id}::" + " ".join(text.strip().lower().split())
     return hashlib.sha256(clean.encode("utf-8")).hexdigest()[:24]
 
-def get_cached_audio(text: str) -> Optional[Path]:
+def get_cached_audio(text: str, profile_id: str = "denise") -> Optional[Path]:
     """
-    Retourne le chemin du fichier WAV Zero Two en cache si présent et valide (>1000 octets).
+    Retourne le chemin du fichier WAV studio en cache si présent et valide (>1000 octets).
     Met à jour la date d'accès pour l'éviction LRU.
     """
     if not text or len(text.strip()) == 0:
         return None
-    key = _compute_key(text)
+    key = _compute_key(text, profile_id)
     candidate = CACHE_DIR / f"{key}.wav"
     if candidate.exists() and candidate.stat().st_size > 1000:
         try:
@@ -45,15 +45,15 @@ def get_cached_audio(text: str) -> Optional[Path]:
         return candidate
     return None
 
-def save_cached_audio(text: str, audio_path: Path) -> Optional[Path]:
+def save_cached_audio(text: str, audio_path: Path, profile_id: str = "denise") -> Optional[Path]:
     """
-    Sauvegarde un fichier audio produit par RVC dans le cache persistant sous forme WAV.
+    Sauvegarde un fichier audio masterisé dans le cache persistant sous forme WAV.
     Gère la purge LRU automatique si le cache dépasse les plafonds.
     """
     if not text or not audio_path.exists() or audio_path.stat().st_size < 1000:
         return None
 
-    key = _compute_key(text)
+    key = _compute_key(text, profile_id)
     target = CACHE_DIR / f"{key}.wav"
 
     try:
@@ -87,9 +87,23 @@ def save_cached_audio(text: str, audio_path: Path) -> Optional[Path]:
         print(f"⚠️ [AudioCache] Erreur lors de la mise en cache : {e}")
         return None
 
-def is_cached(text: str) -> bool:
-    """Vérifie rapidement si une phrase est déjà mémorisée dans le cache."""
-    return get_cached_audio(text) is not None
+def is_cached(text: str, profile_id: str = "denise") -> bool:
+    """Vérifie rapidement si une phrase est déjà mémorisée dans le cache pour ce profil."""
+    return get_cached_audio(text, profile_id) is not None
+
+def clear_cache() -> int:
+    """Purge l'intégralité du cache audio."""
+    count = 0
+    try:
+        for f in CACHE_DIR.glob("*.wav"):
+            try:
+                f.unlink(missing_ok=True)
+                count += 1
+            except Exception:
+                pass
+    except Exception:
+        pass
+    return count
 
 def _prune_cache_if_needed():
     """Élimine les fichiers audio les plus anciens si la taille ou le nombre dépasse la limite."""

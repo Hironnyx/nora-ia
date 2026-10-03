@@ -109,13 +109,72 @@ def set_current_outfit(outfit: str):
     prefs["tenue_active"] = outfit
     save_memory(mem)
 
-def is_voice_cloning_enabled() -> bool:
-    """Indique si le clonage vocal Zero Two RVC sur RTX 4080 est activé."""
+VOICE_PROFILES = {
+    "denise": {
+        "id": "denise",
+        "name": "Nora Exécutive (Féminin)",
+        "voice": "fr-FR-DeniseNeural",
+        "rate": "+2%",
+        "pitch": "-1Hz",
+        "gender": "Féminin",
+        "desc": "Calme, autoritaire, diction cristalline (Par défaut)"
+    },
+    "henri": {
+        "id": "henri",
+        "name": "Nora J.A.R.V.I.S. (Masculin)",
+        "voice": "fr-FR-HenriNeural",
+        "rate": "+2%",
+        "pitch": "-1Hz",
+        "gender": "Masculin",
+        "desc": "Protocolaire, flegmatique, style majordome J.A.R.V.I.S."
+    },
+    "vivienne": {
+        "id": "vivienne",
+        "name": "Nora Studio (Féminin)",
+        "voice": "fr-FR-VivienneMultilingualNeural",
+        "rate": "+1%",
+        "pitch": "-2Hz",
+        "gender": "Féminin",
+        "desc": "Moderne, haute fidélité multilingue"
+    },
+    "remy": {
+        "id": "remy",
+        "name": "Nora Cyber Tech (Masculin)",
+        "voice": "fr-FR-RemyMultilingualNeural",
+        "rate": "+2%",
+        "pitch": "-1Hz",
+        "gender": "Masculin",
+        "desc": "Technique, fluide et dynamique"
+    }
+}
+
+def get_voice_profile() -> str:
+    """Retourne l'identifiant du profil vocal actif de Nora (par défaut 'denise')."""
     mem = load_memory()
-    return mem.get("user", {}).get("preferences", {}).get("voice_cloning_zero_two", True)
+    return mem.get("user", {}).get("preferences", {}).get("voice_profile", "denise")
+
+def set_voice_profile(profile_id: str):
+    """Enregistre le profil vocal choisi par Maverick."""
+    if profile_id not in VOICE_PROFILES:
+        profile_id = "denise"
+    mem = load_memory()
+    prefs = mem.setdefault("user", {}).setdefault("preferences", {})
+    prefs["voice_profile"] = profile_id
+    save_memory(mem)
+
+def get_voice_profile_info(profile_id: str = None) -> dict:
+    """Retourne la configuration complète du profil vocal demandé ou actif."""
+    if not profile_id:
+        profile_id = get_voice_profile()
+    return VOICE_PROFILES.get(profile_id, VOICE_PROFILES["denise"])
+
+def is_voice_cloning_enabled() -> bool:
+    """Indique si le clonage vocal expérimental RVC est activé (désactivé par défaut au profit de la voix HD pure)."""
+    mem = load_memory()
+    return mem.get("user", {}).get("preferences", {}).get("voice_cloning_zero_two", False)
 
 def set_voice_cloning_enabled(enabled: bool):
-    """Active ou désactive le clonage vocal Zero Two RVC."""
+    """Active ou désactive le clonage vocal expérimental RVC."""
     mem = load_memory()
     prefs = mem.setdefault("user", {}).setdefault("preferences", {})
     prefs["voice_cloning_zero_two"] = bool(enabled)

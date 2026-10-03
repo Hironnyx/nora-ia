@@ -41,6 +41,8 @@ import nora_companion
 import project_manager
 import print3d_manager
 import agent_home
+import voice_engine
+import nora_audio_cache
 
 if sys.platform == "win32":
     if hasattr(sys.stdout, "reconfigure"):
@@ -545,6 +547,77 @@ class QGDashboard(QWidget):
 
         layout.addLayout(quick_grid)
 
+        # Sélecteur de profil vocal studio HD
+        voice_card = QFrame()
+        voice_card.setStyleSheet("""
+            QFrame {
+                background: rgba(15, 23, 42, 0.6);
+                border: 1px solid rgba(56, 189, 248, 0.25);
+                border-radius: 8px;
+                padding: 4px 8px;
+            }
+        """)
+        vc_layout = QHBoxLayout(voice_card)
+        vc_layout.setContentsMargins(8, 4, 8, 4)
+        vc_layout.setSpacing(10)
+
+        vc_title = QLabel("🎙️ PROFIL VOCAL :")
+        vc_title.setStyleSheet("color: #38bdf8; font-size: 11px; font-weight: bold; border: none;")
+        vc_layout.addWidget(vc_title)
+
+        self.voice_combo = QComboBox()
+        self.voice_combo.setStyleSheet("""
+            QComboBox {
+                background: rgba(30, 41, 59, 0.85);
+                color: #f1f5f9;
+                border: 1px solid rgba(255, 255, 255, 0.15);
+                border-radius: 6px;
+                padding: 4px 10px;
+                font-size: 11px;
+                font-weight: 600;
+                min-width: 230px;
+            }
+            QComboBox::drop-down { border: none; }
+            QComboBox QAbstractItemView {
+                background: #0f172a;
+                color: #f1f5f9;
+                selection-background-color: #0284c7;
+                border: 1px solid rgba(56, 189, 248, 0.4);
+            }
+        """)
+        current_v = memory_manager.get_voice_profile()
+        for p_id, p_info in memory_manager.VOICE_PROFILES.items():
+            self.voice_combo.addItem(p_info["name"], p_id)
+
+        idx = self.voice_combo.findData(current_v)
+        if idx >= 0:
+            self.voice_combo.setCurrentIndex(idx)
+        self.voice_combo.currentIndexChanged.connect(self._on_voice_profile_changed)
+        vc_layout.addWidget(self.voice_combo)
+
+        btn_test_voice = QPushButton("TESTER 🔊")
+        btn_test_voice.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_test_voice.setStyleSheet("""
+            QPushButton {
+                background: rgba(2, 132, 199, 0.25);
+                color: #38bdf8;
+                border: 1px solid rgba(56, 189, 248, 0.4);
+                border-radius: 6px;
+                padding: 4px 12px;
+                font-size: 10px;
+                font-weight: bold;
+            }
+            QPushButton:hover {
+                background: #0284c7;
+                color: white;
+            }
+        """)
+        btn_test_voice.clicked.connect(self._on_test_voice_clicked)
+        vc_layout.addWidget(btn_test_voice)
+        vc_layout.addStretch()
+
+        layout.addWidget(voice_card)
+
         log_lbl = QLabel("DERNIÈRE ACTIVITÉ DE L'AGENT :")
         log_lbl.setStyleSheet("color: #94a3b8; font-size: 11px; font-weight: bold; margin-top: 6px;")
         layout.addWidget(log_lbl)
@@ -589,6 +662,23 @@ class QGDashboard(QWidget):
             self.cockpit_log.append(f"⚡ [Mission] {cmd}")
             if self.parent_mascot:
                 self.parent_mascot.execute_mission(cmd)
+
+    def _on_voice_profile_changed(self, index: int):
+        p_id = self.voice_combo.itemData(index)
+        if p_id:
+            memory_manager.set_voice_profile(p_id)
+            info = memory_manager.get_voice_profile_info(p_id)
+            self.cockpit_log.append(f"🎙️ [Voix] Profil configuré sur : {info['name']}")
+            if self.parent_mascot and hasattr(self.parent_mascot, 'speak_nora'):
+                self.parent_mascot.speak_nora(f"Profil vocal configuré sur {info['name']}. À vos ordres, Maverick.")
+
+    def _on_test_voice_clicked(self):
+        info = memory_manager.get_voice_profile_info()
+        self.cockpit_log.append(f"🔊 [Voix] Test en cours ({info['name']})...")
+        if self.parent_mascot and hasattr(self.parent_mascot, 'speak_nora'):
+            self.parent_mascot.speak_nora(f"Système vocal opérationnel Maverick. Profil : {info['name']}.")
+        else:
+            voice_engine.speak(f"Système vocal opérationnel Maverick. Profil : {info['name']}.")
 
     # =========================================================================
     # 2. PANNEAU ESSAIM NEURONAL & AGORA (DÉBAT + FICHES INDIVIDUELLES)

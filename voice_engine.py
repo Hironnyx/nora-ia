@@ -1,20 +1,26 @@
 """
-Module de synthèse et de reconnaissance vocale pour Nora.
-- Détection automatique du vrai microphone actif (évite les périphériques muets comme Voicemod/NVIDIA)
-- Synthèse : edge-tts avec voix ultra-réaliste française 'fr-FR-VivienneMultilingualNeural'
-- Reconnaissance : SpeechRecognition avec micro actif
+Module de synthèse et de reconnaissance vocale haute fidélité pour Nora (J.A.R.V.I.S. Class).
+- Profils vocaux neuronaux calibrés (Nora Exécutive, Nora J.A.R.V.I.S., Nora Studio, Nora Cyber Tech)
+- Pipeline de mastering audio studio broadcast (dé-clic, micro-fondu 5ms, normalisation crête -1.5 dBFS)
+- Cache audio LRU multi-profils (0 ms de latence sur les répliques fréquentes)
+- Détection automatique du vrai microphone actif (évite les périphériques muets)
 """
 import os
 import sys
 import time
 import asyncio
 import threading
+import subprocess
+import queue
 from pathlib import Path
 import pygame
 import edge_tts
 import speech_recognition as sr
 import pyaudio
 import numpy as np
+
+import memory_manager
+import nora_audio_cache
 
 if sys.platform == "win32":
     if sys.stdout is not None and hasattr(sys.stdout, "reconfigure"):
@@ -30,8 +36,6 @@ else:
 AUDIO_DIR = (BASE_DIR / "temp_audio").resolve()
 AUDIO_DIR.mkdir(exist_ok=True)
 
-NORA_VOICE = "fr-FR-VivienneMultilingualNeural"
-
 try:
     pygame.mixer.init()
 except Exception as e:
@@ -39,6 +43,78 @@ except Exception as e:
 
 _is_speaking = False
 _cached_mic_index = None
+
+def _find_ffmpeg() -> str:
+    """Localise l'exécutable ffmpeg avec fallbacks multiples."""
+    candidates = [
+        BASE_DIR / "ffmpeg.exe",
+        Path(sys.executable).parent / "ffmpeg.exe",
+        Path(sys.executable).parent / "Scripts" / "ffmpeg.exe",
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c)
+    try:
+        import imageio_ffmpeg
+        return imageio_ffmpeg.get_ffmpeg_exe()
+    except Exception:
+        pass
+    return "ffmpeg"
+
+def _master_audio_pcm(input_path: Path, output_wav: Path) -> Path:
+    """
+    Pipeline de mastering audio studio broadcast pour Nora :
+    1. Décodage vers PCM 16-bit 44.1kHz mono via ffmpeg
+    2. Micro-fondu de 5ms en entrée et sortie pour supprimer les clics numériques
+    3. Normalisation crête à -1.5 dBFS (niveau broadcast optimal, ni trop fort ni trop faible)
+    4. Exportation WAV 16-bit ultra-compatible winsound
+    """
+    ffmpeg_exe = _find_ffmpeg()
+    raw_wav = output_wav.with_name(f"{output_wav.stem}_raw.wav")
+
+    flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
+    cmd = [
+        str(ffmpeg_exe), "-y", "-i", str(input_path),
+        "-acodec", "pcm_s16le", "-ar", "44100", "-ac", "1",
+        str(raw_wav)
+    ]
+    try:
+        subprocess.run(cmd, capture_output=True, creationflags=flags)
+    except Exception as e:
+        print(f"⚠️ [VoiceMastering] Erreur ffmpeg : {e}")
+        return input_path
+
+    if not raw_wav.exists() or raw_wav.stat().st_size < 500:
+        return input_path
+
+    try:
+        import soundfile as sf
+        data, samplerate = sf.read(str(raw_wav))
+        if data.ndim > 1:
+            data = data.mean(axis=1)
+
+        # 5ms fade-in / fade-out
+        fade_len = int(samplerate * 0.005)
+        if len(data) > fade_len * 2:
+            fade_in = np.linspace(0.0, 1.0, fade_len)
+            fade_out = np.linspace(1.0, 0.0, fade_len)
+            data[:fade_len] *= fade_in
+            data[-fade_len:] *= fade_out
+
+        # Peak normalization à -1.5 dBFS (0.84)
+        peak = np.max(np.abs(data))
+        if peak > 0:
+            data = data * (0.84 / peak)
+
+        sf.write(str(output_wav), data, samplerate, subtype='PCM_16')
+        try:
+            raw_wav.unlink(missing_ok=True)
+        except Exception:
+            pass
+        return output_wav
+    except Exception as e:
+        print(f"⚠️ [VoiceMastering] Fallback post-processing : {e}")
+        return raw_wav
 
 def get_active_microphone_index() -> int:
     """Scanne et trouve automatiquement le microphone physique actif avec un signal réel."""
@@ -80,8 +156,12 @@ def get_active_microphone_index() -> int:
     print(f"🎙️ Microphone sélectionné automatiquement : Index {best_idx}")
     return best_idx
 
-async def _generate_audio_async(text: str, output_path: Path):
-    communicate = edge_tts.Communicate(text, NORA_VOICE)
+async def _generate_audio_async(text: str, output_path: Path, profile_id: str = None):
+    profile = memory_manager.get_voice_profile_info(profile_id)
+    voice_name = profile.get("voice", "fr-FR-DeniseNeural")
+    rate = profile.get("rate", "+2%")
+    pitch = profile.get("pitch", "-1Hz")
+    communicate = edge_tts.Communicate(text, voice_name, rate=rate, pitch=pitch)
     await communicate.save(str(output_path))
 
 def cleanup_stale_audio():
@@ -99,8 +179,6 @@ def cleanup_stale_audio():
 
 cleanup_stale_audio()
 
-import queue
-
 _speech_queue = queue.Queue()
 _speech_worker_thread = None
 
@@ -114,10 +192,11 @@ def _speech_worker_loop():
             text, on_start, on_end, done_event = item
             _is_speaking = True
 
-            # 1. Vérification dans le cache audio instantané Zero Two (0 ms de latence)
+            profile_id = memory_manager.get_voice_profile()
+
+            # 1. Vérification dans le cache audio studio instantané (0 ms de latence)
             try:
-                import nora_audio_cache
-                cached_audio = nora_audio_cache.get_cached_audio(text)
+                cached_audio = nora_audio_cache.get_cached_audio(text, profile_id)
                 if cached_audio and cached_audio.exists():
                     if on_start:
                         try:
@@ -146,41 +225,25 @@ def _speech_worker_loop():
             final_audio = audio_file
 
             try:
-                asyncio.run(_generate_audio_async(text, audio_file))
+                asyncio.run(_generate_audio_async(text, audio_file, profile_id))
 
-                try:
-                    import voice_cloning
-                    final_audio = voice_cloning.convert_to_zero_two(audio_file)
-                except Exception:
-                    final_audio = audio_file
+                if memory_manager.is_voice_cloning_enabled():
+                    try:
+                        import voice_cloning
+                        final_audio = voice_cloning.convert_to_zero_two(audio_file)
+                    except Exception:
+                        final_audio = audio_file
 
-                # Si le fichier est un MP3, le convertir en WAV via ffmpeg pour une lecture Win32 instantanée et 100% fiable
-                wav_file = final_audio.with_suffix(".wav")
-                if final_audio.suffix.lower() == ".mp3":
-                    ffmpeg_exe = BASE_DIR / "ffmpeg.exe"
-                    if not ffmpeg_exe.exists():
-                        ffmpeg_exe = Path(sys.executable).parent / "ffmpeg.exe"
-                    if not ffmpeg_exe.exists():
-                        try:
-                            import imageio_ffmpeg
-                            ffmpeg_exe = Path(imageio_ffmpeg.get_ffmpeg_exe())
-                        except Exception:
-                            pass
-                    if ffmpeg_exe.exists():
-                        import subprocess
-                        flags = getattr(subprocess, 'CREATE_NO_WINDOW', 0x08000000)
-                        subprocess.run(
-                            [str(ffmpeg_exe), "-y", "-i", str(final_audio), "-acodec", "pcm_s16le", "-ar", "44100", str(wav_file)],
-                            capture_output=True, creationflags=flags
-                        )
-                        if wav_file.exists() and wav_file.stat().st_size > 1000:
-                            final_audio = wav_file
+                # Mastering audio studio broadcast (dé-clic, micro-fondu 5ms, normalisation crête -1.5 dBFS)
+                wav_file = audio_file.with_suffix(".wav")
+                mastered_wav = _master_audio_pcm(final_audio, wav_file)
+                if mastered_wav.exists() and mastered_wav.stat().st_size > 1000:
+                    final_audio = mastered_wav
 
-                # Enregistrement automatique dans le cache audio Zero Two
+                # Enregistrement automatique dans le cache audio sous ce profil
                 if final_audio and final_audio.exists():
                     try:
-                        import nora_audio_cache
-                        nora_audio_cache.save_cached_audio(text, final_audio)
+                        nora_audio_cache.save_cached_audio(text, final_audio, profile_id)
                     except Exception:
                         pass
 
@@ -232,11 +295,11 @@ def _speech_worker_loop():
                 if done_event:
                     done_event.set()
 
-                # Nettoyage immédiat du fichier audio lu
+                # Nettoyage immédiat du fichier audio temporaire non-caché
                 try:
                     if audio_file.exists():
                         os.remove(str(audio_file))
-                    if final_audio != audio_file and final_audio.exists():
+                    if final_audio != audio_file and final_audio.exists() and "audio_cache" not in str(final_audio):
                         os.remove(str(final_audio))
                 except Exception:
                     pass
@@ -296,3 +359,26 @@ def listen_microphone(timeout: int = 5, phrase_time_limit: int = 10) -> str:
 
 def is_speaking():
     return _is_speaking or not _speech_queue.empty()
+
+def get_voice_profile() -> str:
+    """Retourne l'identifiant du profil vocal actif."""
+    return memory_manager.get_voice_profile()
+
+def set_voice_profile(profile_id: str):
+    """Bascule immédiatement vers un nouveau profil vocal."""
+    memory_manager.set_voice_profile(profile_id)
+    info = memory_manager.get_voice_profile_info(profile_id)
+    print(f"🎙️ [VoiceEngine] Profil vocal actif : {info['name']} ({info['voice']})")
+
+def get_available_profiles() -> dict:
+    """Retourne la liste des profils vocaux disponibles."""
+    return memory_manager.VOICE_PROFILES
+
+def test_voice(profile_id: str = None, text: str = None):
+    """Effectue un test vocal immédiat à haute voix."""
+    if profile_id:
+        set_voice_profile(profile_id)
+    info = memory_manager.get_voice_profile_info()
+    test_phrase = text or f"Bonjour Maverick. Tous les sous-systèmes de Nora sont opérationnels. Profil vocal : {info['name']}."
+    speak(test_phrase, blocking=True)
+

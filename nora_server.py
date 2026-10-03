@@ -41,18 +41,19 @@ ACTIVE_AUDIO_JOBS: dict[str, threading.Event] = {}
 def _synthesize_audio_background(text: str, target_path: Path, job_id: str, evt: threading.Event):
     """Synthétise l'audio en arrière-plan sans bloquer la réponse texte."""
     try:
-        asyncio.run(voice_engine._generate_audio_async(text, target_path))
-        try:
-            import voice_cloning
-            final_audio = voice_cloning.convert_to_zero_two(target_path)
-            if final_audio != target_path and final_audio.exists():
-                try:
+        profile_id = memory_manager.get_voice_profile()
+        asyncio.run(voice_engine._generate_audio_async(text, target_path, profile_id))
+        if memory_manager.is_voice_cloning_enabled():
+            try:
+                import voice_cloning
+                final_audio = voice_cloning.convert_to_zero_two(target_path)
+                if final_audio != target_path and final_audio.exists():
                     import shutil
                     shutil.copy2(final_audio, target_path)
-                except Exception:
-                    pass
-        except Exception as ex:
-            print(f"[RVC Background Convert] {ex}")
+            except Exception as ex:
+                print(f"[RVC Background Convert] {ex}")
+        if target_path.suffix.lower() == ".wav":
+            voice_engine._master_audio_pcm(target_path, target_path)
     except Exception as e:
         print(f"[Audio Background Error] {e}")
     finally:

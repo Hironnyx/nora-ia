@@ -79,6 +79,7 @@ import qg_dashboard
 import nora_initiatives
 import gaming_mode
 import tools_vision
+import nora_audio_cache
 from wake_word_listener import WakeWordDetector
 
 
@@ -630,6 +631,30 @@ class NoraDynamicIsland(QWidget):
             self.display_message("⏳ Une mission est déjà en cours d'exécution, Maverick.")
             return
 
+        # Détection immédiate des commandes vocales de changement de voix
+        lower = user_text.lower()
+        if "voix" in lower:
+            if any(k in lower for k in ["denise", "executiv", "exécutiv"]):
+                memory_manager.set_voice_profile("denise")
+                msg = "Profil vocal configuré sur Nora Exécutive. Prête pour vos directives, Maverick."
+                self.on_chat_response(msg)
+                return
+            elif any(k in lower for k in ["jarvis", "henri", "majordome"]):
+                memory_manager.set_voice_profile("henri")
+                msg = "Profil vocal configuré sur Nora J.A.R.V.I.S. À vos ordres, Maverick."
+                self.on_chat_response(msg)
+                return
+            elif any(k in lower for k in ["vivienne", "studio"]):
+                memory_manager.set_voice_profile("vivienne")
+                msg = "Profil vocal configuré sur Nora Studio. À votre écoute, Maverick."
+                self.on_chat_response(msg)
+                return
+            elif any(k in lower for k in ["remy", "cyber"]):
+                memory_manager.set_voice_profile("remy")
+                msg = "Profil vocal configuré sur Nora Cyber Tech. Systèmes parés, Maverick."
+                self.on_chat_response(msg)
+                return
+
         self.set_hud_state("work")
         self.display_message(f"💬 « {user_text} »\nAnalyse cognitive en cours...")
 
@@ -1073,6 +1098,21 @@ class NoraDynamicIsland(QWidget):
         act_vision = menu.addAction("Vision Écran (Gemini Multimodal)")
 
         menu.addSeparator()
+        menu_voice = menu.addMenu("Profil Vocal Nora")
+        menu_voice.setStyleSheet(menu.styleSheet())
+        current_voice = memory_manager.get_voice_profile()
+        profiles = memory_manager.VOICE_PROFILES
+        voice_actions = {}
+        for p_id, p_info in profiles.items():
+            mark = "● " if p_id == current_voice else "○ "
+            act_p = menu_voice.addAction(f"{mark}{p_info['name']}")
+            voice_actions[act_p] = p_id
+
+        menu_voice.addSeparator()
+        act_test_voice = menu_voice.addAction("Tester la voix active")
+        act_clear_cache = menu_voice.addAction("Purger le cache audio")
+
+        menu.addSeparator()
         act_ram = menu.addAction("Purger la RAM")
         is_gaming = gaming_mode.is_gaming_mode()
         act_gaming = menu.addAction("Désactiver Mode Gaming" if is_gaming else "Activer Mode Gaming (Priorité GPU)")
@@ -1101,6 +1141,18 @@ class NoraDynamicIsland(QWidget):
             self.toggle_hands_free()
         elif action == act_vision:
             self.trigger_screen_vision("")
+        elif action in voice_actions:
+            chosen_id = voice_actions[action]
+            memory_manager.set_voice_profile(chosen_id)
+            info = memory_manager.get_voice_profile_info(chosen_id)
+            self.display_message(f"🎙️ Profil vocal : {info['name']}", duration_ms=4000)
+            self.speak_nora(f"Profil vocal configuré sur {info['name']}. À vos ordres, Maverick.")
+        elif action == act_test_voice:
+            info = memory_manager.get_voice_profile_info()
+            self.speak_nora(f"Système vocal opérationnel Maverick. Profil actif : {info['name']}.")
+        elif action == act_clear_cache:
+            count = nora_audio_cache.clear_cache()
+            self.display_message(f"🧹 Cache audio purgé ({count} fichiers)", duration_ms=3500)
         elif action == act_ram:
             self.optimize_ram_direct()
         elif action == act_gaming:
