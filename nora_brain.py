@@ -8,6 +8,7 @@ Cerveau conversationnel de Nora :
 import os
 import sys
 import re
+import time
 import datetime
 from pathlib import Path
 from dotenv import load_dotenv
@@ -127,12 +128,37 @@ def handle_direct_security_query(clean_input: str) -> tuple[bool, str]:
         return True, scan["speech"]
     return False, ""
 
-def analyze_intent_and_respond(user_text: str) -> tuple[str, str]:
+_dialogue_turns = []
+
+def get_recent_dialogue_context() -> str:
+    """Fournit les derniers tours d'échanges récents (< 2 min) pour la fluidité conversationnelle."""
+    global _dialogue_turns
+    now = time.time()
+    _dialogue_turns = [t for t in _dialogue_turns if now - t["time"] < 120]
+    if not _dialogue_turns:
+        return ""
+    lines = ["CONTEXTE CONVERSATIONNEL RÉCENT (Derniers échanges de l'appel) :"]
+    for t in _dialogue_turns[-6:]:
+        lines.append(f"- {t['speaker']} : « {t['text']} »")
+    return "\n".join(lines) + "\n"
+
+def record_dialogue_turn(speaker: str, text: str):
+    """Mémorise un tour d'échange dans l'historique conversationnel court terme."""
+    global _dialogue_turns
+    if not text or not str(text).strip():
+        return
+    _dialogue_turns.append({"speaker": speaker, "text": str(text).strip(), "time": time.time()})
+    if len(_dialogue_turns) > 12:
+        _dialogue_turns = _dialogue_turns[-12:]
+
+def clear_dialogue_history():
+    """Réinitialise l'historique conversationnel court terme."""
+    global _dialogue_turns
+    _dialogue_turns.clear()
+
+def _analyze_intent_internal(user_text: str) -> tuple[str, str]:
     """
-    Analyse l'intention en combinant le contrôle PC, la sécurité et l'IA Gemini.
-    Retourne :
-    - ('CHAT', 'réponse personnalisée de Nora')
-    - ('MISSION', None)
+    Analyse interne de l'intention en combinant le contrôle PC, la sécurité et l'IA Gemini.
     """
     clean_input = user_text.strip().lower()
     user_name = memory_manager.get_user_name()
@@ -418,6 +444,7 @@ def analyze_intent_and_respond(user_text: str) -> tuple[str, str]:
     memory_context = memory_manager.format_memory_for_prompt()
     import nora_memory_rag
     rag_context = nora_memory_rag.vector_rag.get_rag_context_for_prompt(user_text, top_k=2)
+    dialogue_context = get_recent_dialogue_context()
 
     time_context = (
         "Il est tard dans la nuit : répondez TOUJOURS précisément et utilement à la demande ou question de Maverick sans éluder le sujet, avec une touche d'attention bienveillante si opportun."
@@ -442,7 +469,7 @@ RÈGLES D'OR DE COMPORTEMENT ET D'ÉLOCUTION :
 MÉMOIRE DE NORA :
 {memory_context}
 {rag_context}
-
+{dialogue_context}
 Maverick vient de vous dire : "{user_text}"
 
 RÈGLES :
@@ -468,4 +495,16 @@ Votre réponse :
             continue
 
     return "CHAT", f"Je suis à votre écoute, Maverick. Que puis-je faire pour vous ?"
+
+
+def analyze_intent_and_respond(user_text: str) -> tuple[str, str]:
+    """
+    Point d'entrée principal de l'analyse cognitive de Nora.
+    Mémorise automatiquement les tours de dialogue dans l'historique court terme pour la conversation continue.
+    """
+    intent, reply = _analyze_intent_internal(user_text)
+    if intent == "CHAT" and reply:
+        record_dialogue_turn("Maverick", user_text)
+        record_dialogue_turn("Nora", reply)
+    return intent, reply
 

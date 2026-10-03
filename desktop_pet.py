@@ -103,6 +103,7 @@ class NoraBridge(QObject):
     mission_requested = pyqtSignal(str)
     user_message_received = pyqtSignal(str)
     ram_boost_requested = pyqtSignal()
+    follow_up_listen = pyqtSignal()
 
 
 class NoraWaveformWidget(QWidget):
@@ -199,12 +200,15 @@ class NoraDynamicIsland(QWidget):
         self.bridge.swarm_event.connect(self.on_swarm_event_received)
         self.bridge.user_message_received.connect(self.process_user_message)
         self.bridge.ram_boost_requested.connect(self.optimize_ram_direct)
+        self.bridge.follow_up_listen.connect(self.on_follow_up_listen)
 
         self.drag_position = QPoint()
         self.is_dragging = False
         self.is_mission_running = False
         self.is_recording_voice = False
         self.is_speaking_now = False
+        self.continuous_conversation_enabled = memory_manager.is_continuous_conversation_enabled()
+        self.in_continuous_dialogue = False
         self.hands_free_enabled = False
         self.system_alerts_enabled = True
         self.core_pulse_state = 0
@@ -382,8 +386,8 @@ class NoraDynamicIsland(QWidget):
         self.btn_mic.setFixedSize(26, 26)
         self.btn_mic.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
         self.btn_mic.setStyleSheet(btn_style)
-        self.btn_mic.setToolTip("Activer l'écoute vocale (Clic) / Mains-Libres 'Dis Nora'")
-        self.btn_mic.clicked.connect(self.start_voice_input)
+        self.btn_mic.setToolTip("Activer l'écoute vocale (Clic) / Conversation continue")
+        self.btn_mic.clicked.connect(self.on_btn_mic_clicked)
         btn_layout.addWidget(self.btn_mic)
 
         # Bouton Vision Écran
@@ -623,14 +627,24 @@ class NoraDynamicIsland(QWidget):
             self.adjustSize()
             self.process_user_message(text)
 
+    def on_btn_mic_clicked(self):
+        if getattr(self, 'is_recording_voice', False) or getattr(self, 'in_continuous_dialogue', False):
+            self.in_continuous_dialogue = False
+            self.set_hud_state("idle")
+            self.display_message("Écoute interrompue, Maverick.", duration_ms=2500)
+            return
+        self.start_voice_input(is_follow_up=False)
+
     def keyPressEvent(self, event):
         if event.key() == Qt.Key.Key_Escape:
+            self.in_continuous_dialogue = False
             if self.cmd_bar.isVisible():
                 self.cmd_bar.hide()
                 self.adjustSize()
             if self.hud_card.isVisible():
                 self.hud_card.hide()
                 self.adjustSize()
+            self.set_hud_state("idle")
         super().keyPressEvent(event)
 
     # =========================================================================
@@ -755,7 +769,7 @@ class NoraDynamicIsland(QWidget):
     # =========================================================================
     # AUDIO & SYNTHÈSE VOCALE
     # =========================================================================
-    def speak_nora(self, text: str, on_finished=None, force: bool = False):
+    def speak_nora(self, text: str, on_finished=None, force: bool = False, allow_follow_up: bool = True):
         if gaming_mode.is_gaming_mode() and not force:
             if on_finished:
                 threading.Timer(0.1, on_finished).start()
@@ -774,6 +788,8 @@ class NoraDynamicIsland(QWidget):
                 pass
             if on_finished:
                 on_finished()
+            if getattr(self, 'continuous_conversation_enabled', False) and getattr(self, 'in_continuous_dialogue', False) and allow_follow_up:
+                self.bridge.follow_up_listen.emit()
 
         voice_engine.speak(text, on_start=_on_start, on_end=_on_end)
 
@@ -783,22 +799,56 @@ class NoraDynamicIsland(QWidget):
     def on_speech_stopped(self):
         self.is_speaking_now = False
 
-    def start_voice_input(self):
+    def on_follow_up_listen(self):
+        """Réactive l'écoute automatiquement en mode conversation continue après la réponse de Nora."""
+        if not getattr(self, 'continuous_conversation_enabled', False) or not getattr(self, 'in_continuous_dialogue', False) or self.is_mission_running:
+            return
+        # Répit de 350ms pour laisser dissiper l'écho acoustique dans la pièce
+        QTimer.singleShot(350, lambda: self.start_voice_input(is_follow_up=True))
+
+    def start_voice_input(self, is_follow_up: bool = False):
         if self.is_mission_running or getattr(self, 'is_recording_voice', False):
             return
         self.is_recording_voice = True
+        self.in_continuous_dialogue = True
 
         def record_thread():
             try:
                 self.bridge.set_state.emit("listen")
-                self.bridge.update_hud.emit("🎙️ <i>À votre écoute, Maverick... Parlez librement.</i>", 5000)
-                spoken = voice_engine.listen_microphone()
+                if is_follow_up:
+                    self.bridge.update_hud.emit("🎙️ <i>Je vous écoute toujours, Maverick...</i>", 6000)
+                else:
+                    self.bridge.update_hud.emit("🎙️ <i>À votre écoute, Maverick... Parlez librement.</i>", 6000)
+
+                spoken = voice_engine.listen_microphone(timeout=6, phrase_time_limit=10)
                 if spoken:
+                    # Détection naturelle des formules de politesse de fin de conversation
+                    clean = spoken.strip().lower()
+                    closing_phrases = [
+                        "merci", "merci nora", "c'est bon", "c'est tout", "au revoir",
+                        "bonne nuit", "à plus", "a plus", "stop", "annule", "terminé",
+                        "termine", "repose-toi", "rien d'autre", "rien de plus",
+                        "ça sera tout", "ca sera tout", "c'est parfait", "c'est bon merci"
+                    ]
+                    if any(clean == p or clean.startswith(p + " ") or clean.endswith(" " + p) for p in closing_phrases) and len(clean.split()) <= 4:
+                        self.in_continuous_dialogue = False
+                        self.bridge.set_state.emit("idle")
+                        close_msg = "À vos ordres, Maverick. Je reste en veille."
+                        self.bridge.update_hud.emit(f"💬 « {spoken} »\n✨ {close_msg}", 4000)
+                        self.speak_nora(close_msg, allow_follow_up=False)
+                        return
+
+                    self.in_continuous_dialogue = True
                     self.bridge.user_message_received.emit(spoken)
                 else:
+                    self.in_continuous_dialogue = False
                     self.bridge.set_state.emit("idle")
-                    self.bridge.update_hud.emit("Je n'ai pas capté votre voix, Maverick. Cliquez sur 🎙️ ou écrivez-moi.", 5000)
+                    if is_follow_up:
+                        self.bridge.update_hud.emit("✨ Échange en pause. Je reste à votre entière disposition, Maverick.", 4000)
+                    else:
+                        self.bridge.update_hud.emit("Je n'ai pas capté votre voix, Maverick. Cliquez sur 🎙️ ou écrivez-moi.", 5000)
             except Exception as e:
+                self.in_continuous_dialogue = False
                 self.bridge.set_state.emit("idle")
                 self.bridge.update_hud.emit(f"Erreur microphone : {e}", 4000)
             finally:
@@ -810,12 +860,13 @@ class NoraDynamicIsland(QWidget):
         if self.is_mission_running:
             return
         if command:
+            self.in_continuous_dialogue = True
             self.process_user_message(command)
         else:
             sound_effects.play_wake_chime()
             self.set_hud_state("listen")
             self.display_message("✨ Oui Maverick, je suis à votre écoute.", duration_ms=4000)
-            self.start_voice_input()
+            self.start_voice_input(is_follow_up=False)
 
     # =========================================================================
     # VISION D'ÉCRAN MULTIMODALE GEMINI
@@ -1130,6 +1181,7 @@ class NoraDynamicIsland(QWidget):
         act_qg = menu.addAction("Poste de Contrôle QG")
         act_cmd = menu.addAction("Ligne de Commande Rapide (Ctrl+Alt+N)")
         act_mic = menu.addAction("Entrée Vocale")
+        act_continuous = menu.addAction("☑ Conversation Continue (Duplex)" if getattr(self, 'continuous_conversation_enabled', True) else "☐ Conversation Continue (Duplex)")
         act_handsfree = menu.addAction("Mode Mains-Libres ('Dis Nora')")
         act_vision = menu.addAction("Vision Écran (Gemini Multimodal)")
 
@@ -1173,6 +1225,11 @@ class NoraDynamicIsland(QWidget):
             self.toggle_command_bar()
         elif action == act_mic:
             self.start_voice_input()
+        elif action == act_continuous:
+            self.continuous_conversation_enabled = not self.continuous_conversation_enabled
+            memory_manager.set_continuous_conversation_enabled(self.continuous_conversation_enabled)
+            stat = "activé" if self.continuous_conversation_enabled else "désactivé"
+            self.display_message(f"💬 Mode Conversation Continue {stat}, Maverick.", duration_ms=3500)
         elif action == act_handsfree:
             self.toggle_hands_free()
         elif action == act_vision:

@@ -267,3 +267,18 @@ def get_welcome_message() -> str:
         return f"Ravi de vous retrouver, {name} ! Toutes les sondes et agents sont opérationnels. Comment puis-je vous assister aujourd'hui ?"
     else:
         return f"Bonjour {name} ! Je suis Nora, votre copilote et esprit d'équipe IA. De quoi avez-vous besoin aujourd'hui ?"
+
+def is_continuous_conversation_enabled() -> bool:
+    """Indique si le mode de conversation continue (mains-libres duplex) est activé."""
+    mem = load_memory()
+    return mem.get("user", {}).get("preferences", {}).get("continuous_conversation", True)
+
+def set_continuous_conversation_enabled(enabled: bool):
+    """Enregistre l'état du mode conversation continue."""
+    mem = load_memory()
+    if "user" not in mem:
+        mem["user"] = {}
+    if "preferences" not in mem["user"]:
+        mem["user"]["preferences"] = {}
+    mem["user"]["preferences"]["continuous_conversation"] = bool(enabled)
+    save_memory(mem)

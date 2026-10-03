@@ -614,6 +614,12 @@ class QGDashboard(QWidget):
         """)
         btn_test_voice.clicked.connect(self._on_test_voice_clicked)
         vc_layout.addWidget(btn_test_voice)
+
+        self.btn_continuous = QPushButton()
+        self.btn_continuous.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self._update_continuous_btn_style()
+        self.btn_continuous.clicked.connect(self._on_continuous_dialogue_toggle)
+        vc_layout.addWidget(self.btn_continuous)
         vc_layout.addStretch()
 
         layout.addWidget(voice_card)
@@ -679,6 +685,52 @@ class QGDashboard(QWidget):
             self.parent_mascot.speak_nora(f"Système vocal opérationnel Maverick. Profil : {info['name']}.")
         else:
             voice_engine.speak(f"Système vocal opérationnel Maverick. Profil : {info['name']}.")
+
+    def _update_continuous_btn_style(self):
+        active = memory_manager.is_continuous_conversation_enabled()
+        if active:
+            self.btn_continuous.setText("DUPLEX CONTINU : ACTIF 💬")
+            self.btn_continuous.setStyleSheet("""
+                QPushButton {
+                    background: rgba(16, 185, 129, 0.2);
+                    color: #34d399;
+                    border: 1px solid rgba(52, 211, 153, 0.4);
+                    border-radius: 6px;
+                    padding: 4px 10px;
+                    font-size: 10px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background: rgba(16, 185, 129, 0.35);
+                    color: #ffffff;
+                }
+            """)
+        else:
+            self.btn_continuous.setText("DUPLEX CONTINU : INACTIF ⚪")
+            self.btn_continuous.setStyleSheet("""
+                QPushButton {
+                    background: rgba(100, 116, 139, 0.15);
+                    color: #94a3b8;
+                    border: 1px solid rgba(148, 163, 184, 0.3);
+                    border-radius: 6px;
+                    padding: 4px 10px;
+                    font-size: 10px;
+                    font-weight: bold;
+                }
+                QPushButton:hover {
+                    background: rgba(100, 116, 139, 0.25);
+                    color: #f1f5f9;
+                }
+            """)
+
+    def _on_continuous_dialogue_toggle(self):
+        new_state = not memory_manager.is_continuous_conversation_enabled()
+        memory_manager.set_continuous_conversation_enabled(new_state)
+        if hasattr(self, 'parent_mascot') and self.parent_mascot:
+            self.parent_mascot.continuous_conversation_enabled = new_state
+        self._update_continuous_btn_style()
+        stat = "activé" if new_state else "désactivé"
+        self.cockpit_log.append(f"💬 [Duplex] Mode conversation continue {stat}.")
 
     # =========================================================================
     # 2. PANNEAU ESSAIM NEURONAL & AGORA (DÉBAT + FICHES INDIVIDUELLES)
