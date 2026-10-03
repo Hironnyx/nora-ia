@@ -355,6 +355,26 @@ class SystemMonitor:
     def stop(self):
         self.is_running = False
 
+def get_current_metrics() -> Dict[str, Any]:
+    """Retourne les métriques instantanées normalisées pour l'HUD et le moteur d'autonomie."""
+    d = get_system_diagnostics()
+    g = d.get('gpu', {})
+    return {
+        "cpu_percent": d.get("cpu_percent", 0.0),
+        "ram_percent": d.get("ram_percent", 0.0),
+        "ram_used_gb": d.get("ram_used_gb", 0.0),
+        "ram_total_gb": d.get("ram_total_gb", 0.0),
+        "gpu": {
+            "name": g.get("model", "NVIDIA GeForce RTX 4080"),
+            "temp_c": g.get("temperature_c", 0),
+            "load_pct": g.get("load_percent", 0.0),
+            "vram_used_gb": round(g.get("memory_used_mb", 0) / 1024, 1),
+            "vram_total_gb": round(g.get("memory_total_mb", 0) / 1024, 1)
+        },
+        "disk_free_gb": d.get("disk_free_gb", 0.0),
+        "health_score": d.get("health_score", 100)
+    }
+
 if __name__ == "__main__":
     print("--- Test des sondes système ---")
     print(get_system_health_report())

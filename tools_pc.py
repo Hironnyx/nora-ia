@@ -14,6 +14,7 @@ CATEGORIES = {
     "Documents": [".pdf", ".docx", ".doc", ".txt", ".xlsx", ".xls", ".pptx", ".ppt", ".odt", ".csv", ".rtf"],
     "Installateurs_et_Logiciels": [".exe", ".msi", ".iso", ".bat", ".cmd"],
     "Archives": [".zip", ".rar", ".7z", ".tar", ".gz", ".bz2"],
+    "Modeles_3D": [".stl", ".step", ".stp", ".obj", ".3mf", ".gcode"],
     "Audio_et_Musique": [".mp3", ".wav", ".aac", ".flac", ".ogg", ".m4a"],
     "Videos": [".mp4", ".mkv", ".mov", ".avi", ".webm", ".wmv", ".flv"],
     "Code_et_Scripts": [".py", ".js", ".ts", ".html", ".css", ".json", ".xml", ".cpp", ".c", ".cs", ".php", ".sh", ".ps1"]

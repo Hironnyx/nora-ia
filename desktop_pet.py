@@ -210,6 +210,7 @@ class NoraDynamicIsland(QWidget):
         self.init_security_watchdog()
         self.init_global_hotkey()
         self.init_qg()
+        self.init_autonomy_engine()
 
         # Timer de pulsation lumineuse du Core Arc Reactor (1 Hz)
         self.pulse_timer = QTimer(self)
@@ -939,6 +940,28 @@ class NoraDynamicIsland(QWidget):
         if hasattr(self, 'qg') and self.qg:
             self.qg.show_independent()
 
+    def init_autonomy_engine(self):
+        """Démarre le Moteur d'Autonomie Exécutif en tâche de fond permanente."""
+        import nora_consciousness
+        def _on_action(action_type, title, desc, speak):
+            self.bridge.update_hud.emit(f"⚡ <b>{title}</b>\n{desc}", 7000)
+            if speak and not self.is_speaking_now:
+                self.speak_nora(desc)
+
+        def _on_hud(text, duration_ms):
+            self.bridge.update_hud.emit(text, duration_ms)
+
+        def _on_thought(text, speak):
+            self.bridge.update_hud.emit(f"💡 <b>NOTE NORA :</b>\n{text}", 6000)
+            if speak and not self.is_speaking_now:
+                self.speak_nora(text)
+
+        self.autonomy_engine = nora_consciousness.autonomy_engine
+        self.autonomy_engine.on_action = _on_action
+        self.autonomy_engine.on_hud = _on_hud
+        self.autonomy_engine.on_thought = _on_thought
+        self.autonomy_engine.start()
+
     def toggle_qg(self):
         if hasattr(self, 'qg') and self.qg:
             self.qg.toggle_independent()
@@ -1119,6 +1142,8 @@ class NoraDynamicIsland(QWidget):
                 self.sec_watchdog.stop()
             if hasattr(self, 'wake_detector'):
                 self.wake_detector.stop()
+            if hasattr(self, 'autonomy_engine') and self.autonomy_engine:
+                self.autonomy_engine.stop()
             QApplication.quit()
 
     # =========================================================================
