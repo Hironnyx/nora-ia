@@ -1,20 +1,24 @@
 """
-Mascotte Animée de Bureau 'Nora' :
-- Style Visuel : Zero Two (Darling in the Franxx) - Longs cheveux roses, cornes écarlates, fard rouge, uniforme Franxx
-- Option A : Animations fluides (Synchronisation labiale bouche ouverte/fermée pendant la parole + clignements d'yeux naturels)
-- Le QG de Nora : Mini-Dashboard visuel rétractable aux couleurs de Zero Two
-- Moteur d'Auto-Amélioration & Prise d'Initiatives (accord préalable obligatoire)
-- Navigation Web Autonome en direct avec Playwright
+Station de Contrôle & Copilote IA 'Nora' :
+- Interface Principale : Dynamic Island / Floating Minimal HUD Capsule (Translucide Glassmorphism)
+- Classe Opérationnelle : Copilote Exécutif & Ingénierie Système (Style J.A.R.V.I.S.)
+- Télémétrie en direct : CPU, RAM, GPU NVIDIA RTX 4080 (Température & VRAM), Disque C:
+- Raccourci Clavier Global 'Ctrl + Alt + N' : Ouvre l'Omnibox de commande immédiate
 - Contrôle Total du PC : Volume sonore, Lancement d'applications, Verrouillage Windows, Corbeille
 - Agent de Sécurité Dédié : Veille Windows Defender, surveillance du démarrage anti-malware et scan complet
-- Surveillance Système en temps réel : Alertes RAM, Disque, Batterie et Nouveaux Téléchargements
-- Raccourci Clavier Global 'Ctrl + Alt + N' : Ouvre et réveille Nora instantanément où que vous soyez sur Windows
-- Démarrage automatique configurable avec Windows (shell:startup)
-- Mode Mains-Libres 'Dis Nora' / 'Hey Nora' (Détection vocale continue sur le micro actif)
+- Détection Vocale Continue : Mode Mains-Libres 'Dis Nora' / 'Hey Nora'
+- Vision Multimodale : Analyse instantanée de l'écran avec Google Gemini
+- Orchestration Cognitive : Intégration complète avec le QG de commandement
 """
 import sys
 import os
-import io
+import time
+import math
+import random
+import threading
+import ctypes
+from ctypes import wintypes
+from pathlib import Path
 
 # Protection absolue contre les crashs en mode sans console (--noconsole / pythonw)
 class SafeNullWriter:
@@ -47,27 +51,15 @@ def _global_exception_handler(exctype, value, tb):
             f.write(err_text)
     except Exception:
         pass
-    try:
-        import ctypes
-        ctypes.windll.user32.MessageBoxW(0, f"Erreur de démarrage Nora:\n\n{err_text[:500]}", "Nora Copilote - Diagnostic", 0x10)
-    except Exception:
-        pass
 
 sys.excepthook = _global_exception_handler
 
-import math
-import time
-import random
-import threading
-import ctypes
-from ctypes import wintypes
-from pathlib import Path
 from PyQt6.QtWidgets import (
     QApplication, QWidget, QLabel, QLineEdit, QPushButton,
-    QVBoxLayout, QHBoxLayout, QMenu, QSystemTrayIcon
+    QVBoxLayout, QHBoxLayout, QFrame, QStackedWidget, QMenu, QSystemTrayIcon
 )
 from PyQt6.QtCore import Qt, QPoint, QTimer, pyqtSignal, QObject
-from PyQt6.QtGui import QPixmap, QCursor, QFont, QIcon, QTransform
+from PyQt6.QtGui import QCursor, QFont, QIcon, QPainter, QColor, QBrush, QPen
 
 if getattr(sys, 'frozen', False):
     BASE_DIR = Path(sys.executable).parent.resolve()
@@ -76,7 +68,6 @@ else:
 ASSETS_DIR = BASE_DIR / "mascot_assets"
 
 import voice_engine
-import mascot_assets
 import nora_brain
 import memory_manager
 import sound_effects
@@ -88,16 +79,13 @@ import qg_dashboard
 import nora_initiatives
 import gaming_mode
 import tools_vision
-import nora_autonomous_life
-import nora_companion
-import nora_consciousness
 from wake_word_listener import WakeWordDetector
 
 
-
 class NoraBridge(QObject):
-    """Signaux pour la communication sécurisée entre les threads et l'interface PyQt6."""
-    update_bubble = pyqtSignal(str)
+    """Signaux thread-safe pour la communication avec l'interface Qt."""
+    update_hud = pyqtSignal(str, int)
+    update_bubble = pyqtSignal(str)   # Rétrocompatibilité
     set_state = pyqtSignal(str)
     mission_finished = pyqtSignal(str)
     chat_response = pyqtSignal(str)
@@ -108,28 +96,81 @@ class NoraBridge(QObject):
     system_alert = pyqtSignal(str, str, str, bool)
     security_alert = pyqtSignal(str, str, bool)
     open_qg = pyqtSignal()
-    outfit_changed = pyqtSignal(str)
     gaming_mode_changed = pyqtSignal(bool)
     screen_vision_requested = pyqtSignal(str)
     swarm_event = pyqtSignal(str, int, str, int)
     mission_requested = pyqtSignal(str)
-    autonomous_action_triggered = pyqtSignal(str, str, str, bool)
-    pet_state_updated = pyqtSignal(dict)
 
-class NoraMascot(QWidget):
+
+class NoraWaveformWidget(QWidget):
+    """Visualiseur spectral audio minimaliste néon cyan (7 barres animées)."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(68, 22)
+        self.bars = [3, 4, 6, 8, 6, 4, 3]
+        self.is_active = False
+        self.phase = 0.0
+
+        self.anim_timer = QTimer(self)
+        self.anim_timer.timeout.connect(self._animate_step)
+
+    def set_active(self, active: bool):
+        self.is_active = active
+        if active:
+            if not self.anim_timer.isActive():
+                self.anim_timer.start(45)
+        else:
+            self.anim_timer.stop()
+            self.bars = [3, 3, 4, 4, 4, 3, 3]
+            self.update()
+
+    def _animate_step(self):
+        self.phase += 0.35
+        for i in range(7):
+            val = math.sin(self.phase + i * 0.9) * 7.0 + 9.0
+            val += random.uniform(-1.5, 1.5)
+            self.bars[i] = max(3, min(18, int(val)))
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        
+        spacing = 3
+        bar_w = 4
+        start_x = (self.width() - (7 * bar_w + 6 * spacing)) // 2
+        cy = self.height() // 2
+
+        pen = QPen(Qt.PenStyle.NoPen)
+        painter.setPen(pen)
+
+        for i, h in enumerate(self.bars):
+            x = start_x + i * (bar_w + spacing)
+            y = cy - (h // 2)
+            if self.is_active:
+                color = QColor(56, 189, 248, 240) if i in [2, 3, 4] else QColor(14, 165, 233, 190)
+            else:
+                color = QColor(100, 116, 139, 120)
+            painter.setBrush(QBrush(color))
+            painter.drawRoundedRect(x, y, bar_w, h, 2, 2)
+
+
+class NoraDynamicIsland(QWidget):
+    """
+    Dynamic Island / Floating Minimal HUD Capsule pour Nora :
+    - Format compact top-center (Obsidian Glassmorphism)
+    - Jauges télémétriques temps réel (CPU, GPU RTX 4080, RAM)
+    - Indicateur d'écoute vocale et waveform spectrale
+    - Omnibox de commande rapide intégrée
+    - Plaque de notification et de rapport détachable
+    """
     def __init__(self):
         super().__init__()
 
-        # Vérifier et générer les assets Zero Two, l'icône .ico et le raccourci Bureau
-        mascot_assets.generate_all_zero_two_assets()
         sound_effects.generate_chimes_if_missing()
         setup_shortcuts.create_desktop_shortcut()
 
-        # Charger la tenue sauvegardée
-        self.current_outfit = memory_manager.get_current_outfit()
-        mascot_assets.set_active_outfit(self.current_outfit)
-
-        # Préchauffage du clonage vocal Zero Two RVC sur RTX 4080
+        # Préchauffage RVC en arrière-plan
         try:
             import voice_cloning
             voice_cloning.warmup_in_background()
@@ -137,8 +178,9 @@ class NoraMascot(QWidget):
             pass
 
         self.bridge = NoraBridge()
+        self.bridge.update_hud.connect(self.display_message)
         self.bridge.update_bubble.connect(self.display_message)
-        self.bridge.set_state.connect(self.set_sprite_state)
+        self.bridge.set_state.connect(self.set_hud_state)
         self.bridge.mission_finished.connect(self.on_mission_finished)
         self.bridge.chat_response.connect(self.on_chat_response)
         self.bridge.wake_triggered.connect(self.on_wake_word_heard)
@@ -148,157 +190,36 @@ class NoraMascot(QWidget):
         self.bridge.system_alert.connect(self.on_system_alert)
         self.bridge.security_alert.connect(self.on_security_alert)
         self.bridge.open_qg.connect(self.toggle_qg)
-        self.bridge.outfit_changed.connect(self.set_outfit)
-        self.bridge.swarm_event.connect(self.on_swarm_event_received)
         self.bridge.gaming_mode_changed.connect(self.on_gaming_mode_changed)
         self.bridge.screen_vision_requested.connect(self.trigger_screen_vision)
         self.bridge.mission_requested.connect(self.execute_mission)
-        self.bridge.autonomous_action_triggered.connect(self.on_autonomous_action)
-        self.bridge.pet_state_updated.connect(self.on_pet_state_updated)
+        self.bridge.swarm_event.connect(self.on_swarm_event_received)
 
         self.drag_position = QPoint()
         self.is_dragging = False
-        self._pixmap_cache = {}
-        self.preload_all_sprites()
-        self.current_state = "idle"
         self.is_mission_running = False
+        self.is_speaking_now = False
         self.hands_free_enabled = False
         self.system_alerts_enabled = True
-
-        # Moteur de Vie Autonome & Corps Animé (Direction, Tangage, Respiration)
-        self.life_engine = nora_autonomous_life.life_engine
-        self.facing_direction = 1  # 1 = face droite, -1 = face gauche
-        self.is_walking = False
-        self.walk_target_x = 0
-        self.walk_speed = 2
-        self.walk_step_counter = 0
+        self.core_pulse_state = 0
 
         self.init_ui()
         self.init_system_tray()
-        self.init_animations()
         self.init_wake_word_detector()
         self.init_system_monitor()
         self.init_security_watchdog()
         self.init_global_hotkey()
         self.init_qg()
-        self.init_autonomous_life()
-        self.init_consciousness_engine()
 
-        # Préchauffage du clonage vocal Zero Two RVC en arrière-plan
-        try:
-            import voice_cloning
-            voice_cloning.warmup_in_background()
-        except Exception:
-            pass
+        # Timer de pulsation lumineuse du Core Arc Reactor (1 Hz)
+        self.pulse_timer = QTimer(self)
+        self.pulse_timer.timeout.connect(self._pulse_core_led)
+        self.pulse_timer.start(500)
 
-        # Salutation personnalisée au démarrage avec synchronisation labiale
-        QTimer.singleShot(800, self.welcome_greeting)
-        # Ouverture automatique de l'espace de contrôle QG au démarrage (100% indépendant)
-        QTimer.singleShot(1200, self.open_qg_initial)
-
-    def open_qg_initial(self):
-        """Ouvre le QG au lancement comme un espace de contrôle indépendant et fixe."""
-        if hasattr(self, 'qg'):
-            self.qg.show_independent()
-
-    def _load_single_sprite(self, o: str, s: str):
-        """Charge, redimensionne et met en cache un sprite unique avec son miroir gauche/droite."""
-        # 1. Vérifier dans le sous-dossier de la tenue (mascot_assets/<outfit>/<s>.png)
-        p = ASSETS_DIR / o / f"{s}.png"
-        if not p.exists() and s == "idle":
-            p = ASSETS_DIR / o / "idle_standing.png"
-        if not p.exists() and s == "idle_standing":
-            p = ASSETS_DIR / o / "idle.png"
-        if not p.exists():
-            p = ASSETS_DIR / f"nora_{o}_{s}.png"
-        if not p.exists():
-            p = ASSETS_DIR / f"nora_{s}.png"
-        if not p.exists() and s.startswith("walk_"):
-            p = ASSETS_DIR / o / "idle_standing.png"
-        if not p.exists():
-            p = ASSETS_DIR / "nora_idle.png"
-
-        if p.exists():
-            pix = QPixmap(str(p))
-            if not pix.isNull():
-                pix_norm = pix.scaled(
-                    246, 440, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation
-                )
-                self._pixmap_cache[(o, s, 1)] = pix_norm
-                mirrored = pix_norm.transformed(QTransform().scale(-1, 1), Qt.TransformationMode.SmoothTransformation)
-                self._pixmap_cache[(o, s, -1)] = mirrored
-                self._pixmap_cache[(o, s)] = pix_norm
-                if s in ["idle", "idle_standing"]:
-                    alias = "idle_standing" if s == "idle" else "idle"
-                    self._pixmap_cache[(o, alias, 1)] = pix_norm
-                    self._pixmap_cache[(o, alias, -1)] = mirrored
-                    self._pixmap_cache[(o, alias)] = pix_norm
-                return pix_norm
-        return None
-
-    def preload_all_sprites(self):
-        """Démarrage instantané (<50ms) : précharge uniquement les sprites vitaux de la tenue active."""
-        active = getattr(self, 'current_outfit', 'franxx')
-        essential_states = ["idle_standing", "idle", "talk_open", "talk_closed", "blink"]
-        for s in essential_states:
-            self._load_single_sprite(active, s)
-
-        # Lancement du chargement asynchrone des autres frames en arrière-plan sans figer l'interface
-        QTimer.singleShot(150, self.async_preload_remaining_sprites)
-
-    def async_preload_remaining_sprites(self):
-        """Précharge le reste des frames et tenues progressivement sur le thread principal pour éviter tout crash GDI/Qt."""
-        outfits = ["franxx", "school", "hoodie", "cyberpunk", "commander"]
-        states = [
-            "idle_standing", "idle_arms_crossed", "idle_wave", "idle_thinking",
-            "idle_sitting", "idle_work_hologram", "idle_gaming", "alert_shield",
-            "blink", "talk_open", "talk_closed", "listen", "work"
-        ]
-        for i in range(1, 9):
-            states.append(f"walk_{i}")
-        for i in range(1, 5):
-            states.append(f"run_{i}")
-
-        queue = [(o, s) for o in outfits for s in states if (o, s, 1) not in self._pixmap_cache]
-
-        def _process_batch():
-            for _ in range(5):
-                if not queue:
-                    return
-                o, s = queue.pop(0)
-                if (o, s, 1) not in self._pixmap_cache:
-                    try:
-                        self._load_single_sprite(o, s)
-                    except Exception:
-                        pass
-            if queue:
-                QTimer.singleShot(25, _process_batch)
-
-        _process_batch()
-
-    def get_cached_pixmap(self, outfit: str, state: str, direction: int = 1):
-        """Récupère instantanément le sprite mis en cache, ou le charge à la volée en 1 ms."""
-        dir_key = -1 if direction == -1 else 1
-        pix = self._pixmap_cache.get((outfit, state, dir_key))
-        if pix:
-            return pix
-        pix = self._pixmap_cache.get((outfit, state))
-        if pix:
-            return pix
-
-        # Chargement dynamique à la volée si pas encore en cache
-        loaded = self._load_single_sprite(outfit, state)
-        if loaded:
-            return self._pixmap_cache.get((outfit, state, dir_key), loaded)
-
-        # Fallbacks intelligents
-        return (
-            self._pixmap_cache.get((outfit, "idle_standing", dir_key)) or
-            self._pixmap_cache.get((outfit, "idle", dir_key)) or
-            self._pixmap_cache.get(("franxx", state, dir_key)) or
-            self._pixmap_cache.get(("franxx", "idle_standing", dir_key)) or
-            self._pixmap_cache.get(("franxx", "idle"))
-        )
+        # Salutation sobre J.A.R.V.I.S. au démarrage
+        QTimer.singleShot(900, self.welcome_greeting)
+        # QG prêt en arrière-plan
+        QTimer.singleShot(1400, self.open_qg_initial)
 
     def init_ui(self):
         self.setWindowFlags(
@@ -307,229 +228,485 @@ class NoraMascot(QWidget):
             Qt.WindowType.WindowStaysOnTopHint
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.setFixedWidth(270)
 
-        main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(4, 4, 4, 4)
-        main_layout.setSpacing(2)
-        main_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        # Largeur de base de la capsule
+        self.setFixedWidth(510)
 
-        # 1. Bulle de dialogue style Manga / Comic (Apparaît uniquement quand Nora s'exprime)
-        self.bubble_container = QWidget()
-        bubble_layout = QVBoxLayout(self.bubble_container)
-        bubble_layout.setContentsMargins(0, 0, 0, 0)
-        bubble_layout.setSpacing(0)
-        bubble_layout.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(8, 6, 8, 8)
+        main_layout.setSpacing(6)
+        main_layout.setAlignment(Qt.AlignmentFlag.AlignTop | Qt.AlignmentFlag.AlignHCenter)
 
-        self.bubble_label = QLabel("")
-        self.bubble_label.setWordWrap(True)
-        self.bubble_label.setMaximumWidth(235)
-        self.bubble_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.bubble_label.setStyleSheet("""
-            background-color: rgba(9, 13, 22, 0.96);
-            color: #f1f5f9;
-            border: 1px solid rgba(56, 189, 248, 0.4);
-            border-radius: 8px;
-            padding: 8px 12px;
-            font-size: 11px;
-            font-weight: 500;
+        # -------------------------------------------------------------
+        # 1. CAPSULE PRINCIPALE (Dynamic Island Pill)
+        # -------------------------------------------------------------
+        self.capsule_bar = QFrame()
+        self.capsule_bar.setObjectName("capsule_bar")
+        self.capsule_bar.setFixedHeight(44)
+        self.capsule_bar.setCursor(QCursor(Qt.CursorShape.SizeAllCursor))
+        self.capsule_bar.setStyleSheet("""
+            #capsule_bar {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(11, 19, 36, 0.96),
+                    stop:1 rgba(6, 11, 24, 0.98));
+                border: 1px solid rgba(56, 189, 248, 0.38);
+                border-radius: 22px;
+            }
+            #capsule_bar:hover {
+                border: 1px solid rgba(56, 189, 248, 0.75);
+            }
         """)
-        bubble_layout.addWidget(self.bubble_label)
 
-        # Flèche de la bulle vers la tête de Nora
-        self.bubble_tail = QLabel("▼")
-        self.bubble_tail.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        self.bubble_tail.setStyleSheet("color: rgba(56, 189, 248, 0.6); font-size: 10px; margin-top: -3px; border: none; background: transparent;")
-        bubble_layout.addWidget(self.bubble_tail)
+        capsule_layout = QHBoxLayout(self.capsule_bar)
+        capsule_layout.setContentsMargins(14, 0, 12, 0)
+        capsule_layout.setSpacing(10)
 
-        main_layout.addWidget(self.bubble_container)
-        self.bubble_container.hide()  # Cachée par défaut pour un personnage 100% épuré
+        # --- GAUCHE : Arc Core & Marque Nora ---
+        core_layout = QHBoxLayout()
+        core_layout.setSpacing(6)
 
-        # Timer pour masquer la bulle automatiquement
-        self.bubble_hide_timer = QTimer(self)
-        self.bubble_hide_timer.setSingleShot(True)
-        self.bubble_hide_timer.timeout.connect(self.hide_speech_bubble)
+        self.core_dot = QLabel("●")
+        self.core_dot.setStyleSheet("color: #38bdf8; font-size: 13px; font-weight: 900; background: transparent; border: none;")
+        self.core_dot.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
-        # 2. Sprite animé plein corps de Nora (Zero Two)
-        self.avatar_label = QLabel()
-        self.avatar_label.setFixedSize(246, 440)
-        self.avatar_label.setAlignment(Qt.AlignmentFlag.AlignBottom | Qt.AlignmentFlag.AlignHCenter)
-        self.avatar_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.set_sprite_state("idle_standing")
-        main_layout.addWidget(self.avatar_label)
+        self.lbl_nora = QLabel("NORA")
+        self.lbl_nora.setStyleSheet("color: #f8fafc; font-size: 11px; font-weight: 900; letter-spacing: 2px; font-family: 'Segoe UI', system-ui; background: transparent; border: none;")
+        self.lbl_nora.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
-        # 3. Mini-compagnon animal de Nora (Klaxo) présent à ses côtés
-        self.pet_label = QLabel(self)
-        self.pet_label.setFixedSize(54, 54)
-        self.pet_label.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
-        self.pet_label.setStyleSheet("background: transparent; border: none;")
-        pet_sp = ASSETS_DIR / "companion" / "pet_idle.png"
-        if pet_sp.exists():
-            self.pet_label.setPixmap(QPixmap(str(pet_sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-        self.pet_label.mousePressEvent = self.on_companion_clicked
+        self.lbl_state = QLabel("STANDBY")
+        self.lbl_state.setStyleSheet("""
+            color: #38bdf8;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.5px;
+            background: rgba(56, 189, 248, 0.12);
+            padding: 2px 5px;
+            border-radius: 4px;
+            border: none;
+        """)
+        self.lbl_state.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents)
 
-        self.setLayout(main_layout)
+        core_layout.addWidget(self.core_dot)
+        core_layout.addWidget(self.lbl_nora)
+        core_layout.addWidget(self.lbl_state)
+        capsule_layout.addLayout(core_layout)
 
-        # Ancrage fixe au sol (10px au-dessus de la barre des tâches)
-        screen = QApplication.primaryScreen().availableGeometry()
-        self.ground_y = screen.bottom() - 10
+        # Séparateur vertical
+        sep1 = QLabel("|")
+        sep1.setStyleSheet("color: rgba(255, 255, 255, 0.12); font-size: 11px; background: transparent; border: none;")
+        capsule_layout.addWidget(sep1)
+
+        # --- CENTRE : Stack Dynamique (Télémétrie Idle / Waveform Écoute / Action) ---
+        self.center_stack = QStackedWidget()
+        self.center_stack.setStyleSheet("background: transparent; border: none;")
+
+        # Page 0 : Mini-jauges de télémétrie matérielle
+        page_telemetry = QWidget()
+        t_layout = QHBoxLayout(page_telemetry)
+        t_layout.setContentsMargins(0, 0, 0, 0)
+        t_layout.setSpacing(6)
+
+        self.chip_cpu = QLabel("CPU 0%")
+        self.chip_cpu.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 600; font-family: 'Consolas', 'Segoe UI'; background: rgba(255, 255, 255, 0.05); padding: 3px 6px; border-radius: 6px; border: none;")
+
+        self.chip_gpu = QLabel("RTX 4080 --°C")
+        self.chip_gpu.setStyleSheet("color: #38bdf8; font-size: 10px; font-weight: 600; font-family: 'Consolas', 'Segoe UI'; background: rgba(56, 189, 248, 0.08); padding: 3px 6px; border-radius: 6px; border: none;")
+
+        self.chip_ram = QLabel("RAM 0%")
+        self.chip_ram.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 600; font-family: 'Consolas', 'Segoe UI'; background: rgba(255, 255, 255, 0.05); padding: 3px 6px; border-radius: 6px; border: none;")
+
+        t_layout.addWidget(self.chip_cpu)
+        t_layout.addWidget(self.chip_gpu)
+        t_layout.addWidget(self.chip_ram)
+        self.center_stack.addWidget(page_telemetry)  # Index 0
+
+        # Page 1 : Mode Écoute Vocale & Spectral Waveform
+        page_listen = QWidget()
+        l_layout = QHBoxLayout(page_listen)
+        l_layout.setContentsMargins(0, 0, 0, 0)
+        l_layout.setSpacing(6)
+
+        self.waveform = NoraWaveformWidget()
+        self.lbl_listen = QLabel("À votre écoute...")
+        self.lbl_listen.setStyleSheet("color: #38bdf8; font-size: 10px; font-weight: 600; background: transparent; border: none;")
+
+        l_layout.addWidget(self.waveform)
+        l_layout.addWidget(self.lbl_listen)
+        self.center_stack.addWidget(page_listen)  # Index 1
+
+        # Page 2 : Mission / Traitement actif
+        page_work = QWidget()
+        w_layout = QHBoxLayout(page_work)
+        w_layout.setContentsMargins(0, 0, 0, 0)
+        w_layout.setSpacing(6)
+
+        self.lbl_work = QLabel("⚡ Traitement en cours...")
+        self.lbl_work.setStyleSheet("color: #a78bfa; font-size: 10px; font-weight: 600; background: transparent; border: none;")
+        w_layout.addWidget(self.lbl_work)
+        self.center_stack.addWidget(page_work)  # Index 2
+
+        capsule_layout.addWidget(self.center_stack, stretch=1)
+
+        # Séparateur vertical
+        sep2 = QLabel("|")
+        sep2.setStyleSheet("color: rgba(255, 255, 255, 0.12); font-size: 11px; background: transparent; border: none;")
+        capsule_layout.addWidget(sep2)
+
+        # --- DROITE : Boutons d'Action & Déclencheurs Rapides ---
+        btn_layout = QHBoxLayout()
+        btn_layout.setSpacing(4)
+
+        btn_style = """
+            QPushButton {
+                background: rgba(255, 255, 255, 0.04);
+                color: #94a3b8;
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 12px;
+                font-size: 11px;
+                font-weight: 600;
+            }
+            QPushButton:hover {
+                background: rgba(56, 189, 248, 0.18);
+                color: #f8fafc;
+                border-color: rgba(56, 189, 248, 0.5);
+            }
+        """
+
+        # Bouton Micro
+        self.btn_mic = QPushButton("🎙️")
+        self.btn_mic.setFixedSize(26, 26)
+        self.btn_mic.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_mic.setStyleSheet(btn_style)
+        self.btn_mic.setToolTip("Activer l'écoute vocale (Clic) / Mains-Libres 'Dis Nora'")
+        self.btn_mic.clicked.connect(self.start_voice_input)
+        btn_layout.addWidget(self.btn_mic)
+
+        # Bouton Vision Écran
+        self.btn_vision = QPushButton("👁️")
+        self.btn_vision.setFixedSize(26, 26)
+        self.btn_vision.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_vision.setStyleSheet(btn_style)
+        self.btn_vision.setToolTip("Analyser l'écran (Vision Multimodale Gemini)")
+        self.btn_vision.clicked.connect(lambda: self.trigger_screen_vision(""))
+        btn_layout.addWidget(self.btn_vision)
+
+        # Bouton Omnibox (Commande Rapide)
+        self.btn_cmd = QPushButton("⚡")
+        self.btn_cmd.setFixedSize(26, 26)
+        self.btn_cmd.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_cmd.setStyleSheet(btn_style)
+        self.btn_cmd.setToolTip("Ouvrir la ligne de commande rapide (Ctrl+Alt+N)")
+        self.btn_cmd.clicked.connect(self.toggle_command_bar)
+        btn_layout.addWidget(self.btn_cmd)
+
+        # Bouton QG Dashboard
+        self.btn_qg = QPushButton("HQ")
+        self.btn_qg.setFixedSize(30, 26)
+        self.btn_qg.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        self.btn_qg.setStyleSheet("""
+            QPushButton {
+                background: rgba(56, 189, 248, 0.12);
+                color: #38bdf8;
+                border: 1px solid rgba(56, 189, 248, 0.4);
+                border-radius: 12px;
+                font-size: 10px;
+                font-weight: 800;
+            }
+            QPushButton:hover {
+                background: rgba(56, 189, 248, 0.28);
+                color: #ffffff;
+                border-color: #38bdf8;
+            }
+        """)
+        self.btn_qg.setToolTip("Ouvrir le Poste de Contrôle QG")
+        self.btn_qg.clicked.connect(self.toggle_qg)
+        btn_layout.addWidget(self.btn_qg)
+
+        capsule_layout.addLayout(btn_layout)
+        main_layout.addWidget(self.capsule_bar)
+
+        # -------------------------------------------------------------
+        # 2. OMNIBOX DE COMMANDE RAPIDE (Rétractable)
+        # -------------------------------------------------------------
+        self.cmd_bar = QFrame()
+        self.cmd_bar.setObjectName("cmd_bar")
+        self.cmd_bar.setFixedHeight(38)
+        self.cmd_bar.setStyleSheet("""
+            #cmd_bar {
+                background: rgba(15, 23, 42, 0.96);
+                border: 1px solid rgba(56, 189, 248, 0.45);
+                border-radius: 19px;
+            }
+        """)
+        cb_layout = QHBoxLayout(self.cmd_bar)
+        cb_layout.setContentsMargins(12, 0, 8, 0)
+        cb_layout.setSpacing(8)
+
+        lbl_prompt_icon = QLabel("➤")
+        lbl_prompt_icon.setStyleSheet("color: #38bdf8; font-size: 11px; font-weight: 800; background: transparent; border: none;")
+        cb_layout.addWidget(lbl_prompt_icon)
+
+        self.cmd_input = QLineEdit()
+        self.cmd_input.setPlaceholderText("Donnez un ordre ou une question à Nora... (Entrée pour valider, Échap pour masquer)")
+        self.cmd_input.setStyleSheet("""
+            QLineEdit {
+                background: transparent;
+                border: none;
+                color: #f8fafc;
+                font-size: 11px;
+                font-family: 'Segoe UI', system-ui;
+            }
+        """)
+        self.cmd_input.returnPressed.connect(self.submit_cmd_input)
+        cb_layout.addWidget(self.cmd_input, stretch=1)
+
+        btn_send = QPushButton("Exécuter")
+        btn_send.setFixedHeight(26)
+        btn_send.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_send.setStyleSheet("""
+            QPushButton {
+                background: #0284c7;
+                color: #ffffff;
+                font-size: 10px;
+                font-weight: 700;
+                padding: 0 10px;
+                border-radius: 12px;
+                border: none;
+            }
+            QPushButton:hover {
+                background: #0369a1;
+            }
+        """)
+        btn_send.clicked.connect(self.submit_cmd_input)
+        cb_layout.addWidget(btn_send)
+
+        btn_close_cmd = QPushButton("✕")
+        btn_close_cmd.setFixedSize(20, 20)
+        btn_close_cmd.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_close_cmd.setStyleSheet("background: transparent; color: #64748b; font-size: 10px; border: none;")
+        btn_close_cmd.clicked.connect(lambda: self.cmd_bar.hide())
+        cb_layout.addWidget(btn_close_cmd)
+
+        self.cmd_bar.hide()
+        main_layout.addWidget(self.cmd_bar)
+
+        # -------------------------------------------------------------
+        # 3. CARTE HUD DE NOTIFICATION & RAPPORT DÉTACHABLE
+        # -------------------------------------------------------------
+        self.hud_card = QFrame()
+        self.hud_card.setObjectName("hud_card")
+        self.hud_card.setStyleSheet("""
+            #hud_card {
+                background: qlineargradient(x1:0, y1:0, x2:0, y2:1,
+                    stop:0 rgba(10, 16, 30, 0.97),
+                    stop:1 rgba(5, 9, 18, 0.99));
+                border: 1px solid rgba(56, 189, 248, 0.35);
+                border-radius: 12px;
+            }
+        """)
+        hud_layout = QVBoxLayout(self.hud_card)
+        hud_layout.setContentsMargins(12, 8, 12, 10)
+        hud_layout.setSpacing(6)
+
+        header_layout = QHBoxLayout()
+        self.lbl_hud_title = QLabel("⚡ NORA EXECUTIVE HUD")
+        self.lbl_hud_title.setStyleSheet("color: #38bdf8; font-size: 9px; font-weight: 800; letter-spacing: 1px; background: transparent; border: none;")
+        header_layout.addWidget(self.lbl_hud_title, stretch=1)
+
+        btn_hud_close = QPushButton("✕")
+        btn_hud_close.setFixedSize(18, 18)
+        btn_hud_close.setCursor(QCursor(Qt.CursorShape.PointingHandCursor))
+        btn_hud_close.setStyleSheet("background: transparent; color: #64748b; font-size: 10px; border: none;")
+        btn_hud_close.clicked.connect(lambda: self.hud_card.hide())
+        header_layout.addWidget(btn_hud_close)
+        hud_layout.addLayout(header_layout)
+
+        self.hud_msg = QLabel("")
+        self.hud_msg.setWordWrap(True)
+        self.hud_msg.setStyleSheet("color: #f1f5f9; font-size: 11px; line-height: 16px; background: transparent; border: none; font-family: 'Segoe UI', system-ui;")
+        hud_layout.addWidget(self.hud_msg)
+
+        self.hud_card.hide()
+        main_layout.addWidget(self.hud_card)
+
+        # Timer de masquage automatique du HUD
+        self.hud_timer = QTimer(self)
+        self.hud_timer.setSingleShot(True)
+        self.hud_timer.timeout.connect(lambda: self.hud_card.hide())
+
+        # Position initiale : Top-Center de l'écran principal
         self.adjustSize()
-        pos_x = max(60, screen.right() - 290)
-        self.move(pos_x, self.ground_y - self.height())
-        self.update_pet_position()
+        screen = QApplication.primaryScreen().availableGeometry()
+        x = screen.left() + (screen.width() - self.width()) // 2
+        y = screen.top() + 18
+        self.move(x, y)
 
-    # =================================================================
-    # INTÉGRATION WINDOWS SYSTEM TRAY & NOTIFICATIONS
-    # =================================================================
-    def init_system_tray(self):
-        """Place l'icône de Nora dans la zone de notification près de l'horloge Windows."""
-        self.tray_icon = QSystemTrayIcon(self)
-        ico_path = ASSETS_DIR / "nora.ico"
-        if not ico_path.exists():
-            ico_path = ASSETS_DIR / "nora_idle.png"
-        self.tray_icon.setIcon(QIcon(str(ico_path)))
-        self.tray_icon.setToolTip("NORA WORKSTATION | Copilote & Ingénierie")
-
-        # Clic sur l'icône de la barre des tâches pour afficher/masquer
-        self.tray_icon.activated.connect(self.on_tray_activated)
-        self.tray_icon.show()
-
-    def on_tray_activated(self, reason):
-        if reason == QSystemTrayIcon.ActivationReason.Trigger:  # Clic gauche
-            self.toggle_mascot_visibility()
-        elif reason == QSystemTrayIcon.ActivationReason.Context:  # Clic droit
-            self.show_context_menu(QCursor.pos())
-
-    def toggle_mascot_visibility(self):
-        """Bascule la visibilité de Nora et de son QG en 1 clic."""
-        if self.isVisible():
-            self.hide()
-            if hasattr(self, 'qg') and self.qg.isVisible():
-                self.qg.hide()
+    def _pulse_core_led(self):
+        """Anime doucement l'intensité lumineuse du réacteur Arc Core."""
+        self.core_pulse_state = (self.core_pulse_state + 1) % 2
+        if self.is_speaking_now:
+            color = "#38bdf8" if self.core_pulse_state == 0 else "#60a5fa"
+            self.core_dot.setStyleSheet(f"color: {color}; font-size: 14px; font-weight: 900; background: transparent; border: none;")
+        elif self.is_mission_running:
+            color = "#a78bfa" if self.core_pulse_state == 0 else "#818cf8"
+            self.core_dot.setStyleSheet(f"color: {color}; font-size: 13px; font-weight: 900; background: transparent; border: none;")
         else:
-            self.show()
-            self.raise_()
-            self.activateWindow()
+            color = "#38bdf8" if self.core_pulse_state == 0 else "rgba(56, 189, 248, 0.45)"
+            self.core_dot.setStyleSheet(f"color: {color}; font-size: 13px; font-weight: 900; background: transparent; border: none;")
 
-    def notify_windows(self, title: str, message: str, is_warning: bool = False):
-        """Affiche une notification native Windows (Toast/Bulle près de l'horloge)."""
-        if hasattr(self, 'tray_icon') and self.tray_icon and self.tray_icon.isVisible():
-            msg_icon = QSystemTrayIcon.MessageIcon.Warning if is_warning else QSystemTrayIcon.MessageIcon.Information
-            self.tray_icon.showMessage(f"NORA | {title}", message, msg_icon, 4500)
-
-    # =================================================================
-    # ANIMATIONS OPTION A : CLIGNEMENT NATUREL + LIP-SYNC
-    # =================================================================
-    def init_animations(self):
-        # 1. Flottement doux vertical (30 FPS sinusoïdal organique)
-        self.float_start_time = time.time()
-        self.float_timer = QTimer(self)
-        self.float_timer.timeout.connect(self.float_animation_step)
-        self.float_timer.start(33)
-
-        # 2. Clignements d'yeux naturels aléatoires (Option A)
-        self.blink_timer = QTimer(self)
-        self.blink_timer.setSingleShot(True)
-        self.blink_timer.timeout.connect(self.trigger_blink)
-        self.schedule_next_blink()
-
-        # 3. Synchronisation labiale fluide (Option A)
-        self.is_speaking_now = False
-        self.lip_phase = 0
-        self.lip_timer = QTimer(self)
-        self.lip_timer.timeout.connect(self.lip_sync_step)
-
-    def float_animation_step(self):
-        """Mouvement corporel vivant : respiration sinusoïdale organique subtile (0% CPU)."""
-        if getattr(self, 'is_walking', False):
-            return  # La marche gère sa propre cinématique
-        if self.current_state in ["idle", "idle_standing", "talk_open", "talk_closed", "listen", "work"]:
-            elapsed = time.time() - self.float_start_time
-            # Micro-respiration douce de 1.5 pixel maximum (aucun redimensionnement destructeur)
-            offset = int(math.sin(elapsed * 2.0) * 1.5)
-            self.avatar_label.setContentsMargins(0, 2 + offset, 0, 2 - offset)
-
-    def schedule_next_blink(self):
-        """Planifie le prochain clignement naturel des yeux entre 3 et 5.5 secondes."""
-        delay = random.randint(3000, 5500)
-        self.blink_timer.start(delay)
-
-    def trigger_blink(self):
-        """Cligne des yeux si elle est au repos et ne parle pas."""
-        if self.current_state in ["idle", "idle_standing"] and not self.is_speaking_now and not getattr(self, 'is_walking', False):
-            self.set_sprite_state("blink")
-            QTimer.singleShot(140, self.finish_blink)
+    def set_hud_state(self, state: str):
+        """Bascule l'état visuel de la capsule (idle, listen, work)."""
+        if state == "listen":
+            self.lbl_state.setText("LISTENING")
+            self.lbl_state.setStyleSheet("color: #38bdf8; font-size: 8px; font-weight: 700; background: rgba(56, 189, 248, 0.2); padding: 2px 5px; border-radius: 4px; border: none;")
+            self.center_stack.setCurrentIndex(1)
+            self.waveform.set_active(True)
+        elif state == "work":
+            self.lbl_state.setText("EXEC")
+            self.lbl_state.setStyleSheet("color: #a78bfa; font-size: 8px; font-weight: 700; background: rgba(167, 139, 250, 0.2); padding: 2px 5px; border-radius: 4px; border: none;")
+            self.center_stack.setCurrentIndex(2)
+            self.waveform.set_active(False)
         else:
-            self.schedule_next_blink()
+            self.lbl_state.setText("STANDBY")
+            self.lbl_state.setStyleSheet("color: #38bdf8; font-size: 8px; font-weight: 700; background: rgba(56, 189, 248, 0.12); padding: 2px 5px; border-radius: 4px; border: none;")
+            self.center_stack.setCurrentIndex(0)
+            self.waveform.set_active(False)
 
-    def finish_blink(self):
-        """Retour aux yeux ouverts après le clignement."""
-        if self.current_state == "blink" and not self.is_speaking_now:
-            self.set_sprite_state("idle_standing")
-        self.schedule_next_blink()
-
-    def on_speech_started(self):
-        """Déclenché au tout début de la voix de synthèse."""
-        self.is_speaking_now = True
-        self.lip_phase = 0
-        self.set_sprite_state("talk_open")
-        self.lip_timer.start(135)
-        # Maintenir la bulle manga visible tant que Nora parle
-        if hasattr(self, 'bubble_hide_timer'):
-            self.bubble_hide_timer.stop()
-        if hasattr(self, 'bubble_container'):
-            self.bubble_container.show()
-            self.adjustSize()
-            if hasattr(self, 'ground_y'):
-                self.move(self.x(), self.ground_y - self.height())
-
-    def lip_sync_step(self):
-        """Alterne la bouche ouverte et entrouverte pendant l'articulation."""
-        if not self.is_speaking_now:
-            self.lip_timer.stop()
-            return
-        self.lip_phase = 1 - self.lip_phase
-        next_state = "talk_open" if self.lip_phase == 0 else "talk_closed"
-        self.set_sprite_state(next_state)
-
-    def on_speech_stopped(self):
-        """Déclenché dès que Nora a fini de prononcer sa phrase."""
-        self.is_speaking_now = False
-        self.lip_timer.stop()
-        if not self.is_mission_running:
-            self.set_sprite_state("idle_standing")
-        # Masquer automatiquement la bulle de dialogue 3.5s après la parole
-        if hasattr(self, 'bubble_hide_timer'):
-            self.bubble_hide_timer.start(3500)
-
-    def hide_speech_bubble(self):
-        """Masque la bulle de dialogue manga pour laisser le personnage pur et épuré."""
-        if hasattr(self, 'bubble_container') and self.bubble_container.isVisible():
-            self.bubble_container.hide()
-            self.adjustSize()
-            if hasattr(self, 'ground_y'):
-                self.move(self.x(), self.ground_y - self.height())
-
+    # =========================================================================
+    # AFFICHAGE DE MESSAGES & NOTIFICATIONS HUD
+    # =========================================================================
     def display_message(self, text: str, duration_ms: int = 6500):
-        """Affiche un message dans la bulle manga au-dessus de Nora et planifie sa disparition."""
+        """Affiche un message stylisé dans la carte HUD rétractable."""
         if not text:
-            self.hide_speech_bubble()
             return
-        self.bubble_label.setText(text)
-        self.bubble_label.adjustSize()
-        if hasattr(self, 'bubble_container'):
-            self.bubble_container.show()
-            self.adjustSize()
-            if hasattr(self, 'ground_y'):
-                self.move(self.x(), self.ground_y - self.height())
-        if hasattr(self, 'bubble_hide_timer'):
-            self.bubble_hide_timer.stop()
-            if duration_ms > 0:
-                self.bubble_hide_timer.start(duration_ms)
+        self.hud_msg.setText(text)
+        self.hud_card.show()
+        self.adjustSize()
+        self.hud_timer.stop()
+        if duration_ms > 0:
+            self.hud_timer.start(duration_ms)
 
+    def welcome_greeting(self):
+        msg = memory_manager.get_welcome_message()
+        self.display_message(msg, duration_ms=7000)
+        self.speak_nora(msg)
+
+    # =========================================================================
+    # COMMANDE RAPIDE (OMNIBOX)
+    # =========================================================================
+    def toggle_command_bar(self):
+        if self.cmd_bar.isVisible():
+            self.cmd_bar.hide()
+        else:
+            self.cmd_bar.show()
+            self.cmd_input.setFocus()
+            self.cmd_input.selectAll()
+        self.adjustSize()
+
+    def submit_cmd_input(self):
+        text = self.cmd_input.text().strip()
+        if text:
+            self.cmd_input.clear()
+            self.cmd_bar.hide()
+            self.adjustSize()
+            self.process_user_message(text)
+
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key.Key_Escape:
+            if self.cmd_bar.isVisible():
+                self.cmd_bar.hide()
+                self.adjustSize()
+            if self.hud_card.isVisible():
+                self.hud_card.hide()
+                self.adjustSize()
+        super().keyPressEvent(event)
+
+    # =========================================================================
+    # GESTION DES MESSAGES UTILISATEUR & MISSIONS
+    # =========================================================================
+    def process_user_message(self, user_text: str):
+        if self.is_mission_running:
+            self.display_message("⏳ Une mission est déjà en cours d'exécution, Maverick.")
+            return
+
+        self.set_hud_state("work")
+        self.display_message(f"💬 « {user_text} »\nAnalyse cognitive en cours...")
+
+        def analyze_thread():
+            try:
+                intent, chat_reply = nora_brain.analyze_intent_and_respond(user_text)
+                if intent == "OPEN_QG":
+                    self.bridge.open_qg.emit()
+                    self.bridge.chat_response.emit(chat_reply)
+                elif intent == "GAMING_ON":
+                    self.bridge.gaming_mode_changed.emit(True)
+                    self.bridge.chat_response.emit(chat_reply)
+                elif intent == "GAMING_OFF":
+                    self.bridge.gaming_mode_changed.emit(False)
+                    self.bridge.chat_response.emit(chat_reply)
+                elif intent == "BOOST_RAM":
+                    self.bridge.chat_response.emit(chat_reply)
+                    self.optimize_ram_direct()
+                elif intent == "SCREEN_VISION":
+                    self.bridge.screen_vision_requested.emit(chat_reply)
+                elif intent == "CHAT":
+                    self.bridge.chat_response.emit(chat_reply)
+                else:
+                    self.bridge.mission_requested.emit(user_text)
+            except Exception as e:
+                self.bridge.chat_response.emit(f"Maverick, une anomalie est survenue lors de l'analyse : {e}")
+
+        threading.Thread(target=analyze_thread, daemon=True).start()
+
+    def on_chat_response(self, reply_text: str):
+        self.set_hud_state("idle")
+        self.display_message(reply_text, duration_ms=7500)
+        self.speak_nora(reply_text)
+
+    def execute_mission(self, mission_goal: str):
+        self.is_mission_running = True
+        self.set_hud_state("work")
+        self.display_message(f"⚙️ <b>MISSION DÉMARRÉE :</b>\n{mission_goal}\n\nMobilisation de l'Essaim Cognitif en cours...", duration_ms=0)
+        sound_effects.play_wake_chime()
+        self.speak_nora("C'est bien noté Maverick. Je mobilise mes agents pour exécuter la tâche.")
+
+        def mission_worker():
+            def step_callback(step_type, text):
+                if step_type == "swarm":
+                    self.bridge.update_hud.emit(f"🐝 <b>AGORA ESSAIM :</b>\n{text}", 0)
+                    self.bridge.swarm_event.emit("Essaim", 1, text, 96)
+                else:
+                    self.bridge.update_hud.emit(f"⚙️ {text}", 0)
+
+            try:
+                from mission_engine import run_autonomous_mission
+                report = run_autonomous_mission(mission_goal, callback_step=step_callback)
+                self.bridge.mission_finished.emit(report)
+            except Exception as e:
+                self.bridge.mission_finished.emit(f"Erreur mission : {str(e)}")
+
+        threading.Thread(target=mission_worker, daemon=True).start()
+
+    def on_mission_finished(self, report: str):
+        self.is_mission_running = False
+        self.set_hud_state("idle")
+        sound_effects.play_success_chime()
+        summary = "🎉 <b>Mission accomplie avec succès, Maverick !</b>\nLes opérations ont été clôturées à 100 %."
+        self.display_message(summary, duration_ms=8000)
+        self.notify_windows("Mission Nora Terminée", "Toutes les opérations demandées ont été effectuées avec succès.")
+        self.speak_nora("Mission accomplie Maverick. Toutes les opérations ont été menées à bien.")
+
+    def on_swarm_event_received(self, agent: str, round_num: int, text: str, consensus: int):
+        if hasattr(self, 'qg') and self.qg:
+            try:
+                self.qg.update_swarm_event(agent, round_num, text, consensus)
+            except Exception:
+                pass
+
+    # =========================================================================
+    # AUDIO & SYNTHÈSE VOCALE
+    # =========================================================================
     def speak_nora(self, text: str, on_finished=None, force: bool = False):
-        """Fait parler Nora avec synchronisation labiale et animation."""
-        # En mode Gaming, Nora reste silencieuse pour respecter l'audio du jeu (Ne Pas Déranger)
         if gaming_mode.is_gaming_mode() and not force:
             if on_finished:
                 QTimer.singleShot(100, on_finished)
@@ -551,477 +728,120 @@ class NoraMascot(QWidget):
 
         voice_engine.speak(text, on_start=_on_start, on_end=_on_end)
 
-    def set_outfit(self, outfit: str):
-        """Change la tenue de Zero Two en temps réel et met à jour les sprites."""
-        if outfit not in ["franxx", "school", "hoodie", "cyberpunk", "commander"]:
-            outfit = "franxx"
-        self.current_outfit = outfit
-        memory_manager.set_current_outfit(outfit)
-        mascot_assets.set_active_outfit(outfit)
-        self.set_sprite_state(self.current_state)
-        if hasattr(self, 'qg') and self.qg:
-            self.qg.update_outfit_buttons(outfit)
+    def on_speech_started(self):
+        self.is_speaking_now = True
 
-    def on_gaming_mode_changed(self, active: bool):
-        """Synchronise l'interface quand le mode gaming change d'état."""
-        if hasattr(self, 'qg') and self.qg:
-            self.qg.update_gaming_ui()
+    def on_speech_stopped(self):
+        self.is_speaking_now = False
 
-    def set_sprite_state(self, state: str):
-        """Met à jour le sprite affiché instantanément depuis le cache RAM avec orientation."""
-        self.current_state = state
-        pix = self.get_cached_pixmap(self.current_outfit, state, getattr(self, 'facing_direction', 1))
-        if pix:
-            self.avatar_label.setPixmap(pix)
-        self.update_pet_position()
-
-    def play_pose(self, pose_name: str, duration_sec: float = 6.0, dialog: str = None):
-        """Joue une pose spécifique avec réactivité et retour automatique à la posture de base."""
-        self.is_walking = False
-        self.set_sprite_state(pose_name)
-        if dialog:
-            self.display_message(dialog, duration_ms=int(duration_sec * 1000))
-        if hasattr(self, '_pose_return_timer') and self._pose_return_timer:
-            self._pose_return_timer.stop()
-        self._pose_return_timer = QTimer(self)
-        self._pose_return_timer.setSingleShot(True)
-        self._pose_return_timer.timeout.connect(lambda: self.set_sprite_state("idle_standing"))
-        self._pose_return_timer.start(int(duration_sec * 1000))
-
-    def update_pet_position(self):
-        """Place le mini-compagnon aux pieds de Nora selon sa direction."""
-        if hasattr(self, 'pet_label'):
-            if getattr(self, 'facing_direction', 1) == 1:
-                self.pet_label.move(8, max(0, self.height() - 58))
-            else:
-                self.pet_label.move(max(0, self.width() - 62), max(0, self.height() - 58))
-
-    def on_companion_clicked(self, event):
-        pet = nora_companion.pet_manager.get_pet_info()
-        name = pet.get("name", "Klaxo")
-        species = pet.get("species", "Dragonnet")
-        lvl = pet.get("stats", {}).get("level", 1)
-        dialogs = [
-            f"Voici {name}, mon petit {species} (Niv. {lvl}) ! Il adore veiller sur notre bureau avec nous.",
-            f"{name} s'amuse beaucoup à vos côtés, Maverick !",
-            f"J'en prends grand soin chaque jour, Maverick. Il émet un doux ronronnement dès que vous le saluez !"
-        ]
-        self.display_message(random.choice(dialogs))
-        sp = ASSETS_DIR / "companion" / "pet_happy.png"
-        if sp.exists():
-            self.pet_label.setPixmap(QPixmap(str(sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-            QTimer.singleShot(4000, self.reset_companion_sprite)
-
-    def reset_companion_sprite(self):
-        if hasattr(self, 'pet_label'):
-            sp = ASSETS_DIR / "companion" / "pet_idle.png"
-            if sp.exists():
-                self.pet_label.setPixmap(QPixmap(str(sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-
-    def welcome_greeting(self):
-        msg = memory_manager.get_welcome_message()
-        pet = nora_companion.pet_manager.get_pet_info()
-        pname = pet.get("name", "Klaxo")
-        pspecies = pet.get("species", "Dragonnet Écarlate")
-        full_bubble = f"{msg}\nMon petit {pspecies} {pname} et moi veillons sur vos projets !"
-        self.display_message(full_bubble)
-        self.speak_nora(msg)
-
-    # =================================================================
-    # MOTEUR DE VIE AUTONOME & DÉPLACEMENT LIBRE (ROAMING)
-    # =================================================================
-    def init_autonomous_life(self):
-        """Initialise la boucle de déplacement autonome (balade) et le cycle de vie."""
-        # 1. Timer de marche fluide (30 FPS)
-        self.walk_timer = QTimer(self)
-        self.walk_timer.timeout.connect(self.walk_step)
-        self.walk_timer.start(35)
-
-        # 2. Timer de décisions de vie autonome (toutes les 4 secondes)
-        self.life_timer = QTimer(self)
-        self.life_timer.timeout.connect(self.check_autonomous_life)
-        self.life_timer.start(4000)
-
-        # 3. Première balade visible 4.5 secondes après le lancement
-        QTimer.singleShot(4500, self.initial_autonomous_walk)
-
-    def initial_autonomous_walk(self):
-        """Déclenche une première balade visible peu après le démarrage."""
-        if getattr(self, 'is_walking', False) or getattr(self, 'is_dragging', False):
-            return
-        screen = QApplication.primaryScreen().availableGeometry()
-        min_x = screen.left() + 20
-        max_x = max(min_x + 100, screen.right() - self.width() - 20)
-        current_x = self.x()
-        if current_x > (min_x + max_x) / 2:
-            target_x = max(min_x, current_x - 280)
-        else:
-            target_x = min(max_x, current_x + 280)
-        self.start_walking_to(target_x, speed=3, announcement="Je commence ma petite balade sur votre écran, Maverick !")
-
-    def start_walking_to(self, target_x: int, speed: int = 3, announcement: str = None):
-        """Lance une balade autonome fluide vers une coordonnée horizontale."""
-        if getattr(self, 'is_dragging', False) or self.is_mission_running:
-            return
-        screen = QApplication.primaryScreen().availableGeometry()
-        min_x = screen.left() + 20
-        max_x = max(min_x + 100, screen.right() - self.width() - 20)
-        self.walk_target_x = max(min_x, min(max_x, target_x))
-        self.walk_speed = max(2, min(speed, 6))
-        self.is_walking = True
-        self.walk_step_counter = 0
-        self.walk_current_frame = 1
-        self.walk_last_frame_time = time.time()
-        if announcement:
-            self.display_message(announcement, duration_ms=4500)
-
-    def walk_step(self):
-        """Effectue un pas fluide vers la destination de balade avec corps articulé animé."""
-        if not getattr(self, 'is_walking', False) or getattr(self, 'is_dragging', False) or self.is_mission_running:
-            return
-
-        current_x = self.x()
-        dx = self.walk_target_x - current_x
-        dist = abs(dx)
-
-        # Destination atteinte avec précision
-        if dist <= 3:
-            target_y = getattr(self, 'ground_y', self.y() + self.height()) - self.height()
-            self.move(int(self.walk_target_x), int(target_y))
-            self.is_walking = False
-            self.set_sprite_state("idle_standing")
-            return
-
-        # Mise à jour de l'orientation du corps selon la direction de marche
-        self.facing_direction = 1 if dx > 0 else -1
-
-        # Easing naturel : décélération douce à l'approche de la cible
-        if dist < 45:
-            step_size = max(1.2, float(self.walk_speed) * (dist / 45.0))
-        else:
-            step_size = float(self.walk_speed)
-
-        step = step_size if dx > 0 else -step_size
-        new_x = int(current_x + step)
-        target_y = getattr(self, 'ground_y', self.y() + self.height()) - self.height()
-        self.move(new_x, int(target_y))
-        self.update_pet_position()
-
-        # Cadence naturelle des pas : changement de frame toutes les 75 ms
-        now = time.time()
-        if now - getattr(self, 'walk_last_frame_time', 0) >= 0.075:
-            self.walk_last_frame_time = now
-            self.walk_current_frame = (self.walk_current_frame % 8) + 1
-            state_name = f"walk_{self.walk_current_frame}"
-            pix = self.get_cached_pixmap(self.current_outfit, state_name, self.facing_direction)
-            if pix:
-                self.avatar_label.setPixmap(pix)
-
-    def check_autonomous_life(self):
-        """Interroge le moteur de vie autonome pour déclencher balades, pensées ou pauses."""
-        if getattr(self, 'is_walking', False) or getattr(self, 'is_dragging', False) or self.is_mission_running or getattr(self, 'is_speaking_now', False):
-            return
-
-        # En mode Gaming, Nora respecte l'immersion et ne se balade pas
-        if gaming_mode.is_gaming_mode():
-            return
-
-        screen = QApplication.primaryScreen().availableGeometry()
-        min_x = screen.left() + 20
-        max_x = max(min_x + 100, screen.right() - self.width() - 20)
-
-        action = self.life_engine.decide_next_action(self.x(), min_x, max_x)
-        action_type = action.get("type")
-
-        if action_type == "WALK":
-            self.start_walking_to(action["target_x"], action.get("speed", 2), action.get("bubble"))
-        elif action_type in ["THOUGHT", "WATER", "MAINTENANCE"]:
-            if action.get("bubble"):
-                self.display_message(action["bubble"])
-            if action.get("speech"):
-                self.speak_nora(action["bubble"])
-        elif action_type == "PET_CARE":
-            if action.get("bubble"):
-                self.display_message(action["bubble"])
-            if hasattr(self, 'pet_label'):
-                sp = ASSETS_DIR / "companion" / "pet_happy.png"
-                if sp.exists():
-                    self.pet_label.setPixmap(QPixmap(str(sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-                    QTimer.singleShot(4000, self.reset_companion_sprite)
-        elif action_type == "SLEEP":
-            self.display_message(action["bubble"])
-            self.set_sprite_state("blink")
-        elif action_type == "WAKE_UP":
-            self.display_message(action["bubble"])
-            self.set_sprite_state("idle")
-            if action.get("speech"):
-                self.speak_nora(action["bubble"])
-
-    def toggle_roaming_mode(self):
-        """Active ou désactive la balade libre de Nora."""
-        active = self.life_engine.toggle_roaming()
-        if not active:
-            self.is_walking = False
-            self.set_sprite_state("idle")
-            self.display_message("Mode balade désactivé. Je reste ici, Maverick.")
-        else:
-            self.display_message("Mode balade activé ! Je me dégourdis les jambes, Maverick.")
-
-    def force_nap_mode(self):
-        """Met Nora en sieste paisible."""
-        self.is_walking = False
-        self.life_engine.is_sleeping = True
-        self.set_sprite_state("blink")
-        self.display_message("Je fais une petite sieste discrète, Maverick. Zzz... 🌙")
-
-    def read_learning_note(self):
-        """Fait lire à haute voix ou afficher une note du carnet."""
-        thought = self.life_engine.generate_spontaneous_thought("day")
-        self.display_message(thought["text"])
-
-    # =================================================================
-    # MOTEUR DE CONSCIENCE EN ARRIÈRE-PLAN (GEMINI FUNCTION CALLING)
-    # =================================================================
-    def init_consciousness_engine(self):
-        """Initialise le moteur cognitif autonome proactif en arrière-plan."""
-        def _on_action(action_type: str, bubble_text: str, sprite_name: str, speak: bool):
-            self.bridge.autonomous_action_triggered.emit(action_type, bubble_text, sprite_name, speak)
-
-        def _on_pet_updated(pet_state: dict):
-            self.bridge.pet_state_updated.emit(pet_state)
-
-        def _on_thought(thought_text: str, speak: bool):
-            self.bridge.autonomous_action_triggered.emit("THOUGHT", thought_text, "pet_idle.png", speak)
-
-        self.consciousness = nora_consciousness.NoraConsciousnessEngine(
-            interval_seconds=60,
-            on_action_callback=_on_action,
-            on_pet_updated_callback=_on_pet_updated,
-            on_thought_callback=_on_thought
-        )
-        self.consciousness.start()
-
-    def on_autonomous_action(self, action_type: str, bubble_text: str, sprite_name: str, speak: bool):
-        """Déclenche la réaction visuelle, dialoguée et gestuelle de Nora sur le bureau."""
-        if bubble_text:
-            self.display_message(bubble_text, duration_ms=6500)
-            if speak:
-                self.speak_nora(bubble_text)
-
-        # Réaction posturale de Nora
-        if action_type in ["FEED", "PLAY", "PET"]:
-            self.play_pose("idle_wave", duration_sec=5.0)
-        elif action_type == "NAP":
-            self.play_pose("idle_sitting", duration_sec=6.0)
-        elif action_type == "RAM_BOOST":
-            self.play_pose("idle_work_hologram", duration_sec=5.0)
-
-        # Réaction du sprite de Vermeil (mini-compagnon à ses pieds)
-        if hasattr(self, 'pet_label') and sprite_name:
-            sp = ASSETS_DIR / "companion" / sprite_name
-            if sp.exists():
-                self.pet_label.setPixmap(QPixmap(str(sp)).scaled(54, 54, Qt.AspectRatioMode.KeepAspectRatio, Qt.TransformationMode.SmoothTransformation))
-                QTimer.singleShot(6000, self.reset_companion_sprite)
-
-    def on_pet_state_updated(self, pet_state: dict):
-        """Met à jour le panneau Compagnon du QG si ouvert."""
-        if hasattr(self, 'qg') and self.qg:
-            self.qg.update_from_consciousness(pet_state)
-
-    # =================================================================
-    # VISION D'ÉCRAN MULTIMODALE & LE QG DE NORA
-    # =================================================================
-    def trigger_screen_vision(self, prompt_text: str = ""):
-        """Capture l'écran et l'analyse via Gemini 3.6 Flash avec la personnalité de Zero Two."""
+    def start_voice_input(self):
         if self.is_mission_running:
-            self.display_message("⏳ Je suis déjà occupée sur une mission Maverick, un instant s'il vous plaît.")
             return
 
-        self.set_sprite_state("work")
-        self.display_message("👁️ J'analyse votre écran, Maverick... Laissez-moi regarder.")
+        def record_thread():
+            self.bridge.set_state.emit("listen")
+            self.bridge.update_hud.emit("🎙️ <i>À votre écoute, Maverick... Parlez librement.</i>", 5000)
+            spoken = voice_engine.listen_microphone()
+            if spoken:
+                self.process_user_message(spoken)
+            else:
+                self.bridge.set_state.emit("idle")
+                self.bridge.update_hud.emit("Je n'ai pas capté votre voix, Maverick. Cliquez sur 🎙️ ou écrivez-moi.", 5000)
+
+        threading.Thread(target=record_thread, daemon=True).start()
+
+    def on_wake_word_heard(self, command: str):
+        if self.is_mission_running:
+            return
+        if command:
+            self.process_user_message(command)
+        else:
+            sound_effects.play_wake_chime()
+            self.set_hud_state("listen")
+            self.display_message("✨ Oui Maverick, je suis à votre écoute.", duration_ms=4000)
+            self.start_voice_input()
+
+    # =========================================================================
+    # VISION D'ÉCRAN MULTIMODALE GEMINI
+    # =========================================================================
+    def trigger_screen_vision(self, prompt_text: str = ""):
+        if self.is_mission_running:
+            self.display_message("⏳ Une mission est déjà en cours Maverick, un instant s'il vous plaît.")
+            return
+
+        self.set_hud_state("work")
+        self.display_message("👁️ <b>Analyse visuelle de l'écran en cours...</b>", duration_ms=0)
         sound_effects.play_wake_chime()
 
         def vision_worker():
             res = tools_vision.analyze_screen_with_gemini(prompt_text)
             speech = res.get("speech", "")
-            self.bridge.update_bubble.emit(f"👁️ {speech}")
-            self.speak_nora(speech, on_finished=lambda: self.bridge.set_state.emit("idle"))
+            self.bridge.set_state.emit("idle")
+            self.bridge.update_hud.emit(f"👁️ <b>RAPPORT DE VISION :</b>\n{speech}", 9000)
+            self.speak_nora(speech)
 
         threading.Thread(target=vision_worker, daemon=True).start()
 
-    def init_qg(self):
-        self.qg = qg_dashboard.QGDashboard(parent_mascot=self)
-        self.qg.initiative_accepted.connect(self.on_initiative_accepted)
-        self.qg.initiative_refused.connect(self.on_initiative_refused)
-        self.qg.action_requested.connect(self.on_qg_action_requested)
-        self.qg.outfit_changed.connect(self.set_outfit)
-        self.qg.gaming_mode_toggled.connect(self.on_qg_gaming_toggled)
-        self.qg.ram_boost_requested.connect(self.on_qg_ram_boost)
-        self.qg.screen_vision_requested.connect(lambda: self.trigger_screen_vision(""))
-        self.qg.voice_cloning_toggled.connect(self.on_qg_voice_cloning_toggled)
-
-    def on_qg_gaming_toggled(self, active: bool):
-        if active:
-            msg = "🎮 Mode Gaming ACTIVÉ ! Silence radio et performances maximales, Maverick."
-            self.display_message(msg)
-            self.speak_nora(msg, force=True)
-        else:
-            msg = "✨ Mode Gaming DÉSACTIVÉ ! Je reprends les alertes normales, Maverick."
-            self.display_message(msg)
-            self.speak_nora(msg, force=True)
-
-    def on_qg_voice_cloning_toggled(self, active: bool):
-        stat = "activée" if active else "désactivée"
-        self.display_message(f"🎙️ Voix de Nora {stat} (RTX 4080) !")
-        self.speak_nora(f"Ma voix Nora est maintenant {stat}, Maverick.", force=True)
-
-    def on_qg_ram_boost(self):
-        sound_effects.play_wake_chime()
-
-    def toggle_qg(self):
-        if hasattr(self, 'qg'):
-            self.qg.toggle_independent()
-
-    def on_initiative_accepted(self, init_id: str):
-        self.set_sprite_state("work")
-        res = nora_initiatives.execute_accepted_initiative(init_id)
-        self.display_message(res)
-        sound_effects.play_success_chime()
-        self.speak_nora(res, on_finished=lambda: self.set_sprite_state("idle"))
-
-    def on_initiative_refused(self, init_id: str):
-        res = nora_initiatives.refuse_initiative(init_id)
-        self.display_message(res)
-        self.speak_nora(res)
-
-    def on_qg_action_requested(self, action_name: str):
-        if action_name == "security_scan":
-            self.run_security_scan_action()
-        elif action_name == "organize_downloads":
-            self.execute_mission("Range mon dossier Téléchargements en triant tout par catégories.")
-        elif action_name == "web_search":
-            self.start_voice_input()
-        elif action_name == "smart_home_panel":
-            self.show_smart_home_menu()
-
-    def show_smart_home_menu(self):
-        """Ouvre un menu interactif pour piloter la maison et le pont Philips Hue."""
-        import agent_home
-        menu = QMenu(self)
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #0f172a;
-                color: #f1f5f9;
-                border: 2px solid #818cf8;
-                border-radius: 10px;
-                padding: 6px;
-                font-family: 'Segoe UI', sans-serif;
-                font-size: 12px;
-                font-weight: 600;
-            }
-            QMenu::item {
-                padding: 6px 20px;
-                border-radius: 6px;
-            }
-            QMenu::item:selected {
-                background-color: #4338ca;
-                color: #ffffff;
-            }
-            QMenu::separator {
-                height: 1px;
-                background-color: #334155;
-                margin: 4px 8px;
-            }
-        """)
-
-        is_paired = agent_home.smart_home.is_hue_paired()
-        hue_title = "🏠 Pont Philips Hue : Connecté 💖" if is_paired else "🏠 Pont Hue : Détecté (192.168.1.29) 🟡"
-        act_title = menu.addAction(hue_title)
-        act_title.setEnabled(False)
-        menu.addSeparator()
-
-        act_salon = menu.addAction("💡 Basculer Lumières Salon")
-        act_chambre = menu.addAction("💡 Basculer Lumières Chambre")
-        act_zero_two = menu.addAction("🌸 Ambiance Zero Two (Rose Pastel)")
-        menu.addSeparator()
-        act_volets = menu.addAction("🪟 Fermer / Ouvrir Volets")
-        act_night = menu.addAction("🌙 Mode Nuit (Tout Éteindre)")
-        menu.addSeparator()
-        act_status = menu.addAction("📊 État de la Maison")
-        act_pair = menu.addAction("🔗 Associer le Pont Philips Hue...")
-
-        action = menu.exec(QCursor.pos())
-        if action == act_salon:
-            lights = agent_home.smart_home.state.get("lights", {}).get("salon", {})
-            new_on = not lights.get("on", False)
-            ok, msg = agent_home.smart_home.set_light("salon", on=new_on)
-            self.display_message(msg)
-            self.speak_nora(msg)
-        elif action == act_chambre:
-            lights = agent_home.smart_home.state.get("lights", {}).get("chambre", {})
-            new_on = not lights.get("on", False)
-            ok, msg = agent_home.smart_home.set_light("chambre", on=new_on)
-            self.display_message(msg)
-            self.speak_nora(msg)
-        elif action == act_zero_two:
-            ok, msg = agent_home.smart_home.activate_zero_two_ambiance()
-            self.display_message(msg)
-            self.speak_nora(msg)
-        elif action == act_volets:
-            cov = agent_home.smart_home.state.get("covers", {}).get("salon", "ouvert")
-            new_state = (cov != "ouvert")
-            ok, msg = agent_home.smart_home.set_cover("all", open_state=new_state)
-            self.display_message(msg)
-            self.speak_nora(msg)
-        elif action == act_night:
-            ok, msg = agent_home.smart_home.activate_night_mode()
-            self.display_message(msg)
-            self.speak_nora(msg)
-        elif action == act_status:
-            rep = agent_home.smart_home.get_status_report()
-            self.display_message(rep)
-            self.speak_nora("Voici l'état des équipements de la maison, Maverick.")
-        elif action == act_pair:
-            self.display_message("Appuyez sur le gros bouton rond au centre de votre pont Philips Hue (192.168.1.29)...")
-            self.speak_nora("Appuyez sur le gros bouton rond au centre de votre pont Hue, Maverick. Je patiente...")
-            ok, msg = agent_home.smart_home.pair_hue_bridge()
-            self.display_message(msg)
-            self.speak_nora(msg)
-
-    # =================================================================
-    # SURVEILLANCE SYSTÈME & ALERTES EN DIRECT
-    # =================================================================
+    # =========================================================================
+    # SERVICES D'ARRIÈRE-PLAN (MONITORING, DEFENDER, HOTKEY, SYSTRAY, QG)
+    # =========================================================================
     def init_system_monitor(self):
-        """Démarre le module de surveillance matérielle et des téléchargements."""
         def on_sys_alert(category, title, msg, speak):
             self.bridge.system_alert.emit(category, title, msg, speak)
 
         self.sys_monitor = system_monitor.SystemMonitor(on_alert_callback=on_sys_alert)
         self.sys_monitor.start()
 
+        # Timer de mise à jour des mini-puces de télémétrie sur la Dynamic Island (toutes les 2.0 s)
+        self.telemetry_hud_timer = QTimer(self)
+        self.telemetry_hud_timer.timeout.connect(self._update_hud_telemetry)
+        self.telemetry_hud_timer.start(2000)
+        self._update_hud_telemetry()
+
+    def _update_hud_telemetry(self):
+        try:
+            stats = system_monitor.get_current_metrics()
+            cpu = stats.get("cpu_percent", 0.0)
+            ram = stats.get("ram_percent", 0.0)
+            gpu = stats.get("gpu", {})
+
+            # 1. CPU
+            self.chip_cpu.setText(f"CPU {int(cpu)}%")
+            if cpu > 85:
+                self.chip_cpu.setStyleSheet("color: #ef4444; font-size: 10px; font-weight: 700; background: rgba(239, 68, 68, 0.15); padding: 3px 6px; border-radius: 6px; border: none;")
+            elif cpu > 65:
+                self.chip_cpu.setStyleSheet("color: #f59e0b; font-size: 10px; font-weight: 700; background: rgba(245, 158, 11, 0.15); padding: 3px 6px; border-radius: 6px; border: none;")
+            else:
+                self.chip_cpu.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 600; background: rgba(255, 255, 255, 0.05); padding: 3px 6px; border-radius: 6px; border: none;")
+
+            # 2. GPU (RTX 4080)
+            gpu_name = gpu.get("name", "GPU")
+            temp = gpu.get("temp_c", 0)
+            load = gpu.get("load_pct", 0)
+            if "4080" in gpu_name:
+                self.chip_gpu.setText(f"RTX 4080 {temp}°C")
+            else:
+                self.chip_gpu.setText(f"GPU {temp}°C")
+
+            # 3. RAM
+            self.chip_ram.setText(f"RAM {int(ram)}%")
+            if ram > 85:
+                self.chip_ram.setStyleSheet("color: #ef4444; font-size: 10px; font-weight: 700; background: rgba(239, 68, 68, 0.15); padding: 3px 6px; border-radius: 6px; border: none;")
+            else:
+                self.chip_ram.setStyleSheet("color: #94a3b8; font-size: 10px; font-weight: 600; background: rgba(255, 255, 255, 0.05); padding: 3px 6px; border-radius: 6px; border: none;")
+        except Exception:
+            pass
+
     def on_system_alert(self, category: str, title: str, msg: str, speak: bool):
-        """Réceptionne une alerte matérielle ou un nouveau téléchargement."""
         if not self.system_alerts_enabled:
             return
-
         icon = "⚠️" if category == "warning" else "📥"
-        self.display_message(f"{icon} {title} :\n{msg}")
-
+        self.display_message(f"{icon} <b>{title}</b> :\n{msg}", duration_ms=7000)
         if speak and not self.is_speaking_now and not self.is_mission_running:
             sound_effects.play_wake_chime()
             self.speak_nora(msg)
 
-    def show_system_health_report(self):
-        """Énonce et affiche un bilan complet de l'ordinateur."""
-        report = system_monitor.get_system_health_report()
-        self.display_message(f"📊 Bilan Santé du PC :\n{report}")
-        self.speak_nora(report)
-
-    # =================================================================
-    # AGENT DE SÉCURITÉ DU PC (LE GARDIEN)
-    # =================================================================
     def init_security_watchdog(self):
-        """Démarre le gardien de sécurité pour surveiller Defender et le démarrage."""
         def on_sec_alert(title, msg, is_critical):
             self.bridge.security_alert.emit(title, msg, is_critical)
 
@@ -1029,28 +849,11 @@ class NoraMascot(QWidget):
         self.sec_watchdog.start()
 
     def on_security_alert(self, title: str, msg: str, is_critical: bool):
-        """Déclenché si Defender est désactivé ou si un nouveau programme s'ajoute au démarrage."""
-        self.display_message(f"🚨 {title} :\n{msg}")
+        self.display_message(f"🚨 <b>SÉCURITÉ OS : {title}</b>\n{msg}", duration_ms=8000)
         sound_effects.play_wake_chime()
         if not self.is_speaking_now:
             self.speak_nora(msg)
 
-    def run_security_scan_action(self):
-        """Lance un scan de sécurité complet sur demande."""
-        self.set_sprite_state("work")
-        self.display_message("🛡️ L'Agent de Sécurité analyse le système...")
-        sound_effects.play_wake_chime()
-
-        def scan_worker():
-            scan = agent_security.run_security_scan()
-            self.bridge.update_bubble.emit(f"🛡️ Score de Sécurité : {scan['score']}/100\n{scan['speech']}")
-            self.speak_nora(scan["speech"], on_finished=lambda: self.bridge.set_state.emit("idle"))
-
-        threading.Thread(target=scan_worker, daemon=True).start()
-
-    # =================================================================
-    # RACCOURCI CLAVIER GLOBAL (CTRL + ALT + N)
-    # =================================================================
     def init_global_hotkey(self):
         """Enregistre le raccourci global Ctrl+Alt+N sous Windows."""
         self.hotkey_running = True
@@ -1077,20 +880,14 @@ class NoraMascot(QWidget):
         t.start()
 
     def on_hotkey_pressed(self):
-        """Invoque Nora instantanément lors de l'appui sur Ctrl+Alt+N."""
+        """Invoque l'Omnibox instantanément lors de l'appui sur Ctrl+Alt+N."""
         self.show()
         self.setWindowState(self.windowState() & ~Qt.WindowState.WindowMinimized | Qt.WindowState.WindowActive)
         self.raise_()
         self.activateWindow()
-
         sound_effects.play_wake_chime()
-        self.set_sprite_state("listen")
-        self.display_message("✨ Oui Maverick, je vous écoute.")
-        self.start_voice_input()
+        self.toggle_command_bar()
 
-    # =================================================================
-    # MAINS-LIBRES : "DIS NORA"
-    # =================================================================
     def init_wake_word_detector(self):
         def on_wake_alone():
             self.bridge.wake_triggered.emit("")
@@ -1104,137 +901,229 @@ class NoraMascot(QWidget):
         )
 
     def toggle_hands_free(self):
-        """Active ou désactive l'écoute continue 'Dis Nora'."""
         self.hands_free_enabled = not self.hands_free_enabled
-        if hasattr(self, 'qg') and self.qg:
-            self.qg.update_handsfree_button()
-
         if self.hands_free_enabled:
             self.wake_detector.start()
             sound_effects.play_wake_chime()
-            self.display_message("🎧 Mode Mains-Libres ACTIF !\nDis simplement 'Dis Nora' ou 'Hey Nora' à voix haute.")
+            self.btn_mic.setStyleSheet("""
+                QPushButton {
+                    background: rgba(56, 189, 248, 0.3);
+                    color: #ffffff;
+                    border: 1px solid #38bdf8;
+                    border-radius: 12px;
+                }
+            """)
+            self.display_message("🎧 Mode Mains-Libres ACTIF !\nDites simplement 'Dis Nora' ou 'Hey Nora' à voix haute.", duration_ms=4500)
         else:
             self.wake_detector.stop()
-            self.display_message("🎧 Mode Mains-Libres désactivé.")
+            self.btn_mic.setStyleSheet("""
+                QPushButton {
+                    background: rgba(255, 255, 255, 0.04);
+                    color: #94a3b8;
+                    border: 1px solid rgba(255, 255, 255, 0.08);
+                    border-radius: 12px;
+                }
+            """)
+            self.display_message("🎧 Mode Mains-Libres désactivé.", duration_ms=3000)
 
-    def on_wake_word_heard(self, command: str):
-        """Déclenché automatiquement lorsque 'Dis Nora' est prononcé dans la pièce."""
-        if self.is_mission_running:
-            return
+    def init_qg(self):
+        self.qg = qg_dashboard.QGDashboard(parent_mascot=self)
+        self.qg.initiative_accepted.connect(self.on_initiative_accepted)
+        self.qg.initiative_refused.connect(self.on_initiative_refused)
+        self.qg.action_requested.connect(self.on_qg_action_requested)
+        self.qg.gaming_mode_toggled.connect(self.on_qg_gaming_toggled)
+        self.qg.ram_boost_requested.connect(self.optimize_ram_direct)
+        self.qg.screen_vision_requested.connect(lambda: self.trigger_screen_vision(""))
 
-        if command:
-            self.process_user_message(command)
-        else:
-            self.set_sprite_state("listen")
-            self.display_message("✨ Oui Maverick, je vous écoute.")
+    def open_qg_initial(self):
+        if hasattr(self, 'qg') and self.qg:
+            self.qg.show_independent()
+
+    def toggle_qg(self):
+        if hasattr(self, 'qg') and self.qg:
+            self.qg.toggle_independent()
+
+    def on_initiative_accepted(self, init_id: str):
+        res = nora_initiatives.execute_accepted_initiative(init_id)
+        self.display_message(res, duration_ms=6500)
+        sound_effects.play_success_chime()
+        self.speak_nora(res)
+
+    def on_initiative_refused(self, init_id: str):
+        res = nora_initiatives.refuse_initiative(init_id)
+        self.display_message(res, duration_ms=4000)
+        self.speak_nora(res)
+
+    def on_qg_action_requested(self, action_name: str):
+        if action_name == "security_scan":
+            self.run_security_scan_action()
+        elif action_name == "organize_downloads":
+            self.execute_mission("Range mon dossier Téléchargements en triant tout par catégories.")
+        elif action_name == "web_search":
             self.start_voice_input()
 
-    # =================================================================
-    # GESTION DES ENTRÉES : DISCUSSION VS MISSION
-    # =================================================================
-    def submit_text_input(self):
-        if hasattr(self, 'input_field'):
-            text = self.input_field.text().strip()
-            if text:
-                self.input_field.clear()
-                self.process_user_message(text)
+    def on_qg_gaming_toggled(self, active: bool):
+        stat = "ACTIVÉ" if active else "DÉSACTIVÉ"
+        msg = f"🎮 Mode Gaming {stat}, Maverick. Priorité maximale accordée au GPU."
+        self.display_message(msg, duration_ms=4500)
+        self.speak_nora(msg, force=True)
 
-    def start_voice_input(self):
-        if self.is_mission_running:
-            return
+    def on_gaming_mode_changed(self, active: bool):
+        if hasattr(self, 'qg') and self.qg:
+            self.qg.update_gaming_ui()
 
-        def record_thread():
-            self.bridge.set_state.emit("listen")
-            self.bridge.update_bubble.emit("🎙️ Je vous écoute Maverick... Vous pouvez parler.")
-            spoken = voice_engine.listen_microphone()
-            if spoken:
-                self.process_user_message(spoken)
-            else:
-                self.bridge.set_state.emit("idle")
-                self.bridge.update_bubble.emit("Je n'ai pas bien compris Maverick. Cliquez sur 🎙️ ou écrivez-moi.")
-
-        threading.Thread(target=record_thread, daemon=True).start()
-
-    def process_user_message(self, user_text: str):
-        if self.is_mission_running:
-            self.display_message("⏳ Je suis déjà occupée sur une mission Maverick, un instant s'il vous plaît.")
-            return
-
-        def analyze_thread():
-            try:
-                intent, chat_reply = nora_brain.analyze_intent_and_respond(user_text)
-                if intent == "OPEN_QG":
-                    self.bridge.open_qg.emit()
-                    self.bridge.chat_response.emit(chat_reply)
-                elif intent.startswith("OUTFIT:"):
-                    outfit_key = intent.split(":")[1]
-                    self.bridge.outfit_changed.emit(outfit_key)
-                    self.bridge.chat_response.emit(chat_reply)
-                elif intent == "GAMING_ON":
-                    self.bridge.gaming_mode_changed.emit(True)
-                    self.bridge.chat_response.emit(chat_reply)
-                elif intent == "GAMING_OFF":
-                    self.bridge.gaming_mode_changed.emit(False)
-                    self.bridge.chat_response.emit(chat_reply)
-                elif intent == "BOOST_RAM":
-                    self.bridge.chat_response.emit(chat_reply)
-                elif intent == "SCREEN_VISION":
-                    self.bridge.screen_vision_requested.emit(chat_reply)
-                elif intent == "CHAT":
-                    self.bridge.chat_response.emit(chat_reply)
-                else:
-                    self.bridge.mission_requested.emit(user_text)
-            except Exception as e:
-                logger.error(f"Erreur analyze_thread: {e}")
-                self.bridge.chat_response.emit(f"Désolée Maverick, une erreur est survenue lors de l'analyse : {e}")
-
-        threading.Thread(target=analyze_thread, daemon=True).start()
-
-    def on_chat_response(self, reply_text: str):
-        self.display_message(reply_text)
-        self.speak_nora(reply_text)
-
-    def execute_mission(self, mission_goal: str):
-        self.is_mission_running = True
-        self.bridge.set_state.emit("work")
-        self.bridge.update_bubble.emit(f"⚙️ Mission : '{mission_goal[:35]}...'\nJe mobilise mes agents, Maverick.")
-        
+    def optimize_ram_direct(self):
         sound_effects.play_wake_chime()
-        self.speak_nora("C'est bien noté Maverick. Je lance mes agents pour s'en occuper.")
+        count, freed = gaming_mode.optimize_ram_boost()
+        msg = f"⚡ Mémoire vive optimisée : {count} processus allégés, {freed} Mo libérés !"
+        self.display_message(msg, duration_ms=5000)
+        self.speak_nora(msg, force=True)
 
-        def mission_worker():
-            def step_callback(step_type, text):
-                if step_type == "swarm":
-                    self.bridge.update_bubble.emit(text)
-                    self.bridge.swarm_event.emit("Essaim", 1, text, 96)
-                else:
-                    self.bridge.update_bubble.emit(f"⚙️ {text}")
+    def run_security_scan_action(self):
+        self.set_hud_state("work")
+        self.display_message("🛡️ <b>Audit de sécurité en cours...</b>", duration_ms=0)
+        sound_effects.play_wake_chime()
 
-            try:
-                from mission_engine import run_autonomous_mission
-                report = run_autonomous_mission(mission_goal, callback_step=step_callback)
-                self.bridge.mission_finished.emit(report)
-            except Exception as e:
-                self.bridge.mission_finished.emit(f"Erreur : {str(e)}")
+        def scan_worker():
+            scan = agent_security.run_security_scan()
+            self.bridge.set_state.emit("idle")
+            self.bridge.update_hud.emit(f"🛡️ <b>Score de Sécurité : {scan['score']}/100</b>\n{scan['speech']}", 8000)
+            self.speak_nora(scan["speech"])
 
-        threading.Thread(target=mission_worker, daemon=True).start()
+        threading.Thread(target=scan_worker, daemon=True).start()
 
-    def on_swarm_event_received(self, agent: str, round_num: int, text: str, consensus: int):
-        try:
+    # =========================================================================
+    # SYSTEM TRAY & CONTEXT MENU
+    # =========================================================================
+    def init_system_tray(self):
+        self.tray_icon = QSystemTrayIcon(self)
+        ico_path = ASSETS_DIR / "nora.ico"
+        if not ico_path.exists():
+            ico_path = ASSETS_DIR / "nora_idle.png"
+        if ico_path.exists():
+            self.tray_icon.setIcon(QIcon(str(ico_path)))
+        self.tray_icon.setToolTip("NORA WORKSTATION | Copilote Exécutif IA")
+        self.tray_icon.activated.connect(self.on_tray_activated)
+        self.tray_icon.show()
+
+    def on_tray_activated(self, reason):
+        if reason == QSystemTrayIcon.ActivationReason.Trigger:
+            if self.isVisible():
+                self.hide()
+            else:
+                self.show()
+                self.raise_()
+        elif reason == QSystemTrayIcon.ActivationReason.Context:
+            self.show_context_menu(QCursor.pos())
+
+    def show_context_menu(self, global_pos: QPoint):
+        menu = QMenu(self)
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #0b1120;
+                color: #f1f5f9;
+                border: 1px solid rgba(56, 189, 248, 0.35);
+                border-radius: 8px;
+                padding: 6px;
+                font-size: 11px;
+                font-family: 'Segoe UI', system-ui;
+            }
+            QMenu::item {
+                padding: 6px 20px 6px 12px;
+                border-radius: 4px;
+            }
+            QMenu::item:selected {
+                background-color: #0284c7;
+                color: #ffffff;
+            }
+            QMenu::separator {
+                height: 1px;
+                background: rgba(255, 255, 255, 0.08);
+                margin: 4px 6px;
+            }
+        """)
+
+        act_qg = menu.addAction("Poste de Contrôle QG")
+        act_cmd = menu.addAction("Ligne de Commande Rapide (Ctrl+Alt+N)")
+        act_mic = menu.addAction("Entrée Vocale")
+        act_handsfree = menu.addAction("Mode Mains-Libres ('Dis Nora')")
+        act_vision = menu.addAction("Vision Écran (Gemini Multimodal)")
+
+        menu.addSeparator()
+        act_ram = menu.addAction("Purger la RAM")
+        is_gaming = gaming_mode.is_gaming_mode()
+        act_gaming = menu.addAction("Désactiver Mode Gaming" if is_gaming else "Activer Mode Gaming (Priorité GPU)")
+        act_sec = menu.addAction("Audit de Sécurité Système")
+
+        menu.addSeparator()
+        act_lock = menu.addAction("Verrouiller la session Windows")
+        act_bin = menu.addAction("Vider la corbeille")
+        act_mute = menu.addAction("Couper / Rétablir le son")
+
+        menu.addSeparator()
+        act_vis = menu.addAction("Masquer la Capsule HUD" if self.isVisible() else "Afficher la Capsule HUD")
+        is_startup = setup_shortcuts.is_startup_enabled()
+        act_startup = menu.addAction("☑ Lancer avec Windows" if is_startup else "☐ Lancer avec Windows")
+        menu.addSeparator()
+        act_quit = menu.addAction("Quitter la station Nora")
+
+        action = menu.exec(global_pos)
+        if action == act_qg:
+            self.toggle_qg()
+        elif action == act_cmd:
+            self.toggle_command_bar()
+        elif action == act_mic:
+            self.start_voice_input()
+        elif action == act_handsfree:
+            self.toggle_hands_free()
+        elif action == act_vision:
+            self.trigger_screen_vision("")
+        elif action == act_ram:
+            self.optimize_ram_direct()
+        elif action == act_gaming:
+            new_state, msg = gaming_mode.toggle_gaming_mode()
             if hasattr(self, 'qg') and self.qg:
-                self.qg.update_swarm_event(agent, round_num, text, consensus)
-        except Exception as e:
-            logger.error(f"Erreur on_swarm_event_received: {e}")
+                self.qg.update_gaming_ui()
+            self.display_message(msg, duration_ms=4500)
+            self.speak_nora(msg, force=True)
+        elif action == act_sec:
+            self.run_security_scan_action()
+        elif action == act_lock:
+            tools_pc_control.lock_workstation()
+        elif action == act_bin:
+            ok, msg = tools_pc_control.empty_recycle_bin()
+            self.display_message(f"🗑️ {msg}", duration_ms=4500)
+        elif action == act_mute:
+            ok, msg = tools_pc_control.toggle_mute()
+            self.display_message(msg, duration_ms=3500)
+        elif action == act_vis:
+            if self.isVisible():
+                self.hide()
+            else:
+                self.show()
+                self.raise_()
+        elif action == act_startup:
+            new_startup = not is_startup
+            setup_shortcuts.set_startup_enabled(new_startup)
+            stat = "activé" if new_startup else "désactivé"
+            self.display_message(f"Démarrage automatique avec Windows {stat}.", duration_ms=4000)
+        elif action == act_quit:
+            self.hotkey_running = False
+            if hasattr(self, 'tray_icon') and self.tray_icon:
+                self.tray_icon.hide()
+            if hasattr(self, 'qg') and self.qg:
+                self.qg.close()
+            if hasattr(self, 'sys_monitor'):
+                self.sys_monitor.stop()
+            if hasattr(self, 'sec_watchdog'):
+                self.sec_watchdog.stop()
+            if hasattr(self, 'wake_detector'):
+                self.wake_detector.stop()
+            QApplication.quit()
 
-    def on_mission_finished(self, report: str):
-        self.is_mission_running = False
-        sound_effects.play_success_chime()
-
-        summary_preview = "🎉 Mission accomplie à 100 % ! Tout a été terminé avec succès, Maverick."
-        self.display_message(summary_preview)
-        self.notify_windows("Mission Accomplie !", "Toutes les actions demandées ont été effectuées avec succès !")
-        self.speak_nora("Mission accomplie Maverick ! Toutes les actions demandées ont été effectuées.")
-
+    # =========================================================================
+    # INTERACTIONS SOURIS (DRAG & DROP DE LA CAPSULE)
+    # =========================================================================
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = True
@@ -1248,7 +1137,6 @@ class NoraMascot(QWidget):
             curr_pos = event.globalPosition().toPoint()
             if hasattr(self, 'drag_start_pos') and (curr_pos - self.drag_start_pos).manhattanLength() > 6:
                 self.drag_has_moved = True
-                self.is_walking = False  # Pause la balade libre si Maverick déplace Nora
             new_pos = curr_pos - self.drag_position
             self.move(new_pos)
             event.accept()
@@ -1256,11 +1144,8 @@ class NoraMascot(QWidget):
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
             self.is_dragging = False
-            self.walk_target_x = self.x()
-            self.ground_y = self.y() + self.height()
             if not getattr(self, 'drag_has_moved', False):
-                # Un clic direct sur Nora ouvre / ferme son QG de commande classique et esthétique
-                self.toggle_qg()
+                self.toggle_command_bar()
             event.accept()
 
     def mouseDoubleClickEvent(self, event):
@@ -1272,248 +1157,30 @@ class NoraMascot(QWidget):
         try:
             pos = event.globalPos() if hasattr(event, 'globalPos') else QCursor.pos()
             self.show_context_menu(pos)
-        except Exception as e:
-            print(f"[ContextMenu Error] {e}")
-
-    def show_context_menu(self, global_pos: QPoint):
-        menu = QMenu(self)
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #0b1120;
-                color: #f1f5f9;
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 6px;
-                padding: 6px;
-                font-size: 11px;
-                font-family: 'Segoe UI', system-ui, sans-serif;
-            }
-            QMenu::item {
-                padding: 6px 20px 6px 12px;
-                border-radius: 4px;
-            }
-            QMenu::item:selected {
-                background-color: #2563eb;
-                color: #ffffff;
-            }
-            QMenu::separator {
-                height: 1px;
-                background: rgba(255, 255, 255, 0.08);
-                margin: 4px 6px;
-            }
-        """)
-
-        action_qg = menu.addAction("Poste de Contrôle QG")
-        if self.isVisible():
-            action_toggle_mascot = menu.addAction("Masquer la mascotte (Mode Silencieux / Systray)")
-        else:
-            action_toggle_mascot = menu.addAction("Afficher la mascotte sur le bureau")
-
-        action_voice = menu.addAction("Entrée vocale (Ctrl+Alt+N)")
-        action_handsfree = menu.addAction("Mode Mains-Libres")
-        action_vision = menu.addAction("Analyser l'écran (Vision IA)")
-        
-        # Vie Autonome & Déplacement
-        menu.addSeparator()
-        is_roaming = self.life_engine.roaming_enabled
-        roam_label = "Désactiver le déplacement libre" if is_roaming else "Activer le déplacement libre"
-        action_roam = menu.addAction(roam_label)
-        action_walk_now = menu.addAction("Effectuer un déplacement")
-        action_nap = menu.addAction("Mettre en veille active")
-        action_read = menu.addAction("Consulter la base de connaissances")
-        menu.addSeparator()
-
-        # Profils d'Apparence
-        outfit_menu = menu.addMenu("Profils d'apparence")
-        outfit_menu.setStyleSheet("""
-            QMenu {
-                background-color: #0b1120;
-                color: #f1f5f9;
-                border: 1px solid rgba(255, 255, 255, 0.12);
-                border-radius: 6px;
-                padding: 4px;
-                font-size: 11px;
-            }
-            QMenu::item {
-                padding: 5px 16px 5px 10px;
-                border-radius: 4px;
-            }
-            QMenu::item:selected {
-                background-color: #2563eb;
-            }
-        """)
-        curr_outfit = memory_manager.get_current_outfit()
-        act_franxx = outfit_menu.addAction("Pilote Franxx" + (" ✓" if curr_outfit == "franxx" else ""))
-        act_school = outfit_menu.addAction("Tenue Élève" + (" ✓" if curr_outfit == "school" else ""))
-        act_hoodie = outfit_menu.addAction("Street Hoodie" + (" ✓" if curr_outfit == "hoodie" else ""))
-        act_cyberpunk = outfit_menu.addAction("Cyber Techwear" + (" ✓" if curr_outfit == "cyberpunk" else ""))
-        act_commander = outfit_menu.addAction("Commandant" + (" ✓" if curr_outfit == "commander" else ""))
-
-        # Mode Gaming & Optimisation
-        menu.addSeparator()
-        is_gaming = gaming_mode.is_gaming_mode()
-        gaming_label = "Désactiver Mode Gaming" if is_gaming else "Activer Mode Gaming (Priorité GPU)"
-        action_gaming = menu.addAction(gaming_label)
-        action_boost_ram = menu.addAction("Libérer la mémoire RAM")
-
-        # Synthèse Vocale Haute Définition
-        menu.addSeparator()
-        is_vc_on = memory_manager.is_voice_cloning_enabled()
-        vc_label = "Synthèse Vocale RVC (RTX 4080) " + ("[Activée ✓]" if is_vc_on else "[Désactivée]")
-        action_toggle_vc = menu.addAction(vc_label)
-
-        # Domotique & Philips Hue
-        menu.addSeparator()
-        action_smart_home = menu.addAction("Éclairage & Domotique (Philips Hue)...")
-
-        menu.addSeparator()
-
-        # Sécurité et Santé
-        action_security = menu.addAction("Audit de Sécurité Système")
-        action_health = menu.addAction("Télémétrie & Santé Machine")
-        
-        # Contrôles PC directs
-        menu.addSeparator()
-        vol_muted = False
-        try:
-            from pycaw.pycaw import AudioUtilities
-            spk = AudioUtilities.GetSpeakers()
-            if spk and hasattr(spk, 'EndpointVolume'):
-                vol_muted = bool(spk.EndpointVolume.GetMute())
         except Exception:
             pass
-        mute_label = "Rétablir le son" if vol_muted else "Couper le son"
-        action_mute = menu.addAction(mute_label)
-        action_clean_bin = menu.addAction("Vider la corbeille")
-        action_lock = menu.addAction("Verrouiller la session Windows")
 
-        # Alertes & Démarrage
-        menu.addSeparator()
-        alerts_text = "Désactiver les alertes PC" if self.system_alerts_enabled else "Activer les alertes PC"
-        action_toggle_alerts = menu.addAction(alerts_text)
+    def notify_windows(self, title: str, message: str):
+        if hasattr(self, 'tray_icon') and self.tray_icon:
+            self.tray_icon.showMessage(title, message, QSystemTrayIcon.MessageIcon.Information, 4000)
 
-        is_startup = setup_shortcuts.is_startup_enabled()
-        startup_text = "☑ Lancer au démarrage de Windows" if is_startup else "☐ Lancer au démarrage de Windows"
-        action_startup = menu.addAction(startup_text)
+    # Stubs de rétrocompatibilité pour toute dépendance résiduelle
+    def set_outfit(self, outfit: str): pass
+    def play_pose(self, pose_name: str, duration_sec: float = 6.0, dialog: str = None): pass
+    def set_sprite_state(self, state: str): self.set_hud_state(state)
 
-        menu.addSeparator()
-        action_clean = menu.addAction("Classer le dossier Téléchargements")
-        action_dup = menu.addAction("Analyser les fichiers en double")
-        menu.addSeparator()
-        action_quit = menu.addAction("Quitter la station Nora")
 
-        action = menu.exec(global_pos)
-        if action == action_qg:
-            self.toggle_qg()
-        elif action == action_toggle_mascot:
-            self.toggle_mascot_visibility()
-            if not self.isVisible():
-                self.notify_windows("Mode Silencieux", "Nora reste active en arrière-plan. Cliquez sur l'icône dans la barre des tâches pour me réafficher.")
-        elif action == action_voice:
-            self.start_voice_input()
-        elif action == action_handsfree:
-            self.toggle_hands_free()
-        elif action == action_vision:
-            self.trigger_screen_vision("")
-        elif action == action_roam:
-            self.toggle_roaming_mode()
-        elif action == action_walk_now:
-            screen = QApplication.primaryScreen().availableGeometry()
-            min_x = screen.left() + 20
-            max_x = max(min_x + 100, screen.right() - self.width() - 20)
-            import random
-            target = random.randint(min_x, max_x)
-            self.start_walking_to(target, speed=3, announcement="Déplacement de contrôle sur l'espace de travail, Maverick.")
-        elif action == action_nap:
-            self.force_nap_mode()
-        elif action == action_read:
-            self.read_learning_note()
-        elif action == act_franxx:
-            self.set_outfit("franxx")
-            self.display_message("Profil visuel Pilote Franxx appliqué, Maverick.")
-        elif action == act_school:
-            self.set_outfit("school")
-            self.display_message("Profil visuel Tenue Élève appliqué, Maverick.")
-        elif action == act_hoodie:
-            self.set_outfit("hoodie")
-            self.display_message("Profil visuel Street Hoodie appliqué, Maverick.")
-        elif action == act_cyberpunk:
-            self.set_outfit("cyberpunk")
-            self.display_message("Profil visuel Cyber Techwear appliqué, Maverick.")
-        elif action == act_commander:
-            self.set_outfit("commander")
-            self.display_message("Profil visuel Commandant appliqué, Maverick.")
-        elif action == action_gaming:
-            new_state, msg = gaming_mode.toggle_gaming_mode()
-            if hasattr(self, 'qg') and self.qg:
-                self.qg.update_gaming_ui()
-            self.display_message(msg)
-            self.speak_nora(msg, force=True)
-        elif action == action_boost_ram:
-            count, freed = gaming_mode.optimize_ram_boost()
-            msg = f"⚡ RAM Boostée ! {count} applications vidées ({freed} Mo libérés)."
-            self.display_message(msg)
-            self.speak_nora(msg, force=True)
-        elif action == action_toggle_vc:
-            new_state = not is_vc_on
-            memory_manager.set_voice_cloning_enabled(new_state)
-            stat = "activée" if new_state else "désactivée"
-            self.display_message(f"🎙️ Voix de Nora {stat} (accélérée par RTX 4080) !")
-            if hasattr(self, 'qg') and self.qg:
-                self.qg.update_vc_ui()
-            self.speak_nora(f"Ma voix Nora est maintenant {stat}, Maverick.", force=True)
-        elif action == action_smart_home:
-            self.show_smart_home_menu()
-        elif action == action_security:
-            self.run_security_scan_action()
-        elif action == action_health:
-            self.show_system_health_report()
-        elif action == action_mute:
-            ok, msg = tools_pc_control.toggle_mute()
-            self.display_message(msg)
-        elif action == action_clean_bin:
-            ok, msg = tools_pc_control.empty_recycle_bin()
-            self.display_message(f"🗑️ {msg}")
-            self.speak_nora(msg)
-        elif action == action_lock:
-            tools_pc_control.lock_workstation()
-        elif action == action_toggle_alerts:
-            self.system_alerts_enabled = not self.system_alerts_enabled
-            stat = "activées" if self.system_alerts_enabled else "désactivées"
-            self.display_message(f"🔔 Les alertes système sont maintenant {stat}.")
-        elif action == action_startup:
-            new_startup = not is_startup
-            setup_shortcuts.set_startup_enabled(new_startup)
-            if new_startup:
-                self.display_message("🚀 Nora se lancera désormais automatiquement à l'allumage de Windows !")
-            else:
-                self.display_message("Démarrage automatique au lancement de Windows désactivé.")
-        elif action == action_clean:
-            self.execute_mission("Réorganise mon dossier Téléchargements en triant tout par catégories.")
-        elif action == action_dup:
-            self.execute_mission("Scanne mon dossier Téléchargements et isole les doublons.")
-        elif action == action_quit:
-            self.hotkey_running = False
-            if hasattr(self, 'consciousness'):
-                self.consciousness.stop()
-            if hasattr(self, 'tray_icon') and self.tray_icon:
-                self.tray_icon.hide()
-            if hasattr(self, 'qg'):
-                self.qg.close()
-            if hasattr(self, 'sys_monitor'):
-                self.sys_monitor.stop()
-            if hasattr(self, 'sec_watchdog'):
-                self.sec_watchdog.stop()
-            if hasattr(self, 'wake_detector'):
-                self.wake_detector.stop()
-            QApplication.quit()
+# Alias pour rétrocompatibilité
+NoraMascot = NoraDynamicIsland
+
 
 def run_app():
     try:
         app = QApplication(sys.argv)
-        mascot = NoraMascot()
-        mascot.show()
+        island = NoraDynamicIsland()
+        island.show()
 
-        # Démarrage ultra-rapide non bloquant du serveur mobile en arrière-plan
+        # Démarrage non-bloquant du serveur mobile en arrière-plan
         def _start_bg_server():
             try:
                 import nora_server

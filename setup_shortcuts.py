@@ -48,7 +48,7 @@ def create_windows_shortcut(
     working_dir: Path = PROJECT_DIR,
     icon_path: Path = ICON_PATH,
     hotkey: str = "",
-    description: str = "Nora Mascotte IA"
+    description: str = "Nora - Copilote Exécutif IA"
 ) -> bool:
     """Crée un raccourci Windows (.lnk) avec WScript.Shell via PowerShell."""
     ensure_nora_icon()

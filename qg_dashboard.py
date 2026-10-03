@@ -197,7 +197,8 @@ class QGDashboard(QWidget):
         self.telemetry_timer.start(2000)
 
         self.update_telemetry()
-        self.update_outfit_buttons(self.current_outfit)
+        if hasattr(self, 'outfit_btns'):
+            self.update_outfit_buttons(self.current_outfit)
         self.update_gaming_ui()
         self.update_vc_ui()
 
@@ -251,25 +252,21 @@ class QGDashboard(QWidget):
         self.panel_swarm = self.create_swarm_panel()            # Index 1
         self.panel_projects = self.create_projects_panel()      # Index 2
         self.panel_3dprint = self.create_3dprint_panel()        # Index 3
-        self.panel_companion = self.create_companion_panel()    # Index 4
-        self.panel_wardrobe = self.create_wardrobe_panel()      # Index 5
-        self.panel_system = self.create_system_panel()          # Index 6
-        self.panel_security = self.create_security_panel()      # Index 7
-        self.panel_smarthome = self.create_smarthome_panel()    # Index 8
-        self.panel_memory = self.create_memory_panel()          # Index 9
-        self.panel_mobile = self.create_mobile_panel()          # Index 10
+        self.panel_system = self.create_system_panel()          # Index 4
+        self.panel_security = self.create_security_panel()      # Index 5
+        self.panel_smarthome = self.create_smarthome_panel()    # Index 6
+        self.panel_memory = self.create_memory_panel()          # Index 7
+        self.panel_mobile = self.create_mobile_panel()          # Index 8
 
         self.stack.addWidget(self.panel_cockpit)       # 0
         self.stack.addWidget(self.panel_swarm)         # 1
         self.stack.addWidget(self.panel_projects)      # 2
         self.stack.addWidget(self.panel_3dprint)       # 3
-        self.stack.addWidget(self.panel_companion)     # 4
-        self.stack.addWidget(self.panel_wardrobe)      # 5
-        self.stack.addWidget(self.panel_system)        # 6
-        self.stack.addWidget(self.panel_security)      # 7
-        self.stack.addWidget(self.panel_smarthome)     # 8
-        self.stack.addWidget(self.panel_memory)        # 9
-        self.stack.addWidget(self.panel_mobile)        # 10
+        self.stack.addWidget(self.panel_system)        # 4
+        self.stack.addWidget(self.panel_security)      # 5
+        self.stack.addWidget(self.panel_smarthome)     # 6
+        self.stack.addWidget(self.panel_memory)        # 7
+        self.stack.addWidget(self.panel_mobile)        # 8
 
         body_layout.addWidget(self.stack, stretch=1)
         frame_layout.addWidget(body_widget, stretch=1)
@@ -375,13 +372,11 @@ class QGDashboard(QWidget):
             ("Orchestration IA", 1),
             ("Projets", 2),
             ("Atelier 3D", 3),
-            ("Compagnon", 4),
-            ("Profils & Style", 5),
-            ("Télémétrie Système", 6),
-            ("Sécurité OS", 7),
-            ("Domotique", 8),
-            ("Mémoire & Faits", 9),
-            ("Passerelle Réseau", 10),
+            ("Télémétrie Système", 4),
+            ("Sécurité OS", 5),
+            ("Domotique", 6),
+            ("Mémoire & Faits", 7),
+            ("Passerelle Réseau", 8),
         ]
 
         for text, idx in nav_items:
